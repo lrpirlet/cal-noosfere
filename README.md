@@ -33,7 +33,7 @@ nooSFere](https://www.noosfere.org/icarus/articles/article.asp?numarticle=463)
 [nooSFere - Plan du site](https://www.noosfere.org/actu/news.asp)
 
 Le site nooSFere ne vend ni n’édite des livres. L’association propose a
-ses membres (cout de 30€/an voire 10€/an en tarif réduit… on peut donner
+ses membres (coût de 30€/an voire 10€/an en tarif réduit… on peut donner
 plus 😊) des services vraiment superbes. Voir [Pourquoi
 adhérer](https://www.noosfere.org/noosfere/assoc/pourquoi.asp).
 
@@ -45,5 +45,5 @@ l'association](https://www.noosfere.org/noosfere/assoc/don.asp)
 
 # cal-noosfere
 
-Mon idée est de me permettre de télécharger les infos relative a un
+Mon idée est de me permettre de télécharger les informations relatives à un
 livre dans calibre
