@@ -4,9 +4,10 @@ import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 
-debug=1
+debug=0
 
-lrpauteur = input("auteur : ")
+##lrpauteur = input("auteur : ")
+lrpauteur="van vogt"   #1 existe    
 if not len(lrpauteur):
     lrpauteur="vanvogt"     #n'existe pas
     lrpauteur="eschbach"   #2 existent
@@ -17,7 +18,8 @@ if not len(lrpauteur):
 lrpauteur=str(lrpauteur.replace(","," "))
 lrpauteur=str(lrpauteur.replace(".","* "))
 
-lrplivre = input("ISBN ou titre du livre) : ")
+lrplivre = "2-277-12381-1"
+##lrplivre = input("ISBN ou titre du livre) : ")
 if not len(lrplivre):
     lrplivre = "cataplute "      # pas de livres
     lrplivre = "fondation"      # un tas de livres
@@ -42,7 +44,7 @@ def req_mtd_post(rkt):
     req=urllib.parse.urlencode(rkt).encode('ascii')
     try: sr=urllib.request.urlopen(search_urn,req,timeout=15)
     except urllib.error.URLError as e:
-        print("Une erreur enoyée par le site a été reçue.")
+        print("Une erreur enovyée par le site a été reçue.")
         print("code : ",e.code,"reason : ",e.reason)
         sys.exit("réponse d'erreur de l'url, désolé")
     except timeout:
@@ -172,33 +174,35 @@ def ret_livr_par_auteur_indx(soup):
                     print("child['href'] : ",child['href'])
                 livre_par_auteur_index[child.text]=(child["href"])
     except: print("Désolé, il semble que la DB ne connaisse aucun livre de cet auteur",auteura.title(),".\nOu qu'il y a un bug... :-)")
-    return livre_par_auteur_index    
+    return livre_par_auteur_index
 
-def ret_top_vol_indx(soup):
+def ret_top_vol_indx(soup,livrel):
     # cette fonction recoit une page qui contient plusieur volume de meme auteur, de meme ISBN et generalement de meme titres.
     # Ces volumes diffèrent par l'editeur, la date d'edition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
     # MON choix se base sur un systeme de points:
-    # isbn présent:                         3pt
-    # résumé présent:                       2pt
-    # critique présente:                    2pt
-    # sommaire des nouvelles presentes:     2pt
-    # titre different                      -1pt
+    # résumé présent:                       r   1pt
+    # critique présente:                    c   1pt
+    # critique de la serie                  cs  1pt
+    # sommaire des nouvelles presentes:     s   1pt
+    # information verifiée                  v   1pt
+    # titre identique                       t   1pt
+    # image presente                        p   1pt
+    # isbn present                          i   2pt
+    # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense construire une image + carateristique dans un bouton
     debug=1
     if debug: print("ret_top_vol_indx")
 
     top_vol_index={}
-    item=[]
+    item,count,point=[],0,1
+
     for child in soup.recursiveChildGenerator():
-        if child.name=="td" and "class" in child.attrs:
-            if 'item_bib' in child["class"]:
-                if debug:
-                    print("\nfound 'result'")
-                    #print("child (=subsoup) :\n",child.prettify())
-                    #print("child",child.prettify())
-                item.append(child)
-                if debug: print(item)
-    return item
+        if child.name=="td" and "class" in child.attrs and 'item_bib' in child["class"]:
+            count+=1
+            if not count%2 == 0:
+                subsoup=child
+                item.append(subsoup)
+    return item     #icI et dans le prg principal lrplrp
     try:
         for child in subsoup.recursiveChildGenerator():
             if child.name=="a" and "href" in child.attrs:
@@ -207,9 +211,96 @@ def ret_top_vol_indx(soup):
                     print("child['href'] : ",child['href'])
                 livre_par_auteur_index[child.text]=(child["href"])
     except: print("Désolé, il semble que la DB ne connaisse aucun livre de cet auteur",auteura.title(),".\nOu qu'il y a un bug... :-)")
+
+    return top_vol_index
+
+def lrplrp(subsoup):
+    # cette fonction recoit une page qui contient plusieur volume de meme auteur, de meme ISBN et generalement de meme titres.
+    # Ces volumes diffèrent par l'editeur, la date d'edition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
+    # MON choix se base sur un systeme de points:
+    # résumé présent:                       r   1pt
+    # critique présente:                    c   1pt
+    # critique de la serie                  cs  1pt
+    # sommaire des nouvelles presentes:     s   1pt
+    # information verifiée                  v   2pt
+    # titre identique                       t   1pt
+    # image presente                        p   1pt
+    # isbn present                          i   2pt
+    # en cas d'egalité, le plus ancien reçoit la préférence
+    # plus tard, je pense construire une image + carateristique dans un bouton
+
+    debug=1
+    if debug: print("lrplrp")
+
+    top_vol_index={}
+    item,count,point=[],0,1
+    # R indique la présence d'un résumé,  C d'une critique, CS d'une critique de la série,  S d'un sommaire,
+    # V information verifiée, T indique un titre identique au livres, point (cfr supra)
+    point=0
+    vol_index=vol_titre=vol_couvrt_index=vol_editeur=isbn=vol_collection=""
+   
     
-    return top_vol_index    
-    
+    for child in subsoup.recursiveChildGenerator():
+        # vol_index
+        if child.name == "a":
+            if "href" in child.attrs and "numlivre" in child["href"]:
+                vol_index=child["href"]
+                continue
+        # vol_titre, t, vol_couvrt_index, p
+        if child.name=="img":
+            if ("alt" and "src" and "title") in child.attrs and "Cliquez" in child["title"]:
+                vol_titre = child["alt"]
+                if livrel.title()==vol_titre.title():
+                    point+=1
+                if "http" in child["src"]:
+                    vol_couvrt_index = child["src"]
+                    point+=1
+                continue
+        # vol_editeur, isbn, i
+        if child.name=="a":
+            if "href" in child.attrs and "numediteur" in child["href"]:
+                vol_editeur=child.text
+                # isbn may be next
+                tmp=child.find_next("span")
+                if debug: print("type(tmp),tmp : ", type(tmp),tmp)
+                isbn=tmp.text
+                if (not "nd" in isbn) and (len(isbn)>0):        # here I need some sort of ISBN validation
+                    point+=2
+                continue
+        # vol_collection
+        if child.name=="a":
+            if "href" in child.attrs and "collection" in child["href"]:
+                vol_collection = child.text
+                continue
+        # information verifiée
+        if child.name=="img":
+            if ("src" and "title") in child.attrs:
+                if "3dbullgreen" in child["src"]:
+                    point+=2
+                continue
+        if child.name=="span":
+            if ("class" and "name" and "title") in child.attrs and "Présence" in child["title"]:
+                if "R" in child.text: point+=1
+                elif "C" in child.text: point+=1
+                elif "CS" in child.text: point+=1
+                elif "S" in child.text: point+=1
+            continue
+        continue        # avoit aving debug code in the loop
+    top_vol_index
+    if debug:
+        print("vol_index             : ",vol_index)
+        print("t, vol_titre          : ",t,vol_titre)
+        print("p, vol_couvrt_index   : ",p, vol_couvrt_index)
+        print("vol_editeur           : ",vol_editeur)
+        print("i, isbn               : ",i, isbn)
+        print("vol_collection        : ",vol_collection)
+        print("v, verifié            : ",v)
+       print("====================")
+        print("\nfound 'result', (count-1/2) : ", int((count-1)/2))
+        print("\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+        print("end loop")
+    return
+    return top_vol_index
 
 #ISBN (ou titre de livre)
 # On émet une recherche avec vers noosfere avec isbn (ou titre de livre!)
@@ -233,7 +324,7 @@ if len(livre_index) == 0:
 for key,ref in livre_index.items():
     livrel,indexl = key,ref
     if debug :
-        print("livrel.title() : ",livrel.title(),"indexl : ",indexl)
+        print("livrel : ",livrel,"indexl : ",indexl)
 rqt = indexl+"&Tri=3"
 if debug: print("rqt ajoutée à base_url",rqt)
 ret_rqt = req_mtd_get(rqt)
@@ -242,24 +333,27 @@ if debug:
     print("soup = req_mtd_get(rqt)",soup.prettify())
     print("url_vrai : ",url_vrai)
 if "numitem" in url_vrai:       #url_vrai contient .../livres/editionsLivre.asp?numitem=69&Tri=3 si plusieurs editions du livre
-    if debug: print("allez, ecore un effort, faut trouver le bon livre")
-    top_vol_indx = ret_top_vol_indx(soup)   #vol_indx est un pointeur vers le livre
-    # pour le moment top_vol_indx est en fait item, une liste de subsoup
-#elif "numlivre" in url_vrai:    #url_vrai contient ...livres/niourf.asp?numlivre=7479 si le livre est trouvé
-#    if debug: print("livre  trouvé")
+    if debug: print("allez, ecore un effort, faut trouver le bon volume")
+    top_vol_indx = ret_top_vol_indx(soup,livrel)   #vol_indx est un pointeur vers le livre
+    item=top_vol_indx      # pour le moment top_vol_indx est en fait item, une liste de subsoup
+    if debug: print(item[0])
+    resultat=lrplrp(item[0])
+
+elif "numlivre" in url_vrai:    #url_vrai contient ...livres/niourf.asp?numlivre=7479 si le livre est trouvé
+    if debug: print("livre  trouvé")
 else:
     print("quelquechose ne va pas, bug???")
 
     #return vol_idx    # si ceci est une fontion..
 #print(top_vol_indx)
 
-    
+
 # explose top_vol_indx en auteur,isbn,titre,serie et N°de serie,editeur,collection d'editeur et N° de collection d'editeur,
 # traducteur, graphiste et commentaire.
 # Ce dernier contient la reference de nooSFere, le 4me de couverture (resumé), la ou les critique(s), sommaire (si recueil de nouvelles)
 
+sys.exit("fin tekporaire")
 
-"""
 #auteur
 if debug:
     print("trouve ref pour : ",lrpauteur)
@@ -275,8 +369,8 @@ for key,ref in auteur_index.items():
     auteura,indexa = key,ref
     if debug :
         print("auteura.title() : ",auteura.title(),"indexa : ",indexa)
-"""
-"""
+
+
 #livres attribués à un auteur connu
 if debug: print("\nTrouve ref pour les livres de : ",lrpauteur," connu comme : ",auteura.title(),".")
 rqt=indexa+"&Niveau=livres"
@@ -288,7 +382,7 @@ for key,ref in livre_par_auteur_index.items():
     livrelpa,indexlpa = key,ref
     if debug :
         print("livrelpa.title() : ",livrelpa.title(),"indexlpa : ",indexlpa)
-"""    
+
 
 
 
@@ -315,7 +409,7 @@ If you simply need the list of all matches you can use: re.findall(s, r.text)
 share  follow
 """
 
-""" reference 
+""" reference
 lrpall = re.findall(r'(.?livres/auteur.*?)\n',sr.text)
 #lrpall = re.search(r'(.?livres/auteur.*?)\n',sr.text)
 
