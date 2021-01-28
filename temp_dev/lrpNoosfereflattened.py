@@ -1,4 +1,4 @@
-import urllib
+#import urllib
 import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
@@ -106,15 +106,14 @@ def req_mtd_post(rkt):
 def req_mtd_get(rqt):
     # accede <base_url>/livres/auteur.asp?numauteur=366
     # renvoie la soup et le vrai url (a mettre en commentaires pour reference)
-    debug=0
+    debug=1
     if debug: print("\nfunction req_mtd_get(rqt)")
 
     url=base_url+rqt
+    url="https://www.noosfere.org/livres/niourf.asp?numlivre=1348"  # La Guerre contre le Rull 2 critiques
     url="https://www.noosfere.org/livres/niourf.asp?numlivre=984"   # A la poursuite des Slans R, C
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=1348"  # La Guerre contre le Rull 2 critiques
     url="https://www.noosfere.org/livres/niourf.asp?numlivre=612"   # ANTHOLOGIE Résume, Summary
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=1348"  # La Guerre contre le Rull 2 critiques
-
+    url="https://www.noosfere.org/livres/niourf.asp?numlivre=2146617285"    #Temps futurs
 
     if debug: print("url : ",url)
     try: sr=urllib.request.urlopen(url,timeout=15)
@@ -363,79 +362,111 @@ if True:
 
     vol_info={}
     vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_comm_edi=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
-    vol_comment_soup=BS('<div><a href="' + url_vrai + '">"' + url_vrai + '</a></div>',"html.parser").find("div")
+    vol_comment_soup=BS('<div><p><br/>Référence: <a href="' + url_vrai + '">"' + url_vrai + '</a></p></div>',"html.parser")
+    comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=None
 
-    for child in soup.recursiveChildGenerator():
-        if child.name=="div" and "id" in child.attrs and "Fiche_livre" in child["id"]:
-            subsoup=child
-            print("subsoup",subsoup)
-            for child in subsoup.recursiveChildGenerator():
-                print("type(child),child.name   ",type(child),child.name)
-                if child.name=="span" and "class" in child.attrs and "TitreNiourf" in child["class"]:
-                    vol_title = child.text.strip()
-                if child.name=="span" and "class" in child.attrs and "AuteurNiourf" in child["class"]:
-                    vol_auteur = child.text.replace("\n","").strip()
-                    for i in range(len(vol_auteur.split())):
-                        if not vol_auteur.split()[i].isupper():
-                            vol_auteur_prenom += " "+vol_auteur.split()[i]
-                        else:
-                            vol_auteur_nom += " "+vol_auteur.split()[i].title()
-                    vol_auteur_prenom = vol_auteur_prenom.strip()
-                    vol_auteur_nom = vol_auteur_nom.strip()
-                if child.name=="span" and "class" in child.attrs and "ficheNiourf" in child["class"]:
-##                    k1,k2="","x"
-##                    for elemnt in child.childGenerator():
-##                        k1=k2
-##                        k2=elemnt
-##                        if k1==k2:
-##                            break
-##                        vol_comm_edi += str(elemnt)
-##                    vol_comm_edi=vol_comm_edi.replace("<br/>","\n").replace("\n\n","\n").replace("<i>","").replace("</i>","").replace("&amp;","&")
-##                    vol_comm_edi=vol_comm_edi.rstrip("\n")
-                    comment=child
-                    vol_comment_soup.append(comment)
+##    for child in soup.recursiveChildGenerator():
+##        if child.name=="div" and "id" in child.attrs and "Fiche_livre" in child["id"]:
+##            subsoup=child
+    if True:
+        if True:
+            subsoup=soup.select("div[id='Fiche_livre']")[0]             # select retiurn a bs4.element.ResultSet, sort of a list of bs4.element.Tag...
 
-ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur avant .append ou renvoyer le .append apres la find du bouclage...
-                    
-##                    for chld in vol_comment_soup.recursiveChildGenerator():
-##                        if chld.name=="a" and "href" in chld.attrs and "editeur.asp" in chld["href"]:
-##                            vol_editor = child.text
-##                        if chld.name=="a" and "href" in chld.attrs and "collection.asp" in chld["href"]:
-##                            vol_coll = chld.text
-##                            vol_coll_nbr = chld.next_element.next_element.replace("n°","").strip()
-##                if child.name=="span"and "class" in child.attrs and "sousFicheNiourf" in child["class"]:
-##                    for elemnt in child.childGenerator():
-##                        if "Dépôt légal" in elemnt:
-##                            vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
-##                            if len(str(vol_dp_lgl))<3:
-##                                vol_dp_lgl=""
-##                                elemnt=elemnt.next.next
-##                                for i in (trimestre,janvier,février,mars,avril,mai,juin,juillet,août,septembre,octobre,novembre,décembre):
-##                                    if i in elemnt:
-##                                        vol_dp_lgl=elemnt
-##                                        break
-##                        if "ISBN" in elemnt: vol_isbn = elemnt
-##                        if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ").rstrip("\t")
-##                if child.name=="img" and "name" in child.attrs and "couverture" in child["name"]:
-##                    vol_cover_index = child["src"]            
-##                    #continue
-##                if child.name=="div" and "id" in child.attrs and "Résumes" in child["id"]:
-##                    vol_comment_soup.append(child.find_previous("table").wrap(soup.new_tag("div")))
-##                    vol_comment_soup.append(child)
-##                    #continue
-##                if child.name=="div" and "id" in child.attrs and "Critique" in child["id"]:
-##                    vol_comment_soup.append(child.find_previous("table").wrap(soup.new_tag("div")))
-##                    vol_comment_soup.append(child)
-##                    #continue
-##                if child.name=="div" and "id" in child.attrs and "Sommaire" in child["id"]:
-##                    vol_comment_soup.append(child.find_previous("table").wrap(soup.new_tag("div")))
-##                    vol_comment_soup.append(child)
-##                    #continue
-##                if child.name=="div" and "id" in child.attrs and "AutresCritique" in child["id"]:
-##                    vol_comment_soup.append(child.find_previous("table").wrap(soup.new_tag("div")))
-##                    vol_comment_soup.append(child)
-##                    #continue
-##
+            vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
+            if debug: print("vol_title")
+
+            vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
+            if debug: print("vol_auteur")
+
+            for i in range(len(vol_auteur.split())):
+                if not vol_auteur.split()[i].isupper():
+                    vol_auteur_prenom += " "+vol_auteur.split()[i]
+                else:
+                    vol_auteur_nom += " "+vol_auteur.split()[i].title()
+
+            vol_auteur_prenom = vol_auteur_prenom.strip()
+            if debug: print("vol_auteur_prenom")
+
+            vol_auteur_nom = vol_auteur_nom.strip()
+            if debug: print("vol_auteur_nom")
+
+            comment_generic = soup.select("span[class='ficheNiourf']")[0]
+            if debug: print("comment_generic")
+
+            vol_editor = soup.select("a[href*='editeur.asp']")[0].text
+            if debug: print("vol_editor")
+
+            vol_coll = soup.select("a[href*='collection.asp']")[0].text
+            if debug: print("vol_coll")
+
+            tmp_lst=[]
+            for i in comment_generic.stripped_strings:
+                tmp_lst.append(str(i))
+            vol_coll_nbr = tmp_lst[len(tmp_lst)-1].replace("n°","").strip()
+            if debug: print("vol_coll_nbr")
+
+            for elemnt in soup.select("span[class='sousFicheNiourf']")[0].stripped_strings:
+                if "Dépôt légal" in elemnt:
+                    vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
+                    if debug: print("vol_dp_lgl")
+                if len(str(vol_dp_lgl))<3:
+                    for i in ("trimestre","janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
+                        if i in elemnt:
+                            vol_dp_lgl=elemnt
+                if "ISBN" in elemnt:
+                    vol_isbn = elemnt
+                    if "néant" in vol_isbn: vol_isbn=""
+                    if debug: print("vol_isbn")
+                if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
+
+            for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
+                if "http" in elemnt:
+                    if not vol_cover_index:
+                        vol_cover_index = elemnt
+                        if debug: print("vol_cover_index")                    
+
+            tmp_comm_lst=soup.select("td[class='onglet_biblio1']")
+            for i in range(len(tmp_comm_lst)):
+                if "Quatrième de couverture" in str(tmp_comm_lst[i]):
+                    comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html.parser")
+                    comment_resume = soup.select("div[id='Résumes']")[0]
+                    if debug: print("comment_resume")
+
+                if "Critique" in str(tmp_comm_lst[i]):
+                    if not "autres" in str(tmp_comm_lst[i]):
+                        comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"html.parser")
+                        comment_Critique = soup.select("div[id='Critique']")[0]
+                        if debug: print("comment_Critique")
+
+                if "Sommaire" in str(tmp_comm_lst[i]):
+                    comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"html.parser")
+                    comment_Sommaire = soup.select("div[id='Sommaire']")[0]
+                    if debug: print("comment_Sommaire")
+
+                if "Critiques des autres" in str(tmp_comm_lst[i]):
+                    comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html.parser")
+                    comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
+                    if debug: print("comment_AutresCritique")
+
+
+#
+# ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur avant .append ou renvoyer le .append apres la find du bouclage...
+# a partir d'ici on peut detruire soup et subsoup                   
+            
+    if comment_generic:
+        vol_comment_soup.append(comment_generic)
+    if comment_resume:
+        vol_comment_soup.append(comment_pre_resume)
+        vol_comment_soup.append(comment_resume)
+    if comment_Critique:
+        vol_comment_soup.append(comment_pre_Critique)
+        vol_comment_soup.append(comment_Critique)
+    if comment_Sommaire:
+        vol_comment_soup.append(comment_pre_Sommaire)
+        vol_comment_soup.append(comment_Sommaire)
+    if comment_AutresCritique:
+        vol_comment_soup.append(comment_pre_AutresCritique)
+        vol_comment_soup.append(comment_AutresCritique)
 
     vol_info["vol_title"]=vol_title
     vol_info["vol_auteur_prenom"]=vol_auteur_prenom
@@ -462,7 +493,7 @@ ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur 
         print("vol_cover_index        : ",vol_cover_index)
         print("vol_comment_soup       :\n",vol_comment_soup)
         print("=======================")
-        print("vol_info               : ",vol_info)
+        print("tmp_comm_lst           : ",tmp_comm_lst)
 
 
 sys.exit("fin tekporaire")

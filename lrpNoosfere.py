@@ -1,10 +1,10 @@
-import urllib
+#import urllib
 import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 
-debug=1
+debug=0
 
 ##lrpauteur = input("auteur : ")
 ##if not len(lrpauteur):
@@ -32,9 +32,8 @@ base_url="https://www.noosfere.org"
 search_urn=base_url+"/livres/noosearch.asp"
 base_rkt={"ModeMoteur":"MOTSCLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
 
-def verifie_isbn(isbn_str):
+def verify_isbn(isbn_str):
     # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide" 
-    #
     # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
     # et que l'on traite un mot de 10 ou 13 characteres.
     #
@@ -47,8 +46,21 @@ def verifie_isbn(isbn_str):
     # On calcule la validité de l'ISBN13 par l'équation suivante:
     # ((x1+x3+x5+X7+X9+X11+x13)+(3*(X2+X4+X6+X8+X10+X12))) % 10 == 0
     #
+    # isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
+    # Characters irrelevant to ISBN and separators inside ISBN must be removed,
+    # the resulting word must be either 10 or 13 characters long.
+    #
+    # ISBN10 must be 9 digits long plus one control character this is either a digit or "X" representing numeric value 10
+    # The ISBN10 is valid if the following equation is verified.
+    # (x1 * 10 + x2 * 9 + x3 * 8 + x4 * 7 + x5 * 6 + x6 * 5 + x7 * 4 + x8 * 3 + x9 * 2 + x10 * 1) mod 11 == 0
+    #
+    # ISBN13 must be 12 digits long plus 1 control digit.
+    # The validy of the l'ISBN13 is verified when this equation verify
+    # ((x1+x3+x5+X7+X9+X11+x13)+(3*(X2+X4+X6+X8+X10+X12))) % 10 == 0
+    #
+
     debug=0
-    if debug: print("\nverifie_isbn(isbn_str)")
+    if debug: print("\nverify_isbn(isbn_str)")
 
     total=0
     
@@ -74,7 +86,7 @@ def verifie_isbn(isbn_str):
 
     # ISBN13
     else:
-        for i in range(len(isbn_str)):           # attention les impairs sont d'index pair :-)
+        for i in range(len(isbn_str)):           # Attention, les impairs sont d'index pair :) -- carefull here, the odd positions have an even index... 
             if not isbn_str[i].isdigit():
                 return "invalide"
             if i % 2:
@@ -87,7 +99,7 @@ def verifie_isbn(isbn_str):
             return "invalide"
 
 def req_mtd_post(rkt):
-    # acces en mode post sur <base_url>/livres/noosearch.asp
+    # acces en mode post sur <base_url>/livres/noosearch.asp -- access using "post" method over <base_url>/livres/noosearch.asp
     debug=0
     if debug: print("\nfuncion req_mtd_post(rkt)")
 
@@ -112,9 +124,9 @@ def req_mtd_post(rkt):
     return soup
 
 def req_mtd_get(rqt):
-    # acces en mode post sur <base_url>/livres/auteur.asp?numauteur=366
+    # accede <base_url>/livres/auteur.asp?numauteur=366
     # renvoie la soup et le vrai url (a mettre en commentaires pour reference)
-    debug=1
+    debug=0
     if debug: print("\nfunction req_mtd_get(rqt)")
 
     url=base_url+rqt
@@ -238,7 +250,7 @@ def ret_top_vol_indx(soup,livrel):
     # Ces volumes diffèrent par l'editeur, la date d'edition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
     # MON choix se base sur un systeme de points:
     # résumé présent:                       r   1pt
-    # critique présente:                    c   0pt         # semble pas trop correct car CS n'existe pas meme si, quand
+    # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas meme si, quand
     # critique de la serie                  cs  1pt         # une critique existe, elle est reprise pour tous les volumes
     # sommaire des nouvelles presentes:     s   1pt
     # information verifiée                  v   1pt
@@ -248,12 +260,12 @@ def ret_top_vol_indx(soup,livrel):
     # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-    debug=0
+    debug=1
     if debug: print("ret_top_vol_indx")
 
     ts_vol_index={}
     count=0
-    vol_index=vol_titre=vol_couvrt_index=vol_editeur=vol_isbn=vol_collection=""
+    vol_index=vol_title=vol_cover_index=vol_editor=vol_isbn=vol_collection=""
 
     for child in soup.recursiveChildGenerator():
         if child.name=="td" and "class" in child.attrs and 'item_bib' in child["class"]:
@@ -266,66 +278,65 @@ def ret_top_vol_indx(soup,livrel):
                     if child.name == "a":
                         if "href" in child.attrs and "numlivre" in child["href"]:
                             vol_index=child["href"]
-                            continue
-                    # vol_titre, t, vol_couvrt_index, p
+                        continue
+                    # vol_title, t, vol_cover_index, p
                     if child.name=="img":
                         if ("alt" and "src" and "title") in child.attrs and "Cliquez" in child["title"]:
-                            vol_titre = child["alt"]
-                            if livrel.title()==vol_titre.title():
+                            vol_title = child["alt"]
+                            if livrel.title()==vol_title.title():
                                 point+=1
                             if "http" in child["src"]:
-                                vol_couvrt_index = child["src"]
+                                vol_cover_index = child["src"]
                                 point+=1
-                            continue
-                    # vol_editeur, vol_isbn, i
+                        continue
+                    # vol_editor, vol_isbn, i
                     if child.name=="a":
                         if "href" in child.attrs and "numediteur" in child["href"]:
-                            vol_editeur=child.text
+                            vol_editor=child.text
                             # vol_isbn may be next
                             tmp=child.find_next("span")
-                            vol_isbn = verifie_isbn(tmp.text)
+                            vol_isbn = verify_isbn(tmp.text)
                             if not vol_isbn=="invalide":
                                 point+=2
-                                if verifie_isbn(lrplivre)== vol_isbn:
+                                if verify_isbn(lrplivre)== vol_isbn:
                                     point+=10000
-                            continue
+                        continue
                     # vol_collection
                     if child.name=="a":
                         if "href" in child.attrs and "collection" in child["href"]:
                             vol_collection = child.text
-                            continue
-                    # information verifiée
+                        continue
+                    # information verifiée -- verified information
                     if child.name=="img":
                         if ("src" and "title") in child.attrs:
                             if "3dbullgreen" in child["src"]:
                                 point+=2
-                            continue
+                        continue
                     if child.name=="span":
                         if ("class" and "name" and "title") in child.attrs and "Présence" in child["title"]:
                             if "R" in child.text: point+=1
-                            elif "C" in child.text: point+=0
+                            elif "C" in child.text: point+=1
                             elif "CS" in child.text: point+=1
                             elif "S" in child.text: point+=1
-                        continue
-                    continue        # avoit aving debug code in the loop
+                        continue                            
+                    continue        # évite le code debug dans la boucle -- avoid having debug code in the loop
 
-                # Ceci constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur
+                # lrp Ceci constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur
 
-                ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editeur)
+                ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
 
-                # avec une possibilité de choix fonction de ce qu'il veut...
+                # lrp avec une possibilité de choix fonction de ce qu'il veut...
 
-                if debug:
-                    print("key                   : ",str(int(count/2)))
-                    print("vol_index             : ",vol_index)
-                    print("vol_titre             : ",vol_titre)
-                    print("vol_couvrt_index      : ",vol_couvrt_index)
-                    print("vol_editeur           : ",vol_editeur)
-                    print("vol_isbn              : ",vol_isbn)
-                    print("vol_collection        : ",vol_collection)
-                    print("point                 : ",point)
-                    print("======================")
     if debug:
+        print("key                   : ",str(int(count/2)))
+        print("vol_index             : ",vol_index)
+        print("vol_title             : ",vol_title)
+        print("vol_cover_index       : ",vol_cover_index)
+        print("vol_editor            : ",vol_editor)
+        print("vol_isbn              : ",vol_isbn)
+        print("vol_collection        : ",vol_collection)
+        print("point                 : ",point)
+        print("======================")
         print("\nfound",int((count-1)/2),"volumes différents")
 
     top_vol_point,top_vol_index,serie_editeur=0,"",[]
@@ -333,20 +344,132 @@ def ret_top_vol_indx(soup,livrel):
     for key,ref in ts_vol_index.items():
         serie_editeur.append(ts_vol_index[key][2])
 
-    top_vol_editeur={}.fromkeys(set(serie_editeur),0)
+    top_vol_editor={}.fromkeys(set(serie_editeur),0)
 
     for editr in serie_editeur:
-        top_vol_editeur[editr]+=1
+        top_vol_editor[editr]+=1
 
     for key,ref in ts_vol_index.items():
-        if debug: print("La clé est", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editeur[ts_vol_index[key][2]],"le pointeur est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
-        print("La clé est", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editeur[ts_vol_index[key][2]],"le pointeur est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
-        if ts_vol_index[key][0]*top_vol_editeur[ts_vol_index[key][2]]>top_vol_point:
-            top_vol_point=ts_vol_index[key][0]*top_vol_editeur[ts_vol_index[key][2]]
+        if debug: print("La clé est", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"le pointeur est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
+        if ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]>top_vol_point:
+            top_vol_point=ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]
             top_vol_index=ts_vol_index[key][1]
 
 
     return top_vol_index
+
+def extr_vol_details(soup):
+    debug = 0
+    if debug: print("extr_vol_details(soup)")
+
+    vol_info={}
+    vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_comm_edi=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
+    vol_comment_soup=BS('<div><p><br/>Référence: <a href="' + url_vrai + '">"' + url_vrai + '</a></p>',"html.parser").find("div")
+    comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=None
+
+
+    for child in soup.recursiveChildGenerator():
+        if child.name=="div" and "id" in child.attrs and "Fiche_livre" in child["id"]:
+            subsoup=child
+            for child in subsoup.recursiveChildGenerator():
+                if child.name=="span" and "class" in child.attrs and "TitreNiourf" in child["class"]:
+                    vol_title = child.text.strip()
+                if child.name=="span" and "class" in child.attrs and "AuteurNiourf" in child["class"]:
+                    vol_auteur = child.text.replace("\n","").strip()
+                    for i in range(len(vol_auteur.split())):
+                        if not vol_auteur.split()[i].isupper():
+                            vol_auteur_prenom += " "+vol_auteur.split()[i]
+                        else:
+                            vol_auteur_nom += " "+vol_auteur.split()[i].title()
+                    vol_auteur_prenom = vol_auteur_prenom.strip()
+                    vol_auteur_nom = vol_auteur_nom.strip()
+                if child.name=="span" and "class" in child.attrs and "ficheNiourf" in child["class"]:
+                    comment_generic=child
+                    for chld in comment_generic.recursiveChildGenerator():
+                        if chld.name=="a" and "href" in chld.attrs and "editeur.asp" in chld["href"]:
+                            vol_editor = chld.text
+                        if chld.name=="a" and "href" in chld.attrs and "collection.asp" in chld["href"]:
+                            vol_coll = chld.text
+                            vol_coll_nbr = chld.next_element.next_element.replace("n°","").strip()
+                if child.name=="span"and "class" in child.attrs and "sousFicheNiourf" in child["class"]:
+                    for elemnt in child.childGenerator():
+                        if "Dépôt légal" in elemnt:
+                            vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
+                            if len(str(vol_dp_lgl))<3:
+                                vol_dp_lgl=""
+                                elemnt = elemnt.next.next
+                                for i in ("trimestre","janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
+                                    if i in elemnt:
+                                        vol_dp_lgl=elemnt
+                                        break
+                        if "ISBN" in elemnt: vol_isbn = elemnt
+                        if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ").rstrip("\t")
+                if child.name=="img" and "name" in child.attrs and "couverture" in child["name"]:
+                    if not vol_cover_index: vol_cover_index = child["src"]
+                    if debug: print("vol_cover_index")
+                if child.name=="div" and "id" in child.attrs and "Résumes" in child["id"]:
+                    comment_pre_resume=child.find_previous("table")
+                    comment_resume = child
+                    if debug: print("comment_resume")
+                if child.name=="div" and "id" in child.attrs and "Critique" in child["id"]:
+                    comment_pre_Critique = child.find_previous("table")
+                    comment_Critique = child
+                    if debug: print("comment_Critique")
+                if child.name=="div" and "id" in child.attrs and "Sommaire" in child["id"]:
+                    comment_pre_Sommaire = child.find_previous("table")
+                    comment_Sommaire = child
+                    if debug: print("comment_Sommaire")
+                if child.name=="div" and "id" in child.attrs and "AutresCritique" in child["id"]:
+                    comment_pre_AutresCritique = child.find_previous("table")
+                    comment_AutresCritique = child
+                    if debug: print("comment_AutresCritique")
+
+    if comment_generic:
+        vol_comment_soup.append(comment_generic)
+    if comment_resume:
+        vol_comment_soup.append(comment_pre_resume.wrap(soup.new_tag("div")))
+        vol_comment_soup.append(comment_resume)
+    if comment_Critique:
+        vol_comment_soup.append(comment_pre_Critique.wrap(soup.new_tag("div")))
+        vol_comment_soup.append(comment_Critique)
+    if comment_Sommaire:
+        vol_comment_soup.append(comment_pre_Sommaire.wrap(soup.new_tag("div")))
+        vol_comment_soup.append(comment_Sommaire)
+    if comment_AutresCritique:
+        vol_comment_soup.append(comment_pre_AutresCritique.wrap(soup.new_tag("div")))
+        vol_comment_soup.append(comment_AutresCritique)
+
+    vol_info["vol_title"]=vol_title
+    vol_info["vol_auteur_prenom"]=vol_auteur_prenom
+    vol_info["vol_auteur_nom"]=vol_auteur_nom
+    vol_info["vol_editor"]=vol_editor
+    vol_info["vol_coll"]=vol_coll
+    vol_info["vol_coll_nbr"]=vol_coll_nbr
+    vol_info["vol_dp_lgl"]=vol_dp_lgl
+    vol_info["vol_isbn"]=vol_isbn
+    vol_info["vol_genre"]=vol_genre
+    vol_info["vol_cover_index"]=vol_cover_index
+    vol_info["vol_comment_soup"]=vol_comment_soup
+
+    if debug:
+        print("vol_title              : ",vol_title)
+        print("vol_auteur_prenom      : ",vol_auteur_prenom)
+        print("vol_auteur_nom         : ",vol_auteur_nom)
+        print("vol_editor             : ",vol_editor)
+        print("vol_coll               : ",vol_coll)
+        print("vol_coll_nbr           : ",vol_coll_nbr)
+        print("vol_dp_lgl             : ",vol_dp_lgl)
+        print("vol_isbn               : ",vol_isbn)
+        print("vol_genre              : ",vol_genre)
+        print("vol_cover_index        : ",vol_cover_index)
+        print("vol_comment_soup       :\n",vol_comment_soup)
+        print("=======================")
+        print("vol_info               : ",vol_info)
+
+    return vol_info    # si ISBN (ou titre de livre) est une fontion..
+
+
+
 
 #ISBN (ou titre de livre)
 if debug: print("je suis a #ISBN (ou titre de livre)")
@@ -355,6 +478,8 @@ if debug: print("je suis a #ISBN (ou titre de livre)")
 # soit une serie de livres réedités, ou édité chez plusieurs editeurs ou une combinaison des deux
 # Quand le livre est trouve le url reel contient niourf.asp?numlivre=
 # Quand le isbn (ou le titre) pointe vers plusieurs livres, une operation supplementaire est a faire
+
+debug=1
 
 if debug: print("trouve ref pour : ",lrplivre)
 
@@ -398,15 +523,14 @@ if "numlivre" in url_vrai:    #url_vrai contient ...livres/niourf.asp?numlivre=7
 else:
     print("quelquechose ne va pas, bug???")
 
+vol_info=extr_vol_details(soup)  # we get vol_info from the book
+if debug: print("vol_info: ",vol_info)
+
 sys.exit("fin tekporaire")
 
-    #return vol_idx    # si ISBN (ou titre de livre) est une fontion..
 
 
 
-# explose top_vol_indx en auteur,isbn,titre,serie et N°de serie,editeur,collection d'editeur et N° de collection d'editeur,
-# traducteur, graphiste et commentaire.
-# Ce dernier contient la reference de nooSFere, le 4me de couverture (resumé), la ou les critique(s), sommaire (si recueil de nouvelles)
 
 #auteur
 
