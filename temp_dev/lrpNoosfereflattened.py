@@ -1,7 +1,7 @@
-#import urllib
 import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
+import html.parser
 import sys
 
 debug=1
@@ -65,7 +65,7 @@ def verify_isbn(isbn_str):
 
     # ISBN13
     else:
-        for i in range(len(isbn_str)):           # Attention, les impairs sont d'index pair :) -- carefull here, the odd positions have an even index... 
+        for i in range(len(isbn_str)):           # Attention, les impairs sont d'index pair :) -- carefull here, the odd positions have an even index...
             if not isbn_str[i].isdigit():
                 return "invalide"
             if i % 2:
@@ -77,10 +77,19 @@ def verify_isbn(isbn_str):
         else:
             return "invalide"
 
+def make_soup(sr):
+    # isolé pour trouver quel est l'encodage d'origine... ça marchait a peu pres pour utf_8 mais pas tout a fait
+    # il n'est pas improbable que ce soit ca que le site va modifier dans le futur...
+
+    soup = BS(sr, "html.parser",from_encoding="windows-1252")
+    if debug: print(soup.prettify())
+
+    return soup
+
 def req_mtd_post(rkt):
     # acces en mode post sur <base_url>/livres/noosearch.asp -- access using "post" method over <base_url>/livres/noosearch.asp
     debug=0
-    if debug: print("\nfuncion req_mtd_post(rkt)")
+    if debug: print("\nin req_mtd_post(rkt)")
 
     rkt.update(base_rkt)
     req=urllib.parse.urlencode(rkt).encode('ascii')
@@ -89,7 +98,7 @@ def req_mtd_post(rkt):
         print("A network timeout occurred, do you have wide world web access?")
         sys.exit("désolé")
     except urllib.error.URLError as e:
-        
+
         print("Une erreur enovyée par le site a été reçue.")
         print("code : ",e.code,"reason : ",e.reason)
         sys.exit("réponse d'erreur de l'url, désolé")
@@ -99,22 +108,23 @@ def req_mtd_post(rkt):
         for i in sr.headers:
                 print(i, " : ",sr.headers[i])
 
-    soup = BS(sr, "html.parser")
-    if debug: print(soup.prettify())
+    soup = make_soup(sr)
+
     return soup
 
 def req_mtd_get(rqt):
     # accede <base_url>/livres/auteur.asp?numauteur=366
     # renvoie la soup et le vrai url (a mettre en commentaires pour reference)
-    debug=1
-    if debug: print("\nfunction req_mtd_get(rqt)")
+    debug=0
+    if debug: print("\nin req_mtd_get(rqt)")
 
     url=base_url+rqt
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=1348"  # La Guerre contre le Rull 2 critiques
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=984"   # A la poursuite des Slans R, C
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=612"   # ANTHOLOGIE Résume, Summary
-    url="https://www.noosfere.org/livres/niourf.asp?numlivre=2146617285"    #Temps futurs
-
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=984"   # A la poursuite des Slans R, C
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=1348"  # La Guerre contre le Rull 2 critiques
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=612"   # ANTHOLOGIE Résume, Summary
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=2146617285"    #Temps futurs
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=3906"
+##    url="https://www.noosfere.org/livres/niourf.asp?numlivre=6545"
     if debug: print("url : ",url)
     try: sr=urllib.request.urlopen(url,timeout=15)
     except TimeoutError:
@@ -131,8 +141,8 @@ def req_mtd_get(rqt):
         for i in sr.headers:
                 print(i, " : ",sr.headers[i])
 
-    soup = BS(sr, "html.parser")
-    if debug: print(soup.prettify())
+    soup = make_soup(sr)
+
     return (soup,sr.geturl())
 
 def ret_autr_indx(soup):
@@ -140,7 +150,7 @@ def ret_autr_indx(soup):
     # retourne auteur_index, un dictionnaire avec key=AUTEUR, val=href
     # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial
     debug=0
-    if debug: print("function ret_autr_indx(soup)")
+    if debug: print("\nin ret_autr_indx(soup)")
 
     auteur_index={}
     for child in soup.recursiveChildGenerator():
@@ -175,7 +185,7 @@ def ret_livr_ISBN_indx(soup):
     # Attention: on retourne une reference qui peut contenir PLUSIEURs editions
     # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
     debug=0
-    if debug: print("\nIn funtion ret_livr_ISBN_indx()")
+    if debug: print("\nin ret_livr_ISBN_indx()")
 
     livre_index={}
     for child in soup.recursiveChildGenerator():
@@ -204,7 +214,7 @@ def ret_livr_par_auteur_indx(soup):
     # retourne livre_par_auteur_index, un dictionnaire avec key=titre, val=href
     # L'idée est de renvoyer serie de reference, dont on extrait les livres proches de lrplivre
     debug=0
-    if debug: print("ret_livre_par_auteur_indx()")
+    if debug: print("\nin ret_livre_par_auteur_indx()")
 
     livre_par_auteur_index={}
     for child in soup.recursiveChildGenerator():
@@ -245,8 +255,8 @@ def ret_top_vol_indx(soup,livrel):
     # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-    debug=1
-    if debug: print("ret_top_vol_indx")
+    debug=0
+    if debug: print("\nin ret_top_vol_indx")
 
     ts_vol_index={}
     count=0
@@ -298,7 +308,7 @@ def ret_top_vol_indx(soup,livrel):
                             elif "C" in child.text: point+=1
                             elif "CS" in child.text: point+=1
                             elif "S" in child.text: point+=1
-                            
+
                     continue        # évite le code debug dans la boucle -- avoid having debug code in the loop
 
                 # lrp Ceci constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur
@@ -341,7 +351,7 @@ def ret_top_vol_indx(soup,livrel):
 
 #ISBN (ou titre de livre)
 if debug: print("je suis a #ISBN (ou titre de livre)")
-debug=1
+debug=0
 
 rqt="/livres/niourf.asp?numlivre=56&Tri=3"
 ret_rqt = req_mtd_get(rqt)
@@ -360,37 +370,44 @@ if True:
     debug = 1
     if debug: print("extr_vol_details(soup)")
 
+    tmp1=tmp2="junk"
+    tmp_lst=[]
     vol_info={}
     vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_comm_edi=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
-    vol_comment_soup=BS('<div><p><br/>Référence: <a href="' + url_vrai + '">"' + url_vrai + '</a></p></div>',"html.parser")
-    comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=None
+    vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html.parser")
+    comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=None
 
 ##    for child in soup.recursiveChildGenerator():
 ##        if child.name=="div" and "id" in child.attrs and "Fiche_livre" in child["id"]:
 ##            subsoup=child
     if True:
         if True:
-            subsoup=soup.select("div[id='Fiche_livre']")[0]             # select retiurn a bs4.element.ResultSet, sort of a list of bs4.element.Tag...
+            if debug: print(soup.prettify())
 
             vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
             if debug: print("vol_title")
 
             vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
             if debug: print("vol_auteur")
-
             for i in range(len(vol_auteur.split())):
                 if not vol_auteur.split()[i].isupper():
                     vol_auteur_prenom += " "+vol_auteur.split()[i]
                 else:
                     vol_auteur_nom += " "+vol_auteur.split()[i].title()
-
             vol_auteur_prenom = vol_auteur_prenom.strip()
             if debug: print("vol_auteur_prenom")
-
             vol_auteur_nom = vol_auteur_nom.strip()
             if debug: print("vol_auteur_nom")
 
+            try:
+                vol_serie = soup.select("a[href*='serie.asp']")[0].text
+            except:
+                vol_serie = ""
+            if debug: print("vol_cycle")
+
             comment_generic = soup.select("span[class='ficheNiourf']")[0]
+            new_div=soup.new_tag('div')
+            comment_generic = comment_generic.wrap(new_div)
             if debug: print("comment_generic")
 
             vol_editor = soup.select("a[href*='editeur.asp']")[0].text
@@ -399,7 +416,6 @@ if True:
             vol_coll = soup.select("a[href*='collection.asp']")[0].text
             if debug: print("vol_coll")
 
-            tmp_lst=[]
             for i in comment_generic.stripped_strings:
                 tmp_lst.append(str(i))
             vol_coll_nbr = tmp_lst[len(tmp_lst)-1].replace("n°","").strip()
@@ -423,7 +439,10 @@ if True:
                 if "http" in elemnt:
                     if not vol_cover_index:
                         vol_cover_index = elemnt
-                        if debug: print("vol_cover_index")                    
+                        if debug: print("vol_cover_index")
+
+            if vol_cover_index:
+                comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html.parser")
 
             tmp_comm_lst=soup.select("td[class='onglet_biblio1']")
             for i in range(len(tmp_comm_lst)):
@@ -448,11 +467,12 @@ if True:
                     comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
                     if debug: print("comment_AutresCritique")
 
-
 #
 # ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur avant .append ou renvoyer le .append apres la find du bouclage...
-# a partir d'ici on peut detruire soup et subsoup                   
-            
+# a partir d'ici on peut detruire soup et subsoup
+
+    if comment_cover:
+        vol_comment_soup.append(comment_cover)
     if comment_generic:
         vol_comment_soup.append(comment_generic)
     if comment_resume:
@@ -467,10 +487,57 @@ if True:
     if comment_AutresCritique:
         vol_comment_soup.append(comment_pre_AutresCritique)
         vol_comment_soup.append(comment_AutresCritique)
+#
+# Make a minimum of "repair" over vol_comment_soup so that it displays correctly in the comments and in my catalogs
+# - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of tab)
+# - I like to have functional url when they exist
+#
+
+    for elemnt in vol_comment_soup.select('[align="justify"]'):
+        del elemnt['align']
+
+    for child in vol_comment_soup.recursiveChildGenerator():
+        if child.name=="a" and "href" in child.attrs and "auteur.asp" in child["href"]:
+            child["href"]=child["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
+            if debug: print(child["href"])
+        if child.name=="a" and "href" in child.attrs and "serie.asp" in child["href"]:
+            child["href"]=child["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
+            if debug: print(child["href"])
+        if child.name=="a" and "href" in child.attrs and "EditionsLivre.asp" in child["href"]:
+            child["href"]=child["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
+            if debug: print(child["href"])
+        if child.name=="a" and "href" in child.attrs and "editionslivre.asp" in child["href"]:
+            child["href"]=child["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
+            if debug: print(child["href"])
+        if child.name=="a" and "href" in child.attrs and "editeur.asp" in child["href"]:
+            child["href"]=child["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
+            if debug: print(child["href"])
+        if child.name=="a" and "href" in child.attrs and "collection.asp" in child["href"]:
+            child["href"]=child["href"].replace("collection.asp","https://www.noosfere.org/livres/collection.asp")
+            if debug: print(child["href"])
+
+# need to understand local resources and modify argum. 2 of .replace(1,2) to access it
+
+        if child.name=="img" and "src" in child.attrs and "arrow_left" in child["src"]:
+            child["src"]=child["src"].replace("/images/arrow_left.gif","/images/arrow_left.gif")
+            if debug: print(child)
+        if child.name=="img" and "src" in child.attrs and "arrow_right" in child["src"]:
+            child["src"]=child["src"].replace("/images/arrow_right.gif","/images/arrow_right.gif")
+            if debug: print(child)
+
+### remove all double 'br' to improve presentation, note tmp1 and tmp2 must contain an value different from any first elemnt
+
+        for elemnt in comment_generic.findAll():
+            tmp1,tmp2=tmp2,elemnt
+            if tmp1==tmp2:
+                elemnt.extract()
+
 
     vol_info["vol_title"]=vol_title
+    vol_info["vol_auteur"]=vol_auteur
     vol_info["vol_auteur_prenom"]=vol_auteur_prenom
     vol_info["vol_auteur_nom"]=vol_auteur_nom
+    vol_info["vol_serie"]=vol_serie
     vol_info["vol_editor"]=vol_editor
     vol_info["vol_coll"]=vol_coll
     vol_info["vol_coll_nbr"]=vol_coll_nbr
@@ -482,8 +549,10 @@ if True:
 
     if debug:
         print("vol_title              : ",vol_title)
+        print("vol_auteur             : ",vol_auteur)
         print("vol_auteur_prenom      : ",vol_auteur_prenom)
         print("vol_auteur_nom         : ",vol_auteur_nom)
+        print("vol_serie              : ",vol_serie)
         print("vol_editor             : ",vol_editor)
         print("vol_coll               : ",vol_coll)
         print("vol_coll_nbr           : ",vol_coll_nbr)
