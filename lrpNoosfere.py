@@ -4,6 +4,10 @@ import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 
+base_url="https://www.noosfere.org"
+search_urn=base_url+"/livres/noosearch.asp"
+base_rkt={"ModeMoteur":"MOTSCLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+
 def verify_isbn(isbn_str):
     # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
     # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
@@ -31,7 +35,7 @@ def verify_isbn(isbn_str):
     # ((x1+x3+x5+X7+X9+X11+x13)+(3*(X2+X4+X6+X8+X10+X12))) % 10 == 0
     #
 
-    debug=1
+    debug=0
     if debug: print("\nverify_isbn(isbn_str)")
 
     total=0
@@ -72,7 +76,11 @@ def verify_isbn(isbn_str):
 
 def make_soup(sr):
     # isolé pour trouver quel est l'encodage d'origine... ça marchait a peu pres pour utf_8 mais pas tout a fait
-    # il n'est pas improbable que ce soit ca que le site va modifier dans le futur...
+    # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
+    # function isolated to find out what is the site character encoding... The announced standard (in meta) was WRONG
+    # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
+    # Maybe I should have tried earlier as the emitting node is MS (thanks!!!)...
+    # It decode correctly to utf_8 with windows-1252 as input encoding
 
     debug=0
     if debug: print("\nin make_soup(sr)")
@@ -89,7 +97,7 @@ def req_mtd_post(rkt):
 
     rkt.update(base_rkt)
     req=urllib.parse.urlencode(rkt).encode('ascii')
-    try: sr=urllib.request.urlopen(search_urn,req,timeout=15)
+    try: sr=urllib.request.urlopen(search_urn,req,timeout=30)
     except TimeoutError:
         print("A network timeout occurred, do you have wide world web access?")
         sys.exit("désolé")
@@ -114,7 +122,7 @@ def req_mtd_get(rqt):
 
     url=base_url+rqt
     if debug: print("url : ",url)
-    try: sr=urllib.request.urlopen(url,timeout=15)
+    try: sr=urllib.request.urlopen(url,timeout=30)
     except TimeoutError:
         print("A network timeout occurred, do you have wide world web access?")
         sys.exit("désolé")
@@ -137,7 +145,7 @@ def ret_autr_indx(soup):
     # Trouve la reference de l'auteur dans la soupe produite par noosfere
     # retourne auteur_index, un dictionnaire avec key=AUTEUR, val=href
     # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial
-    debug=1
+    debug=0
     if debug: print("\nin ret_autr_indx(soup)")
 
     auteur_index={}
@@ -201,7 +209,7 @@ def ret_livr_par_auteur_indx(soup):
     #Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
     # retourne livre_par_auteur_index, un dictionnaire avec key=titre, val=href
     # L'idée est de renvoyer serie de reference, dont on extrait les livres proches de lrplivre
-    debug=1
+    debug=0
     if debug: print("\nin ret_livre_par_auteur_indx()")
 
     livre_par_auteur_index={}
@@ -243,85 +251,65 @@ def ret_top_vol_indx(soup,livrel):
     # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-    debug=1
-    if debug: print("\nin ret_top_vol_indx")
-    print("this function needs to be rewritten")
+    debug=0
+    if debug: print("\nin ret_top_vol_indx(soup,livrel)")
 
     ts_vol_index={}
-    count=0
-    vol_index=vol_title=vol_cover_index=vol_editor=vol_isbn=vol_collection=""
 
-    for child in soup.recursiveChildGenerator():
-        if child.name=="td" and "class" in child.attrs and 'item_bib' in child["class"]:
-            count+=1
-            if not count%2 == 0:
-                subsoup=child
-                point=0
-                for child in subsoup.recursiveChildGenerator():
-                    # vol_index
-                    if child.name == "a":
-                        if "href" in child.attrs and "numlivre" in child["href"]:
-                            vol_index=child["href"]
-                        continue
-                    # vol_title, t, vol_cover_index, p
-                    if child.name=="img":
-                        if ("alt" and "src" and "title") in child.attrs and "Cliquez" in child["title"]:
-                            vol_title = child["alt"]
-                            if livrel.title()==vol_title.title():
-                                point+=1
-                            if "http" in child["src"]:
-                                vol_cover_index = child["src"]
-                                point+=1
-                        continue
-                    # vol_editor, vol_isbn, i
-                    if child.name=="a":
-                        if "href" in child.attrs and "numediteur" in child["href"]:
-                            vol_editor=child.text
-                            # vol_isbn may be next
-                            tmp=child.find_next("span")
-                            vol_isbn = verify_isbn(tmp.text)
-                            if not vol_isbn=="invalide":
-                                point+=2
-                                if verify_isbn(lrplivre)== vol_isbn:
-                                    point+=10000
-                        continue
-                    # vol_collection
-                    if child.name=="a":
-                        if "href" in child.attrs and "collection" in child["href"]:
-                            vol_collection = child.text
-                        continue
-                    # information verifiée -- verified information
-                    if child.name=="img":
-                        if ("src" and "title") in child.attrs:
-                            if "3dbullgreen" in child["src"]:
-                                point+=2
-                        continue
-                    if child.name=="span":
-                        if ("class" and "name" and "title") in child.attrs and "Présence" in child["title"]:
-                            if "R" in child.text: point+=1
-                            elif "C" in child.text: point+=1
-                            elif "CS" in child.text: point+=1
-                            elif "S" in child.text: point+=1
-                        continue
-                    continue        # évite le code debug dans la boucle -- avoid having debug code in the loop
+    nbr_of_vol=soup.select("td[class='item_bib']")
+    for count in range(0,len(nbr_of_vol),2):
+        subsoup=nbr_of_vol[count]
+        point=0
+        vol_index=vol_title=vol_cover_index=vol_editor=vol_isbn=vol_collection=""
 
-                # lrp Ceci constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur
+        if subsoup.select("a[href*='numlivre']"): vol_index=subsoup.select("a[href*='numlivre']")[0]['href']
 
-                ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
+        if subsoup.select("a > img"): vol_title=subsoup.select("a > img")[0]['alt']
+        if livrel.title()==vol_title.title():
+            point+=1
 
-                # lrp avec une possibilité de choix fonction de ce qu'il veut...
+        if subsoup.select("a > img"):
+            vol_cover_index=subsoup.select("a > img")[0]['src']
+            point+=1
 
-    if debug:
-        print("key                   : ",str(int(count/2)))
-        print("vol_index             : ",vol_index)
-        print("vol_title             : ",vol_title)
-        print("vol_cover_index       : ",vol_cover_index)
-        print("vol_editor            : ",vol_editor)
-        print("vol_isbn              : ",vol_isbn)
-        print("vol_collection        : ",vol_collection)
-        print("point                 : ",point)
-        print("======================")
-        print("\nfound",int((count-1)/2),"volumes différents")
+        if subsoup.select("a[href*='numediteur']"): vol_editor=subsoup.select("a[href*='numediteur']")[0].text
+
+        if subsoup.select("span[class='SousFicheNiourf']"):
+            vol_isbn = verify_isbn(subsoup.select("span[class='SousFicheNiourf']")[0].text).lower().strip()
+            if vol_isbn=="invalide":
+                vol_isbn=""
+            else:
+                point+=2
+                if verify_isbn(lrplivre)== vol_isbn: point+=10000
+
+        if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
+
+        if subsoup.select("img[src*='3dbullgreen']"):
+            point+=2
+
+        tmp_presence=subsoup.select("span[title*='Présence']")
+        for i in range(len(tmp_presence)):
+            if "R" in tmp_presence[i].text: point+=1
+            elif "C" in tmp_presence[i].text: point+=1
+            elif "CS" in tmp_presence[i].text: point+=1
+            elif "S" in tmp_presence[i].text: point+=1
+
+    # lrp Ce choix constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur pour qu il choisisse
+
+        ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
+
+
+        if debug:
+            print("key                   : ",str(int(count/2)))
+            print("vol_index             : ",vol_index)
+            print("vol_title             : ",vol_title)
+            print("vol_cover_index       : ",vol_cover_index)
+            print("vol_editor            : ",vol_editor)
+            print("vol_isbn              : ",vol_isbn)
+            print("vol_collection        : ",vol_collection)
+            print("point                 : ",point)
+            print("======================")
+            print("\nfound",int((count+4)/2),"volumes différents")
 
     top_vol_point,top_vol_index,serie_editeur=0,"",[]
 
@@ -339,8 +327,19 @@ def ret_top_vol_indx(soup,livrel):
             top_vol_point=ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]
             top_vol_index=ts_vol_index[key][1]
 
-
     return top_vol_index
+
+def get_Critique_de_la_serie(rqt):
+    # La critique de la serie peut etre developpée dans une autre page dont seul l(url est d'interet
+    # cette fondtion remplce le pointeur par le contenu.
+    debug=1
+    if debug: print("get_Critique_de_la_serie(rqt)")
+
+    ret_rqt = req_mtd_get(rqt)
+    soup,url_vrai = ret_rqt[0],ret_rqt[1]
+    if debug: print("soup.select_one('div[id="SerieCritique"]')",soup.select_one('div[id="SerieCritique"]'))
+
+    return soup.select_one('div[id="SerieCritique"]')
 
 def extr_vol_details(soup):
     # Here we extract and format the information from the choosen volume.
@@ -377,15 +376,12 @@ def extr_vol_details(soup):
     vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html.parser")
     comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=None
 
-##    for child in soup.recursiveChildGenerator():
-##        if child.name=="div" and "id" in child.attrs and "Fiche_livre" in child["id"]:
-##            subsoup=child
     if debug: print(soup.prettify())
 
-    vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
+    if soup.select("span[class='TitreNiourf']"): vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
     if debug: print("vol_title")
 
-    vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
+    if soup.select("span[class='AuteurNiourf']"): vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
     if debug: print("vol_auteur")
     for i in range(len(vol_auteur.split())):
         if not vol_auteur.split()[i].isupper():
@@ -397,11 +393,13 @@ def extr_vol_details(soup):
     vol_auteur_nom = vol_auteur_nom.strip()
     if debug: print("vol_auteur_nom")
 
-    try:
+    if soup.select("a[href*='serie.asp']"):
         vol_serie = soup.select("a[href*='serie.asp']")[0].text
-    except:
-        vol_serie = ""
-    if debug: print("vol_cycle")
+        tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
+        for i in range(len(tmp_vss)):
+            if "vol." in tmp_vss[i]:
+                vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+    if debug: print("vol_cycle, vol_serie_seq")
 
     print("vol_serie_seq must be implemented!!!")
 
@@ -410,36 +408,38 @@ def extr_vol_details(soup):
     comment_generic = comment_generic.wrap(new_div)
     if debug: print("comment_generic")
 
-    vol_editor = soup.select("a[href*='editeur.asp']")[0].text
+    if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
     if debug: print("vol_editor")
 
-    vol_coll = soup.select("a[href*='collection.asp']")[0].text
+    if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
     if debug: print("vol_coll")
 
     for i in comment_generic.stripped_strings:
         tmp_lst.append(str(i))
     vol_coll_nbr = tmp_lst[len(tmp_lst)-1]
     if "n°" in vol_coll_nbr:
-        vol_coll_nbr = vol_coll_nbr.replace("n°","").strip()
+        for k in ["n°","(",")","-"]:
+            if k in vol_coll_nbr:
+                vol_coll_nbr=vol_coll_nbr.replace(k,"")
+        vol_coll_nbr = vol_coll_nbr.strip()
     else:
         vol_coll_nbr = ""
-    
     if debug: print("vol_coll_nbr")
 
     for elemnt in soup.select("span[class='sousFicheNiourf']")[0].stripped_strings:
         if "Dépôt légal" in elemnt:
             vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
-            if debug: print("vol_dp_lgl")
         if len(str(vol_dp_lgl))<3:
             for i in ("trimestre","janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
                 if i in elemnt:
                     vol_dp_lgl=elemnt
                     break
         if "ISBN" in elemnt:
-            vol_isbn = elemnt
+            vol_isbn = elemnt.lower().replace(" ","")
             if "néant" in vol_isbn: vol_isbn=""
             if debug: print("vol_isbn")
         if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
+    if debug: print("vol_dp_lgl, vol_isbn, vol_genre")
 
     for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
         if "http" in elemnt:
@@ -472,6 +472,9 @@ def extr_vol_details(soup):
             comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html.parser")
             comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
             if debug: print("comment_AutresCritique")
+            if "Critique de la série" in comment_AutresCritique.select('a[href*="serie.asp"]')[0].text:
+                comment_AutresCritique=get_Critique_de_la_serie("/livres/"+comment_AutresCritique.select('a[href*="serie.asp"]')[0]['href'])
+  
 
 #
 # ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur avant .append ou renvoyer le .append apres la find du bouclage...
@@ -525,13 +528,14 @@ def extr_vol_details(soup):
 # need to understand local resources and modify argum. 2 of .replace(1,2) to access it
 
         if child.name=="img" and "src" in child.attrs and "arrow_left" in child["src"]:
-            child["src"]=child["src"].replace("/images/arrow_left.gif","/images/arrow_left.gif")
+            child["src"]=child["src"].replace("/images/arrow_left.gif","D:/Users/Papa/Documents/GIT/cal-noosfere/images/arrow_left.gif")
             if debug: print(child)
         if child.name=="img" and "src" in child.attrs and "arrow_right" in child["src"]:
-            child["src"]=child["src"].replace("/images/arrow_right.gif","/images/arrow_right.gif")
+            child["src"]=child["src"].replace("/images/arrow_right.gif","D:/Users/Papa/Documents/GIT/cal-noosfere/images/arrow_right.gif")
             if debug: print(child)
 
-### remove all double 'br' to improve presentation, note tmp1 and tmp2 must contain an value different from any first elemnt
+# remove all double or triple 'br' to improve presentation.
+# Note: tmp1 and tmp2 must contain a different value from any possible first elemnt
 
         for elemnt in comment_generic.findAll():
             tmp1,tmp2=tmp2,elemnt
@@ -573,7 +577,7 @@ def extr_vol_details(soup):
     return vol_info
 
 
-debug=1
+debug=0
 
 ##lrpauteur = input("auteur : ")
 ##if not len(lrpauteur):
@@ -589,17 +593,16 @@ debug=1
 lrplivre = input("ISBN ou titre du livre) : ")
 if not len(lrplivre):
     lrplivre = "cataplute "      # pas de livres
-    lrplivre = "fondation"      # un tas de livres
-    lrplivre = "2864243806"  #ISBN
     lrplivre = "kwest"          # un livre
-    lrplivre = "2-277-12381-1"
+    lrplivre = "fondation"      # un tas de livres
+    lrplivre = "Fondation Et Empire"      # un livre dans serie mais ca marche pas car noosfere groupe livres similaires
+    lrplivre = "2-277-12381-1"  # a poursuite des slans
+    lrplivre = "2864243806"  #ISBN mars blanche
+    lrplivre = "2-277-11880-X"  #serie anthologie J sadoul
+    lrplivre = "2-265-03148-8"
 
 ##print("lrpauteur : ",lrpauteur)
 print("lrplivre : ",lrplivre)
-
-base_url="https://www.noosfere.org"
-search_urn=base_url+"/livres/noosearch.asp"
-base_rkt={"ModeMoteur":"MOTSCLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
 
 #ISBN (ou titre de livre)
 if debug: print("je suis a #ISBN (ou titre de livre)")
@@ -618,9 +621,10 @@ if not len(livre_index):
     print("Aucun livre trouvé, verifiez l'entrée : ",lrplivre,end=". ")
     sys.exit("Désolé.")
 elif len(livre_index) > 1:
-    print("Désolé, trop de livres trouvés, veuillez entrer un des suivants : ")
-    for key in livre_index:
-        print(key.title())
+    for key,ref in livre_index.items():
+        livrel,indexl = key,ref
+        print("livrel : ",livrel,"indexl : ",indexl)
+        #sys.exit("Désolé, trop de livres trouvés, veuillez entrer un des précédants : ")
 else:
     for key,ref in livre_index.items():
         livrel,indexl = key,ref
@@ -635,10 +639,8 @@ if debug:
 
 if "numitem" in url_vrai:           #url_vrai contient .../livres/editionsLivre.asp?numitem=69&Tri=3 si plusieurs volumes du livre
     if debug: print("allez, ecore un effort, faut trouver le bon volume")
-
     top_vol_indx = ret_top_vol_indx(soup,livrel)   #vol_indx est un pointeur vers le livre
     if debug: print(top_vol_indx)
-
     rqt = (top_vol_indx+"&Tri=3").replace("./niourf","/livres/niourf")
     ret_rqt = req_mtd_get(rqt)
     soup,url_vrai = ret_rqt[0],ret_rqt[1]
@@ -646,7 +648,7 @@ if "numitem" in url_vrai:           #url_vrai contient .../livres/editionsLivre.
         print("soup = req_mtd_get(rqt)",soup.prettify())
         print("url_vrai : ",url_vrai)
 
-if "numlivre" in url_vrai:    #url_vrai contient ...livres/niourf.asp?numlivre=7479 si le livre est trouvé
+elif "numlivre" in url_vrai:    #url_vrai contient ...livres/niourf.asp?numlivre=7479 si le livre est trouvé
     if debug: print("livre  trouvé")
 else:
     print("quelquechose ne va pas, bug???")
