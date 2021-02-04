@@ -1,12 +1,34 @@
+# Note: If this work (done to learn both python and the Hyper Text Markup Language) finds its way to the public domain, so be it.
+# I have no problem with, and reserve the right to ignore, any error, choice and poor optimization.
+# I use it, it is MY problem... You use it, it is YOUR problem
+# For example, my mother language is French and my variable's names are MY choise for MY easy use...
+# Anyway, I'll comment my in english or french or both depending when I write it (no comment please)
+
 #import urllib
 import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 
-base_url="https://www.noosfere.org"
-search_urn=base_url+"/livres/noosearch.asp"
-base_rkt={"ModeMoteur":"MOTSCLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+
+def make_soup(sr):
+    # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
+    # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
+    #
+    # function isolated to find out what is the site character encoding... The announced standard (in meta) is WRONG
+    # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
+    # Maybe I should have tried earlier the working solution as the emitting node is MS
+    # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
+    # It decode correctly to utf_8 with windows-1252 is forced as input encoding
+    # watch-out noosfere is talking about making the site better... ;-}
+    #
+    debug=0
+    if debug: print("\n in make_soup(sr)")
+
+    soup = BS(sr, "html.parser",from_encoding="windows-1252")
+    if debug: print(soup.prettify())
+
+    return soup
 
 def verify_isbn(isbn_str):
     # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
@@ -34,9 +56,8 @@ def verify_isbn(isbn_str):
     # The validy of the l'ISBN13 is verified when this equation verify
     # ((x1+x3+x5+X7+X9+X11+x13)+(3*(X2+X4+X6+X8+X10+X12))) % 10 == 0
     #
-
     debug=0
-    if debug: print("\nverify_isbn(isbn_str)")
+    if debug: print("\n in verify_isbn(isbn_str)")
 
     total=0
 
@@ -55,7 +76,7 @@ def verify_isbn(isbn_str):
             elif char.isalpha() and char == 'X' and i == 9:
                 total = total + (10 * m)
             else:
-                return "invalide"
+                return ""
         if not (total % 11):
             return isbn_str
 
@@ -69,33 +90,23 @@ def verify_isbn(isbn_str):
                 total+=(int(isbn_str[i])*3)
             else:
                 total+=int(isbn_str[i])
-        if (total % 10)==0:
+        if not (total % 10):
             return isbn_str
         else:
-            return "invalide"
-
-def make_soup(sr):
-    # isolé pour trouver quel est l'encodage d'origine... ça marchait a peu pres pour utf_8 mais pas tout a fait
-    # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
-    # function isolated to find out what is the site character encoding... The announced standard (in meta) was WRONG
-    # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
-    # Maybe I should have tried earlier as the emitting node is MS (thanks!!!)...
-    # It decode correctly to utf_8 with windows-1252 as input encoding
-
-    debug=0
-    if debug: print("\nin make_soup(sr)")
-
-    soup = BS(sr, "html.parser",from_encoding="windows-1252")
-    if debug: print(soup.prettify())
-
-    return soup
+            return ""
 
 def req_mtd_post(rkt):
-    # acces en mode post sur <base_url>/livres/noosearch.asp -- access using "post" method over <base_url>/livres/noosearch.asp
-    debug=0
+    # Accède en mode post sur <base_url>/livres/noosearch.asp
+    # Access using "post" method over <base_url>/livres/noosearch.asp
+    #
+    debug=1
     if debug: print("\nin req_mtd_post(rkt)")
 
+    search_urn="https://www.noosfere.org/livres/noosearch.asp"
+    base_rkt={"ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+
     rkt.update(base_rkt)
+    if debug: print("rkt",rkt)
     req=urllib.parse.urlencode(rkt).encode('ascii')
     try: sr=urllib.request.urlopen(search_urn,req,timeout=30)
     except TimeoutError:
@@ -115,12 +126,13 @@ def req_mtd_post(rkt):
     return soup
 
 def req_mtd_get(rqt):
-    # accede <base_url>/livres/auteur.asp?numauteur=366
-    # renvoie la soup et le vrai url (a mettre en commentaires pour reference)
+    # Accède <base_url>/livres/auteur.asp?numauteur=366 en mode get, renvoie la soup et le vrai url utilisé.
+    # Access <base_url>/livres/auteur.asp?numauteur=366 using get mode, send back soup and the real url used
+    #
     debug=0
-    if debug: print("\nin req_mtd_get(rqt)")
+    if debug: print("\n in req_mtd_get(rqt)")
 
-    url=base_url+rqt
+    url="https://www.noosfere.org"+rqt
     if debug: print("url : ",url)
     try: sr=urllib.request.urlopen(url,timeout=30)
     except TimeoutError:
@@ -141,96 +153,76 @@ def req_mtd_get(rqt):
 
     return (soup,sr.geturl())
 
-def ret_autr_indx(soup):
-    # Trouve la reference de l'auteur dans la soupe produite par noosfere
-    # retourne auteur_index, un dictionnaire avec key=AUTEUR, val=href
-    # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial
-    debug=0
-    if debug: print("\nin ret_autr_indx(soup)")
+def ret_author_index(soup):
+    # Trouve la reference de l'auteur dans la soupe de noosfere
+    # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
+    # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial si isbn is indisponible
+    #
+    # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
+    # the idea is to find ONE single reference... to get the author is important is isbn is unavailable
+    #
+    debug=1
+    if debug: print("\n in ret_author_index(soup)")
 
-    auteur_index={}
-    for child in soup.recursiveChildGenerator():
-        if child.name=="div" and "id" in child.attrs:
+    author_index={}
+
+    tmp_ai=soup.select('a[href*="auteur.asp"]')
+    if len(tmp_ai):
+        for i in range(len(tmp_ai)):
             if debug:
-                print('div and "id" true?',child.name=="div" and "id" in child.attrs)
-                print(child.attrs)
-                print('"result" in child["id"] true?',"result" in child["id"])
-            if "result" in child["id"]:
-                if debug:
-                    print("\nfound 'result'")
-                    print("child (=subsoup) :\n",child.prettify())
-                    print("child",child.prettify())
-                subsoup=child
-    try:
-        for child in subsoup.recursiveChildGenerator():
-            if child.name=="a" and "href" in child.attrs:
-                if debug:
-                    print("child.text : ",child.text)
-                    print("child['href'] : ",child['href'])
-                auteur_index[child.text]=(child["href"])
-    except: print("Désolé, l'auteur",lrpauteur," n'a pas été trouvé.")
-    if debug:
-        print("auteur_index: ",auteur_index)
-        print("len(auteur_index) :",len(auteur_index))
-    return auteur_index
+                print("tmp_ai["+str(i)+"].text, tmp_ai["+str(i)+"]['href'] : ",tmp_ai[i].text,tmp_ai[i]["href"])
+            author_index[tmp_ai[i].text]=(tmp_ai[i]["href"])
 
-def ret_livr_ISBN_indx(soup):
+    return author_index
+
+def ret_book_ISBN_index(soup):
     # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
-    # retourne livre_index, un dictionnaire avec key=titre (key=ISBN), val=href
-    # L'idée est de renvoyer UNE seule reference... parfait pour ISBN
-    # Attention: on retourne une reference qui peut contenir PLUSIEURs editions
+    # retourne book_index{}, un dictionnaire avec key=titre (key=ISBN), val=href
+    # L'idée est de trouver UNE seule reference... 
+    # Attention: on retourne une reference qui peut contenir PLUSIEURs volumes
     # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
-    debug=0
-    if debug: print("\nin ret_livr_ISBN_indx()")
+    #
+    # Find the book's reference (either title or ISBN) in the returned soup from noosfere
+    # returns book_index{}, a dictionnary with key=title (key=ISBN), val=href
+    # The idea is to find ONE unique reference...
+    # Caution: the reference may contains several volumes, 
+    # each with potentialy a different editor, a different edition date,... and even a different title
+    #
+    debug=1
+    if debug: print("\n in ret_book_ISBN_index(soup)")
 
-    livre_index={}
-    for child in soup.recursiveChildGenerator():
-        if child.name=="div" and "id" in child.attrs:
-            if 'result' in child["id"]:
-                if debug:
-                    print("\nfound 'result'")
-                    print("child (=subsoup) :\n",child.prettify())
-                    print("child",child.prettify())
-                subsoup=child
-    try:
-        for child in subsoup.recursiveChildGenerator():
-            if child.name=="a" and "href" in child.attrs:
-                if debug:
-                    print("child.text : ",child.text)
-                    print("child['href'] : ",child['href'])
-                livre_index[child.text]=(child["href"])
-    except: print("Désolé, le livre",lrplivre," n'a pas été trouvé.")
-    if debug:
-        print("livre_index: ",livre_index)
-        print("len(livre_index) :",len(livre_index))
-    return livre_index
+    book_index={}
 
-def ret_livr_par_auteur_indx(soup):
-    #Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
-    # retourne livre_par_auteur_index, un dictionnaire avec key=titre, val=href
+    tmp_rbi=soup.select('a[href*="editionsLivre.asp"]')
+    if len(tmp_rbi):
+        for i in range(len(tmp_rbi)):
+            if debug:
+                print("tmp_rbi["+str(i)+"].text, tmp_rbi["+str(i)+"]['href'] : ",tmp_rbi[i].text,tmp_rbi[i]["href"])
+            book_index[tmp_rbi[i].text]=(tmp_rbi[i]["href"])
+
+    return book_index
+
+def ret_book_per_author_index(soup):
+    # Find the books references of a known author from the returned soup for noosfere
+    # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
+    # Idea is to send back a few references that hopefully contains the title expected
+    #
+    # Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
+    # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
     # L'idée est de renvoyer serie de reference, dont on extrait les livres proches de lrplivre
-    debug=0
-    if debug: print("\nin ret_livre_par_auteur_indx()")
+    #
+    debug=1
+    if debug: print("\n in ret_livre_par_auteur_indx(soup)")
 
-    livre_par_auteur_index={}
-    for child in soup.recursiveChildGenerator():
-        if child.name=="div" and "id" in child.attrs:
-            if 'BiblioRomans1' in child["id"]:
-                if debug:
-                    print("\nfound 'result'")
-                    print("child (=subsoup) :\n",child.prettify())
-                    print("child",child.prettify())
-                subsoup=child
-    try:
-        for child in subsoup.recursiveChildGenerator():
-            if child.name=="a" and "href" in child.attrs:
-                if debug:
-                    print("child.text : ",child.text)
-                    print("child['href'] : ",child['href'])
-                livre_par_auteur_index[child.text]=(child["href"])
-    except: print("Désolé, il semble que la DB ne connaisse aucun livre de cet auteur",auteura.title(),".\nOu qu'il y a un bug... :-)")
-    return livre_par_auteur_index
+    book_per_author_index={}
 
+    tmp_bpai=soup.select('a[href*="EditionsLivre.asp"]')
+    for i in range(len(tmp_bpai)):
+        if debug:
+            print("tmp_bpai["+str(i)+"].text, tmp_bpai["+str(i)+"]['href'] : ",tmp_bpai[i].text,tmp_bpai[i]["href"])
+        book_per_author_index[tmp_bpai[i].text]=(tmp_bpai[i]["href"])
+        
+    return book_per_author_index
 
 def ret_top_vol_indx(soup,livrel):
     # cette fonction recoit une page qui contient plusieur volume de meme auteur, dont certains ont le meme ISBN et generalement
@@ -252,7 +244,7 @@ def ret_top_vol_indx(soup,livrel):
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
     debug=0
-    if debug: print("\nin ret_top_vol_indx(soup,livrel)")
+    if debug: print("\n in ret_top_vol_indx(soup,livrel)")
 
     ts_vol_index={}
 
@@ -276,9 +268,7 @@ def ret_top_vol_indx(soup,livrel):
 
         if subsoup.select("span[class='SousFicheNiourf']"):
             vol_isbn = verify_isbn(subsoup.select("span[class='SousFicheNiourf']")[0].text).lower().strip()
-            if vol_isbn=="invalide":
-                vol_isbn=""
-            else:
+            if vol_isbn:
                 point+=2
                 if verify_isbn(lrplivre)== vol_isbn: point+=10000
 
@@ -332,12 +322,16 @@ def ret_top_vol_indx(soup,livrel):
 def get_Critique_de_la_serie(rqt):
     # La critique de la serie peut etre developpée dans une autre page dont seul l(url est d'interet
     # cette fondtion remplce le pointeur par le contenu.
+    #
+    # The critic for a serie may be set appart in another page. The vol url refers to that other loacation.
+    # I want to have it local to my volume.
+    #
     debug=1
-    if debug: print("get_Critique_de_la_serie(rqt)")
+    if debug: print("\n in get_Critique_de_la_serie(rqt)")
 
     ret_rqt = req_mtd_get(rqt)
     soup,url_vrai = ret_rqt[0],ret_rqt[1]
-    if debug: print("soup.select_one('div[id="SerieCritique"]')",soup.select_one('div[id="SerieCritique"]'))
+    if debug: print("""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))
 
     return soup.select_one('div[id="SerieCritique"]')
 
@@ -367,9 +361,8 @@ def extr_vol_details(soup):
     #
 
     debug=1
-    if debug: print("extr_vol_details(soup)")
+    if debug: print("\n in extr_vol_details(soup)")
 
-    tmp1=tmp2="junk"
     tmp_lst=[]
     vol_info={}
     vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_serie=vol_serie_seq=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
@@ -400,8 +393,6 @@ def extr_vol_details(soup):
             if "vol." in tmp_vss[i]:
                 vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
     if debug: print("vol_cycle, vol_serie_seq")
-
-    print("vol_serie_seq must be implemented!!!")
 
     comment_generic = soup.select("span[class='ficheNiourf']")[0]
     new_div=soup.new_tag('div')
@@ -441,16 +432,22 @@ def extr_vol_details(soup):
         if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
     if debug: print("vol_dp_lgl, vol_isbn, vol_genre")
 
-    for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
-        if "http" in elemnt:
-            if not vol_cover_index:
-                vol_cover_index = elemnt
-                if debug: print("vol_cover_index")
+    if soup.select("img[name='couverture']"):
+        for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
+            if "http" in elemnt:
+                if not vol_cover_index:
+                    vol_cover_index = elemnt
+                    if debug: print("vol_cover_index")
 
     if vol_cover_index:
         comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html.parser")
 
+# select the fields I want... More exist such as film adaptations or references to advises to read
+# but that is not quite consistant around all the books (noosfere is a common database from many poeple)
+# and beside I do NOT want to take out the noosfere's business
+
     tmp_comm_lst=soup.select("td[class='onglet_biblio1']")
+    if debug: print(tmp_comm_lst)
     for i in range(len(tmp_comm_lst)):
         if "Quatrième de couverture" in str(tmp_comm_lst[i]):
             comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html.parser")
@@ -471,14 +468,12 @@ def extr_vol_details(soup):
         if "Critiques des autres" in str(tmp_comm_lst[i]):
             comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html.parser")
             comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
-            if debug: print("comment_AutresCritique")
-            if "Critique de la série" in comment_AutresCritique.select('a[href*="serie.asp"]')[0].text:
+            if debug: print("comment_AutresCritique",comment_AutresCritique.prettify())
+            if comment_AutresCritique.select('a[href*="serie.asp"]'):
+                #if "Critique de la série" in comment_AutresCritique.select('a[href*="serie.asp"]')[0].text:
                 comment_AutresCritique=get_Critique_de_la_serie("/livres/"+comment_AutresCritique.select('a[href*="serie.asp"]')[0]['href'])
-  
 
-#
-# ici probleme si .append il semble disparaitre de subsoup.. (faut copier ailleur avant .append ou renvoyer le .append apres la find du bouclage...
-# a partir d'ici on peut detruire soup et subsoup
+# group in a big bundle all the fields I think I need
 
     if comment_cover:
         vol_comment_soup.append(comment_cover)
@@ -498,49 +493,43 @@ def extr_vol_details(soup):
         vol_comment_soup.append(comment_AutresCritique)
 #
 # Make a minimum of "repair" over vol_comment_soup so that it displays correctly in the comments and in my catalogs
-# - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of tab)
+# - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
 # - I like to have functional url when they exist
-#
+# - I like to find out the next and/or previous books in a serie
 
     for elemnt in vol_comment_soup.select('[align="justify"]'):
         del elemnt['align']
 
-    for child in vol_comment_soup.recursiveChildGenerator():
-        if child.name=="a" and "href" in child.attrs and "auteur.asp" in child["href"]:
-            child["href"]=child["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
-            if debug: print(child["href"])
-        if child.name=="a" and "href" in child.attrs and "serie.asp" in child["href"]:
-            child["href"]=child["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
-            if debug: print(child["href"])
-        if child.name=="a" and "href" in child.attrs and "EditionsLivre.asp" in child["href"]:
-            child["href"]=child["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
-            if debug: print(child["href"])
-        if child.name=="a" and "href" in child.attrs and "editionslivre.asp" in child["href"]:
-            child["href"]=child["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
-            if debug: print(child["href"])
-        if child.name=="a" and "href" in child.attrs and "editeur.asp" in child["href"]:
-            child["href"]=child["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
-            if debug: print(child["href"])
-        if child.name=="a" and "href" in child.attrs and "collection.asp" in child["href"]:
-            child["href"]=child["href"].replace("collection.asp","https://www.noosfere.org/livres/collection.asp")
-            if debug: print(child["href"])
-
-# need to understand local resources and modify argum. 2 of .replace(1,2) to access it
-
-        if child.name=="img" and "src" in child.attrs and "arrow_left" in child["src"]:
-            child["src"]=child["src"].replace("/images/arrow_left.gif","D:/Users/Papa/Documents/GIT/cal-noosfere/images/arrow_left.gif")
-            if debug: print(child)
-        if child.name=="img" and "src" in child.attrs and "arrow_right" in child["src"]:
-            child["src"]=child["src"].replace("/images/arrow_right.gif","D:/Users/Papa/Documents/GIT/cal-noosfere/images/arrow_right.gif")
-            if debug: print(child)
-
 # remove all double or triple 'br' to improve presentation.
-# Note: tmp1 and tmp2 must contain a different value from any possible first elemnt
+# Note: tmp1 and tmp2 must contain a different value from any possible first elemnt. (yes, I am lrp and I am unique :-) )
+#
+# ouais, et alors, si je modifie comment_generic APRES l'avoir integré à vol_comment_soup, il n'y a qu'une seule version en mémoire...
+# donc vol_comment_soup est modifié...
+#
 
-        for elemnt in comment_generic.findAll():
-            tmp1,tmp2=tmp2,elemnt
-            if tmp1==tmp2:
-                elemnt.extract()
+    tmp1=tmp2="lrp_the_unique"
+    for elemnt in comment_generic.findAll():
+        tmp1,tmp2=tmp2,elemnt
+        if tmp1==tmp2:
+            elemnt.extract()
+
+    for elemnt in vol_comment_soup.select("a[href*='auteur.asp']"):
+        elemnt["href"]=elemnt["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
+    for elemnt in vol_comment_soup.select("a[href*='serie.asp']"):
+        elemnt["href"]=elemnt["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
+    for elemnt in vol_comment_soup.select("a[href*='EditionsLivre.asp']"):
+        elemnt["href"]=elemnt["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
+    for elemnt in vol_comment_soup.select("a[href*='editionslivre.asp']"):
+        elemnt["href"]=elemnt["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
+    for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
+        elemnt["href"]=elemnt["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
+    for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
+        elemnt["href"]=elemnt["href"].replace("collection.asp","https://www.noosfere.org/livres/collection.asp")
+
+    fg,fd="<==","==>" #chr(0x21D0),chr(0x21D2)   #chr(0x27f8),chr(0x27f9)
+    if vol_comment_soup.select_one("img[src*='arrow_left']"): vol_comment_soup.select_one("img[src*='arrow_left']").replace_with(fg)
+    if vol_comment_soup.select_one("img[src*='arrow_right']"): vol_comment_soup.select_one("img[src*='arrow_right']").replace_with(fd)
+                    
 
     vol_info["vol_auteur_prenom"]=vol_auteur_prenom
     vol_info["vol_auteur_nom"]=vol_auteur_nom
@@ -600,8 +589,10 @@ if not len(lrplivre):
     lrplivre = "2864243806"  #ISBN mars blanche
     lrplivre = "2-277-11880-X"  #serie anthologie J sadoul
     lrplivre = "2-265-03148-8"
+    lrplivre = "2266085360"
 
 ##print("lrpauteur : ",lrpauteur)
+lrplivre = lrplivre.replace(","," ")
 print("lrplivre : ",lrplivre)
 
 #ISBN (ou titre de livre)
@@ -616,17 +607,17 @@ if debug: print("trouve ref pour : ",lrplivre)
 
 rkt = {"Mots": lrplivre,"livres":"livres"}
 soup = req_mtd_post(rkt)
-livre_index = ret_livr_ISBN_indx(soup)
-if not len(livre_index):
+book_index = ret_book_ISBN_index(soup)
+if not len(book_index):
     print("Aucun livre trouvé, verifiez l'entrée : ",lrplivre,end=". ")
     sys.exit("Désolé.")
-elif len(livre_index) > 1:
-    for key,ref in livre_index.items():
+elif len(book_index) > 1:
+    for key,ref in book_index.items():
         livrel,indexl = key,ref
         print("livrel : ",livrel,"indexl : ",indexl)
         #sys.exit("Désolé, trop de livres trouvés, veuillez entrer un des précédants : ")
 else:
-    for key,ref in livre_index.items():
+    for key,ref in book_index.items():
         livrel,indexl = key,ref
         if debug: print("livrel : ",livrel,"indexl : ",indexl)
 
@@ -656,10 +647,8 @@ else:
 vol_info=extr_vol_details(soup)  # we get vol_info from the book
 if debug: print("vol_info: ",vol_info)
 
-sys.exit("fin tekporaire")
 
-
-
+sys.exit("on sort ici...")
 
 
 #auteur
@@ -670,15 +659,15 @@ if debug:
 
 rkt = {"Mots":lrpauteur,"auteurs":"auteurs"}
 soup = req_mtd_post(rkt)
-auteur_index = ret_autr_indx(soup)               # quel est l'indexe de l'auteur? auteur is a dictionary
+author_index = ret_author_index(soup)               # quel est l'indexe de l'auteur? auteur is a dictionary
 
-if not len(auteur_index):
-    sys.exit("Désolé, aucun auteur trouvé avec le nom : ",lrpauteur)
-if len(auteur_index) > 1:
-    print("Désolé, trop d'auteurs trouvés, veuillez entrer un des suivants : ")
-    for key in auteur_index:
+if not len(author_index):
+    sys.exit("Désolé, aucun auteur trouvé avec le nom : ",lrpauteur)  
+if len(author_index) > 1:
+    for key in author_index:
         print(key.title())
-for key,ref in auteur_index.items():
+    print("Désolé, trop d'auteurs trouvés, veuillez entrer un des précédents : ")       
+for key,ref in author_index.items():
     auteura,indexa = key,ref
     if debug: print("auteura.title() : ",auteura.title(),"indexa : ",indexa)
 
@@ -696,59 +685,12 @@ ret_rqt = req_mtd_get(rqt)
 soup,url_vrai_lpa = ret_rqt[0],ret_rqt[1]
 if debug: print("soup = req_mtd_get(rqt)",soup.prettify())
 
-livre_par_auteur_index = ret_livr_par_auteur_indx(soup)
-for key,ref in livre_par_auteur_index.items():
+book_per_author_index = ret_book_per_author_index(soup)
+for key,ref in book_per_author_index.items():
     livrelpa,indexlpa = key,ref
     if debug: print("livrelpa.title() : ",livrelpa.title(),"indexlpa : ",indexlpa)
 
 
 
 
-""" ok, mais faut finaliser #livres attribués à un auteur connu pour creer un dictionaire d'ouvrage
 
-#livre et auteur connu
-if debug:
-    print("\nTrouve ref pour les publication de : ",livrel.title()," de : ",auteura.title(),".")
-rqt="/livres/EditionsLivre.asp?"+indexl.split("?")[1]+"&"+indexa.split("?")[1]
-soup = req_mtd_get(rqt)
-"""
-
-""" reference
-import re
-import requests
-
-s = '<a class=gb1 href=[^>]+>'
-r = requests.get('https://www.google.com/?q=python')
-result = re.search(s, r.text)
-
-print result.group(0)
-If you simply need the list of all matches you can use: re.findall(s, r.text)
-
-share  follow
-"""
-
-""" reference
-lrpall = re.findall(r'(.?livres/auteur.*?)\n',sr.text)
-#lrpall = re.search(r'(.?livres/auteur.*?)\n',sr.text)
-
-if debug:
-        print("lrpall : ",lrpall)
-
-if not len(lrpall):  # use this test for findall
-#if not lrpall:
-        print("Auteur inconnu, verifier manuellement")
-        import sys
-        sys.exit("Auteur inconnu...")
-else:
-        if debug:
-                for i in range(len(lrpall)):
-                        print(lrpall[i])
-        ret_autr_indx()
-
-#ok, we have the author index, just get book requested
-#lrplivre = input("titre du livre")
-#if debug:
-#        if not len(lrplivre):
-#                lrplivre="kwest"
-#requests
-"""
