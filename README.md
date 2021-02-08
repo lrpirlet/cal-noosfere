@@ -1,49 +1,37 @@
-# Le site de nooSFere
+# The nooSFere site
 
-Le URL de nooSFere est https://https://www.noosfere.org/.
+The URL to access nooSFere is <https://https://www.noosfere.org/>.
 
-Voici un site extrêmement riche consacré aux publications à propos de
-l’imaginaire.
+Here is a site really rich that covers French publications about what they call "publications de l’imaginaire".
 
-On y trouve des références aux livres, aux auteurs, aux 4me de
-couverture, pour ne nommer que quelques-uns des sujets présentés dans
-l’encyclopédie : [Ce que contiennent les bases de données
-(noosfere.org)](https://www.noosfere.org/noosfere/pro/stats_bases.asp))..
+one is able to find reference to books, note about the authors copy of the last cover page... to name a few. This site just looks to me like an encyclopedia. : [What noosfere claims as content (sure, in French...)](https://www.noosfere.org/noosfere/pro/stats_bases.asp))..
 
-nooSFere héberge des sites amateurs : [nooSFere - Sites
+nooSFere gives home to non professional sites: [nooSFere - Sites
 d'adherents](https://www.noosfere.org/noosfere/heberges.asp)
 
-nooSFere héberge des sites d’auteurs et d’illustrateurs : [nooSFere -
+nooSFere gives home to authors  and illustrators sites : [nooSFere -
 Sites d'auteurs](https://www.noosfere.org/noosfere/sites_auteurs.asp)
 
-Je ne veux pas reproduire ici ce que le site dit bien mieux que moi…
+I will not reproduce here what the site best describe...
 
-Voir :
+See :
 
-[nooSFere :
-Qu'est-ce](https://www.noosfere.org/noosfere/assoc/qu_estce.asp) en bref
+[nooSFere : What is it?](https://www.noosfere.org/noosfere/assoc/qu_estce.asp) brief overview
 
-[nooSFere - Presentation de
-l'association](https://www.noosfere.org/noosfere/assoc/statuts.asp) en
-détail
+[nooSFere - Presentation of the association](https://www.noosfere.org/noosfere/assoc/statuts.asp) more details
 
-[Questions à la
-nooSFere](https://www.noosfere.org/icarus/articles/article.asp?numarticle=463)
+[FAQ about nooSFere](https://www.noosfere.org/icarus/articles/article.asp?numarticle=463)
 
-[nooSFere - Plan du site](https://www.noosfere.org/actu/news.asp)
+[nooSFere - sitemap](https://www.noosfere.org/actu/news.asp)
 
-Le site nooSFere ne vend ni n’édite des livres. L’association propose a
-ses membres (coût de 30€/an voire 10€/an en tarif réduit… on peut donner
-plus 😊) des services vraiment superbes. Voir [Pourquoi
-adhérer](https://www.noosfere.org/noosfere/assoc/pourquoi.asp).
+nooSFere does NOT sell nor edit any books. The association do propose to their members some very nice services for readers (cost about 30€ a year down to 10€ under some conditions.) 
+See [Why sould I become adherent?](https://www.noosfere.org/noosfere/assoc/pourquoi.asp).
 
-Je ne fais PAS de pub, mais j’aime vraiment bien ce site… Attention, ce
-site va changer dans le futur, c’est annoncé :
+I do NOT make any pub, but I do appreciate this site a lot...
+Carefull noosfere has anounced some changes in the future:
 
-[nooSFere - Soutenir
-l'association](https://www.noosfere.org/noosfere/assoc/don.asp)
+[nooSFere - Support nooSFere with a donation!](https://www.noosfere.org/noosfere/assoc/don.asp)
 
-# cal-noosfere
+## cal-noosfere
 
-Mon idée est de me permettre de télécharger les informations relatives à un
-livre dans calibre
+My idea about this development is to be able to download the information into Calibre.

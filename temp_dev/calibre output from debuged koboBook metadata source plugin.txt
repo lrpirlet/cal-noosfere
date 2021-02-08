@@ -1,0 +1,30 @@
+calibre, version 5.10.1
+ERREUR : Aucune correspondance trouvée: <p>Impossible de trouver un livre correspondant à votre recherche. Essayer de faire une recherche <b>moins spécifique</b>. Par exemple, utiliser seulement le nom de famille de l'auteur et un mot distinctif du titre.<p> Pour voir le journal en entier, cliquer "Afficher les détails.
+
+Running identify query with parameters: 
+{'title': 'Le cycle des légendes', 'authors': ['Marion Zimmer Bradley'], 'identifiers': {'isbn': '2266065955'}, 'timeout': 30} 
+Using plugins: Kobo Books (1, 8, 0) 
+The log from individual plugins is below 
+
+****************************** Kobo Books (1, 8, 0) ****************************** 
+Found 0 results 
+Downloading from Kobo Books took 7.330042839050293 
+Plugin Kobo Books failed
+Traceback (most recent call last):
+  File "calibre\ebooks\metadata\sources\identify.py", line 47, in run
+  File "calibre_plugins.kobobooks.__init__", line 154, in identify
+  File "calibre_plugins.kobobooks.__init__", line 154, in identify
+  File "bdb.py", line 88, in trace_dispatch
+  File "bdb.py", line 112, in dispatch_line
+  File "pdb.py", line 262, in user_line
+  File "pdb.py", line 357, in interaction
+  File "pdb.py", line 322, in _cmdloop
+  File "cmd.py", line 132, in cmdloop
+  File "socket.py", line 669, in readinto
+ConnectionResetError: [WinError 10054] Une connexion existante a dû être fermée par l’hôte distant 
+
+******************************************************************************** 
+The identify phase took 7.46 seconds 
+The longest time (7.330043) was taken by: Kobo Books 
+Merging results from different sources 
+We have 0 merged results, merging took: 0.00 seconds 

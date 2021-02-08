@@ -1,6 +1,6 @@
 # Le site de nooSFere
 
-Le URL de nooSFere est https://https://www.noosfere.org/.
+Le URL de nooSFere est <https://www.noosfere.org/>.
 
 Voici un site extrêmement riche consacré aux publications à propos de
 l’imaginaire.
@@ -44,9 +44,15 @@ site va changer dans le futur, c’est annoncé :
 l'association](https://www.noosfere.org/noosfere/assoc/don.asp)
 
 Mon idée est de me permettre de télécharger les infos relatives à un
-livre dans calibre
+livre dans calibre. 
 
-# L’API (actuel) de ce site, ou plutôt de l’encyclopédie de ce site.
+Ce que je cherche, en fait, est de présenter à travers le catalogue de calibre un maximum d'information a propos d'un livre, d'un cycle, d'un auteur, d'un genre... 
+
+Outre les information de base telles que le titre exact, l'auteur, la date de depot legal, l'editeur, la serie, le vol de la serie, la collection de l'editeur et le numero d'ordre dans la collection, je cherche a presenter des  informations telles que un pointeur sur noosfere du volume, un resumé, une critique, une critique du cycle dont fait partie le volume, le tre original, l'illustrateur, le traducteur...
+
+La beauté de calibre est que l'on a pas besoin d'avoir le livre. Ainsi, j'ai des cycles incomplets mais j'ai les metadonnées de toute la série...
+
+## L’API (actuel) de ce site, ou plutôt de l’encyclopédie de ce site
 
 ### Une recherche simple par [nooSFere - Recherche](https://www.noosfere.org/noosearch_simple.asp)…
 
@@ -57,7 +63,7 @@ la case avec interprétation libre (essayez « riCH » pour voir).
 Bien sûr c’est magnifique, mais pour filtrer ce que tu veux, il faut un
 humain ou une IA… (non je ne peux pas programmer une IA)
 
-### Une recherche avancée par [nooSFere - Recherche dans les bases de nooSFere](https://www.noosfere.org/livres/noosearch.asp).
+### Une recherche avancée par [nooSFere - Recherche dans les bases de nooSFere](https://www.noosfere.org/livres/noosearch.asp)
 
 On a aussi une case pour y écrire les ‘Mots’ rechercher, mais on peut
 sélectionner le sujet (auteur, livres, série, etc.). De plus on peut
@@ -65,137 +71,107 @@ préciser si on veut tous les mots, n’importe quel mot ou les mots
 proches l’un de l’autre. On peut exiger la correspondance exacte des
 mots plutôt que des phrases et des mots approchants…
 
-## Recherche simple par programme :
+## Recherche simple par programme
 
 On envoie une requête, méthode « post »
 vers :<https://www.noosfere.org/noosearch_simple.asp> avec pour
 arguments : "Mots" : "&lt;entrée dans la boite&gt;"
-
-Extrait de code python
-
-lrpauteur = input("auteur : ")
-
-\# noosfere accepts \* to complete the name or the surname, trips on the
-dot in van vogt A.E.
-
-lrpauteur=str(lrpauteur.replace(","," "))
-
-lrpauteur=str(lrpauteur.replace(".","\* "))
-
-base\_url="https://www.noosfere.org"
-
-search\_urn=base\_url+"/noosearch\_simple.asp"
-
-def postrequest(requete):
-
-\# Essayons un accès en mode post sur noosearch\_simple.asp
-
-req=urllib.parse.urlencode(requete).encode('ascii')
-
-sr=urllib.request.urlopen(search\_urn,req)
-
-soup = BS(sr, "html.parser")
-
-return soup
-
-def ret\_autr\_indx(soup):
-
-\# Trouve la reference de l'auteur dans la soupe produite par nooSFere
-
-\# retourne auteurindex, un dictionnaire avec key=AUTEUR, val=href
-
-auteurindex={}
-
-for child in soup.recursiveChildGenerator():
-
-if child.name=="span" and "class" in child.attrs:
-
-if 'resultat\_search' in child\["class"\]:
-
-if "auteur.asp" in child.find\_next("a")\["href"\]:
-
-auteurindex\[child.text\]=(child.find\_next("a")\["href"\])
-
-if len(auteurindex) &gt; 1:
-
-print("Sorry, too many authors found, please input one of the
-following:")
-
-for key in auteurindex:
-
-print(key.title())
-
-elif len(auteurindex) &lt; 1:
-
-print("Sorry could not find the author")
-
-return auteurindex
-
-\#auteur
-
-requete = {"Mots": lrpauteur}
-
-soup = postrequest(requete)
-
-auteurindex = ret\_autr\_indx(soup) \# quel est l'index de l’auteur ?
-auteur est un dict
-
-if len(auteurindex) != 1: sys.exit("Désolé")
-
-for key,ref in auteurindex.items():
-
-auteura,indexa = key,ref
+Notez que cette methode de recherche est limitée et retoourne le plus souvent trop d'informations
 
 ## Recherche avancée par programme
 
 On envoie une requête, méthode « post »
 vers :<https://www.noosfere.org/noosearch_simple.asp> avec
 
--   Arguments obligatoires sous la forme :"key":"value"
+- Arguments obligatoires sous la forme :"key":"value"
 
-    -   "Mots":"&lt;entrée dans la boite&gt;"
+  - "Mots":"&lt;entrée dans la boite&gt;"
 
-    -   "ModeMoteur":"LITTERAL" (phrase et mots approchants)
-        "ModeMoteur":MOTSCLEFS" (correspondance exacte des mots)
+  - "ModeMoteur":"LITTERAL" (phrase et mots approchants) 
+        "ModeMoteur":"MOTSCLEFS" (correspondance exacte des mots) (beaucoup trop restrictif, rate une fois sur deux, se plante de temps en temps sur les titres)
 
-    -   "ModeRecherche":"AND"
-        "ModeRecherche":"OR"
-        "ModeRecherche":"NEAR"
+  - "ModeRecherche":"AND"  (défaut)
+    "ModeRecherche":"OR"  
+    "ModeRecherche":"NEAR"
 
-    -   "recherche":"1"
+  - "recherche":"1"
 
-    -   "Envoyer":"Envoyer"
+  - "Envoyer":"Envoyer"
 
--   Un ou plusieurs des arguments suivant sous la forme "key":"value"
+- Un ou plusieurs des arguments suivant sous la forme "key":"value". On peut, classiquement, rechercher des références par ISBN, par titre et par Auteurs.
+Mais on peut aussi chercher des références liées à un cycle (série), ou a un illustrateur ou a un traducteur, ou a un editeur...
 
-    -   "auteurs":"auteurs" (Auteurs, traducteurs, illustrateurs...)
+  - "auteurs":"auteurs" (Auteurs, traducteurs, illustrateurs...)
 
-    -   "livres":"livres" (Livres)
+  - "livres":"livres" (Livres ou ISBN)
 
-    -   "series":"series" (Séries)
+  - "series":"series" (Séries)
 
-    -   "sommaires":"sommaires" (Sommaires (nouvelles, préfaces...))
+  - "sommaires":"sommaires" (Sommaires (nouvelles, préfaces...))
 
-    -   "editeurs":"editeurs" (Editeurs)
+  - "editeurs":"editeurs" (Editeurs)
 
-    -   "collections":"collections" (Collections)
+  - "collections":"collections" (Collections)
 
-    -   "resumes":"resumes" (4èmes de couverture)
+  - "resumes":"resumes" (4èmes de couverture)
 
-    -   "critiques":"critiques" (Critiques)
+  - "critiques":"critiques" (Critiques)
 
-    -   "CritiquesLivresAuteur":"CritiquesLivresAuteur" (Auteur de
+  - "CritiquesLivresAuteur":"CritiquesLivresAuteur" (Auteur de
         critiques livres)
 
-    -   "prix":"prix" (Prix littéraires)
+  - "prix":"prix" (Prix littéraires)
 
-    -   "articles":"articles" (Articles du fonds documentaire)
+  - "articles":"articles" (Articles du fonds documentaire)
 
-    -   "ArticlesMotsClefs":"ArticlesMotsClefs" (Limiter aux mots-clefs)
+  - "ArticlesMotsClefs":"ArticlesMotsClefs" (Limiter aux mots-clefs)
 
-    -   "ArticlesAuteur":"ArticlesAuteur" (Auteur des articles du fonds
+  - "ArticlesAuteur":"ArticlesAuteur" (Auteur des articles du fonds
         documentaire)
 
-    -   "adaptations":"adaptations" (Adaptations)
+  - "adaptations":"adaptations" (Adaptations)
 
-    -   "CritiquesCinema":"CritiquesCinema" (Critiques des adaptations)
+  - "CritiquesCinema":"CritiquesCinema" (Critiques des adaptations)
+
+## Recherche par ISBN
+
+En principe un ISBN est attribué par livre. C'est vrai la pluspart du temps mais un meme ouvrage peut etre connu sous plusieurs ISBN, à tout le moins après que l'usage to ISBN se soit répendu. Le format d'un ISBN est relativement libre, en outre l'ISBN à 10 chiffres a été remplacé par l'ISBN à 13 chiffres.
+
+Le premier essais sera d'interroger le site avec un ISBN que l'on verifie correct.
+Le reour du site est une SERIE de references que je qualifie de volumes.
+
+A chacun de volumes, triés par ordre de parution, j'associe une série de parametres qui me prermettront de choisir ce que je considere le meilleur candidat.
+
+Ces volumes diffèrent par l'editeur, la date d'edition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
+
+- MON choix se base sur un systeme de points:
+- résumé présent:                       r   1pt
+- critique présente:                    c   1pt         ne semble pas trop correct car CS n'existe pas meme si, quand une critique existe, elle est reprise pour tous les volumes
+- critique de la serie                  cs  1pt
+- sommaire des nouvelles presentes:     s   1pt
+- information verifiée                  v   1pt
+- titre identique                       t   1pt
+- image presente                        p   1pt
+- isbn present                          i   2pt
+- le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
+- en cas d'egalité, le plus ancien reçoit la préférence
+
+## Recherche par titre
+
+Tout a fait similaire à la recherche par ISBN, mais en plus, le nombre de livres pointés par noosfere comme ressemblant est souvent énorme.
+
+Comme pour l'ISBN, noosfere renvoie pour chaque ouvrage (livre) une serie de volume... La recherche devient enorme et je ne vois pas comment faire un tri efficace  pour retrouver ce que je veux...
+
+A éviter
+
+## Recherche par auteur
+
+Qu'on ne s'y trompe pas, l'auteur doit etre suffisament bien défini pour que noosfere retourne UNE seule reference... pour le fun, entre un prenom 
+
+Ici, au contraire du titre, l'usage de "ModeMoteur":"MOTSCLEFS" (correspondance exacte des mots) semble efficace meme pour un nom tronque (essaye voGt pour VAN VOGT Alfred Elton).
+
+Au pointeur de l'auteur, le site noosfere retourne par defaut la bibliographie de l'auteur de la quelle on peut extraire le pointeur titre que l'on recherche. ce pointeur retourne une serie de pointeur de volumes dont je choisi celui qui me semble le mieux...
+
+## couvertures
+
+Noosfere ne donne pas de grandes et belles couverture, mais, sauf quand elle manque (rare), elle retourne la couvrerture associée avec le volume. Je recupère cette couverture, SANS laisser le choix. Libre à l'utilisateur de rechercher une meilleure image ou meme une autre (si la coherence du volume n'importe pas).

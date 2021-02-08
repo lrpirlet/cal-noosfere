@@ -95,7 +95,7 @@ def verify_isbn(isbn_str):
         else:
             return ""
 
-def req_mtd_post(rkt):
+def req_mtd_post(rkt,ModeMoteur="LITTERAL"):
     # Accède en mode post sur <base_url>/livres/noosearch.asp
     # Access using "post" method over <base_url>/livres/noosearch.asp
     #
@@ -103,7 +103,7 @@ def req_mtd_post(rkt):
     if debug: print("\nin req_mtd_post(rkt)")
 
     search_urn="https://www.noosfere.org/livres/noosearch.asp"
-    base_rkt={"ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+    base_rkt={"ModeMoteur":ModeMoteur,"ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
 
     rkt.update(base_rkt)
     if debug: print("rkt",rkt)
@@ -112,9 +112,13 @@ def req_mtd_post(rkt):
     except TimeoutError:
         print("A network timeout occurred, do you have wide world web access?")
         sys.exit("désolé")
-    except urllib.error.URLError as e:
+    except urllib.error.HTTPError as e:
         print("Une erreur enovyée par le site a été reçue.")
         print("code : ",e.code,"reason : ",e.reason)
+        sys.exit("réponse d'erreur de l'url, désolé")
+    except urllib.error.URLError as e:
+        print("Une erreur enovyée par le site a été reçue.")
+        print("reason : ",e.reason)
         sys.exit("réponse d'erreur de l'url, désolé")
     if debug:
         print("\ntype(sr) : ",type(sr))
@@ -138,9 +142,13 @@ def req_mtd_get(rqt):
     except TimeoutError:
         print("A network timeout occurred, do you have wide world web access?")
         sys.exit("désolé")
-    except urllib.error.URLError as e:
-        print("Une erreur envoyée par le site a été reçue.")
+    except urllib.error.HTTPError as e:
+        print("Une erreur enovyée par le site a été reçue.")
         print("code : ",e.code,"reason : ",e.reason)
+        sys.exit("réponse d'erreur de l'url, désolé")
+    except urllib.error.URLError as e:
+        print("Une erreur enovyée par le site a été reçue.")
+        print("reason : ",e.reason)
         sys.exit("réponse d'erreur de l'url, désolé")
     if debug:
         print("\ntype(sr) : ",type(sr))
@@ -243,7 +251,7 @@ def ret_top_vol_indx(soup,livrel):
     # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-    debug=0
+    debug=1
     if debug: print("\n in ret_top_vol_indx(soup,livrel)")
 
     ts_vol_index={}
@@ -299,7 +307,7 @@ def ret_top_vol_indx(soup,livrel):
             print("vol_collection        : ",vol_collection)
             print("point                 : ",point)
             print("======================")
-            print("\nfound",int((count+4)/2),"volumes différents")
+            print("\nfound",int(count/2+1),"volumes différents")
 
     top_vol_point,top_vol_index,serie_editeur=0,"",[]
 
@@ -330,7 +338,7 @@ def get_Critique_de_la_serie(rqt):
     if debug: print("\n in get_Critique_de_la_serie(rqt)")
 
     ret_rqt = req_mtd_get(rqt)
-    soup,url_vrai = ret_rqt[0],ret_rqt[1]
+    soup = ret_rqt[0]
     if debug: print("""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))
 
     return soup.select_one('div[id="SerieCritique"]')
