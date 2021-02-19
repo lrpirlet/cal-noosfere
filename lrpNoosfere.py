@@ -183,7 +183,7 @@ def ret_author_index(soup):
 
     return author_index
 
-def ret_book_ISBN_index(soup):
+def ISBN_ret_book_index(soup):
     # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
     # retourne book_index{}, un dictionnaire avec key=titre (key=ISBN), val=href
     # L'idée est de trouver UNE seule reference... 
@@ -197,7 +197,7 @@ def ret_book_ISBN_index(soup):
     # each with potentialy a different editor, a different edition date,... and even a different title
     #
     debug=1
-    if debug: print("\n in ret_book_ISBN_index(soup)")
+    if debug: print("\n in ISBN_ret_book_index(soup)")
 
     book_index={}
 
@@ -615,7 +615,7 @@ if debug: print("trouve ref pour : ",lrplivre)
 
 rkt = {"Mots": lrplivre,"livres":"livres"}
 soup = req_mtd_post(rkt)
-book_index = ret_book_ISBN_index(soup)
+book_index = ISBN_ret_book_index(soup)
 if not len(book_index):
     print("Aucun livre trouvé, verifiez l'entrée : ",lrplivre,end=". ")
     sys.exit("Désolé.")
