@@ -9,6 +9,7 @@ import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
+import time
 
 
 def make_soup(sr):
@@ -95,15 +96,15 @@ def verify_isbn(isbn_str):
         else:
             return ""
 
-def req_mtd_post(rkt,ModeMoteur="LITTERAL"):
+def req_mtd_post(rkt,ModeMoteur="LITTERAL",ModeRecherche="AND"):
     # Accède en mode post sur <base_url>/livres/noosearch.asp
     # Access using "post" method over <base_url>/livres/noosearch.asp
     #
     debug=1
-    if debug: print("\nin req_mtd_post(rkt)")
+    if debug: print("\nin req_mtd_post(rkt, ModeMoteur =",ModeMoteur, ",ModeRecherche =",ModeRecherche,")")
 
     search_urn="https://www.noosfere.org/livres/noosearch.asp"
-    base_rkt={"ModeMoteur":ModeMoteur,"ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+    base_rkt={"ModeMoteur":ModeMoteur,"ModeRecherche":ModeRecherche,"recherche":"1","Envoyer":"Envoyer"}
 
     rkt.update(base_rkt)
     if debug: print("rkt",rkt)
@@ -178,10 +179,37 @@ def ret_author_index(soup):
     if len(tmp_ai):
         for i in range(len(tmp_ai)):
             if debug:
-                print("tmp_ai["+str(i)+"].text, tmp_ai["+str(i)+"]['href'] : ",tmp_ai[i].text,tmp_ai[i]["href"])
-            author_index[tmp_ai[i].text]=(tmp_ai[i]["href"])
+                print("author : ",tmp_ai[i].text,end=" ; ")
+                print("url_author : ",tmp_ai[i]["href"],end=" ; ")
+                print("pertinence : ",tmp_ai[i].find_previous('tr').select_one('td').text)
+            author_index[tmp_ai[i].text]=(tmp_ai[i]["href"],tmp_ai[i].find_previous('tr').select_one('td').text)
 
     return author_index
+
+def ret_book_per_author_index(soup, book_per_author_index):
+    # Find the books references of a known author from the returned soup for noosfere
+    # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
+    # Idea is to send back a few references that hopefully contains the title expected
+    #
+    # Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
+    # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
+    # L'idée est de renvoyer serie de reference, dont on extrait les livres proches de lrplivre
+    #
+    debug=1
+    if debug: print("\n in ret_book_per_author_index(soup)")
+
+    tmp_bpai=soup.select('a[href*="EditionsLivre.asp"]')
+    for i in range(len(tmp_bpai)):
+##            print("title, book_per_author_url : ",tmp_bpai[i].text," ; ",tmp_bpai[i]["href"])
+##        book_per_author_index[tmp_bpai[i].text]=(tmp_bpai[i]["href"])
+        bpai_title=tmp_bpai[i].text.lower()
+        bpai_url=(tmp_bpai[i]["href"].replace('./','/livres/').split('&'))[0]
+        book_per_author_index[bpai_url]=bpai_title
+        if debug:
+            print('book_per_author_url,tmp_bpai[i]["href"], title : ', bpai_url, tmp_bpai[i]["href"], " ; ", tmp_bpai[i].text)
+            
+        
+    return book_per_author_index
 
 def ISBN_ret_book_index(soup):
     # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
@@ -210,28 +238,6 @@ def ISBN_ret_book_index(soup):
 
     return book_index
 
-def ret_book_per_author_index(soup):
-    # Find the books references of a known author from the returned soup for noosfere
-    # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
-    # Idea is to send back a few references that hopefully contains the title expected
-    #
-    # Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
-    # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
-    # L'idée est de renvoyer serie de reference, dont on extrait les livres proches de lrplivre
-    #
-    debug=1
-    if debug: print("\n in ret_livre_par_auteur_indx(soup)")
-
-    book_per_author_index={}
-
-    tmp_bpai=soup.select('a[href*="EditionsLivre.asp"]')
-    for i in range(len(tmp_bpai)):
-        if debug:
-            print("tmp_bpai["+str(i)+"].text, tmp_bpai["+str(i)+"]['href'] : ",tmp_bpai[i].text,tmp_bpai[i]["href"])
-        book_per_author_index[tmp_bpai[i].text]=(tmp_bpai[i]["href"])
-        
-    return book_per_author_index
-
 def ret_top_vol_indx(soup,livrel):
     # cette fonction recoit une page qui contient plusieur volume de meme auteur, dont certains ont le meme ISBN et generalement
     # le meme titres.
@@ -247,7 +253,7 @@ def ret_top_vol_indx(soup,livrel):
     # information verifiée                  v   1pt
     # titre identique                       t   1pt
     # image presente                        p   1pt
-    # isbn present                          i   2pt
+    # isbn present                          i   50pt
     # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
     # en cas d'egalité, le plus ancien reçoit la préférence
     # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
@@ -277,8 +283,8 @@ def ret_top_vol_indx(soup,livrel):
         if subsoup.select("span[class='SousFicheNiourf']"):
             vol_isbn = verify_isbn(subsoup.select("span[class='SousFicheNiourf']")[0].text).lower().strip()
             if vol_isbn:
-                point+=2
-                if verify_isbn(lrplivre)== vol_isbn: point+=10000
+                point+=500
+                if verify_isbn(lrplivre)== vol_isbn: point+=1000
 
         if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -292,7 +298,7 @@ def ret_top_vol_indx(soup,livrel):
             elif "CS" in tmp_presence[i].text: point+=1
             elif "S" in tmp_presence[i].text: point+=1
 
-    # lrp Ce choix constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur pour qu il choisisse
+    # lrp Ce choix constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur pour qu'il choisisse
 
         ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
 
@@ -579,9 +585,10 @@ debug=0
 lrpauteur = input("auteur : ")
 if not len(lrpauteur):
     lrpauteur="vanvogt"     #n'existe pas
-    lrpauteur="eschbach"   #2 existent
     lrpauteur="eschbach a*"   #1 existent
     lrpauteur="van vogt"   #1 existe
+    lrpauteur="asimov"     #2 existent
+    lrpauteur="eschbach"   #2 existent
 
 # noosfere accepts * to complete the name or the surname, trips on the dot in van vogt A.E.
 lrpauteur=str(lrpauteur.replace(","," "))
@@ -589,10 +596,10 @@ lrpauteur=str(lrpauteur.replace(".","* "))
 
 print("lrpauteur : ",lrpauteur)
 
-##lrplivre = input("ISBN ou titre du livre) : ")
-##if not len(lrplivre):
+lrplivre = input("ISBN ou titre du livre) : ")
+if not len(lrplivre):
 ##    lrplivre = "cataplute "      # pas de livres
-##    lrplivre = "kwest"          # un livre
+    lrplivre = "kwest"          # un livre
 ##    lrplivre = "fondation"      # un tas de livres
 ##    lrplivre = "Fondation Et Empire"      # un livre dans serie mais ca marche pas car noosfere groupe livres similaires
 ##    lrplivre = "2-277-12381-1"  # a poursuite des slans
@@ -602,8 +609,8 @@ print("lrpauteur : ",lrpauteur)
 ##    lrplivre = "2266085360"
 ##
 ####print("lrpauteur : ",lrpauteur)
-##lrplivre = lrplivre.replace(","," ")
-##print("lrplivre : ",lrplivre)
+lrplivre = lrplivre.replace(","," ")
+print("lrplivre : ",lrplivre)
 
 ###ISBN (ou titre de livre)
 ##if debug: print("je suis a #ISBN (ou titre de livre)")
@@ -661,48 +668,75 @@ print("lrpauteur : ",lrpauteur)
 ##sys.exit("on sort ici...")
 ##
 
-#auteur
-
+#auteur et bouquins... retourne une liste reduite de livres devrait etre une def...
+debug=1
 if debug:
     print("je suis a #auteur")
     print("trouve ref pour : ",lrpauteur)
 
 rkt = {"Mots":lrpauteur,"auteurs":"auteurs"}
-soup = req_mtd_post(rkt)
-author_index = ret_author_index(soup)               # quel est l'indexe de l'auteur? auteur is a dictionary
+soup = req_mtd_post(rkt, ModeMoteur="MOTS-CLEFS")
+all_author_index = ret_author_index(soup)               # quel est l'indexe de l'auteur? auteur is a dictionary
 
-if not len(author_index):
-    sys.exit("Désolé, aucun auteur trouvé avec le nom : ",lrpauteur)  
-if len(author_index) > 1:
-    for key in author_index:
-        print(key.title())
-    print("Désolé, trop d'auteurs trouvés, veuillez entrer un des précédents : ")       
-for key,ref in author_index.items():
-    auteura,indexa = key,ref
-    if debug: print("auteura.title() : ",auteura.title(),"indexa : ",indexa)
+if not len(all_author_index):
+    if debug: print("exact match failed, trying fuzzy match")
+    rkt = {"Mots":lrpauteur,"auteurs":"auteurs"}
+    soup = req_mtd_post(rkt)
+    all_author_index = ret_author_index(soup)
+    if not len(all_author_index):
+        print("Désolé, aucun auteur trouvé avec le nom : ",end = "")
+        sys.exit(lrpauteur)
+        
+# With python 3.6 onward, the standard dict type maintains insertion order by default.
+# Python 3.7 elevates this implementation detail to a language specification,
+# noosfere sort the hightest pertinence first ( the most probable author comes out first)
+# no need to sort on pertinence field
+# we only consider those with the highest probability, we limit to 5 or when the probability drops to less than half of the preceding 
 
-sys.exit("on sort ici...")
+author_index=[]
+x=count=0
+for key,ref in all_author_index.items():
+    count+=1
+    auteura,urla,perta = key,ref[0],int(ref[1])
+    author_index.append(ref[0])
+    if debug:
+        print("count : ",count,end=" ; ")
+        print("author     : ",auteura.title(),end=" ; ")
+        print("url_author : ",urla,end=" ; ")
+        print("pertinence : ",perta)
+        print("x : ", x, ", perta : ", perta, ", x and perta < x/2 or count==5 : ", x and perta < x/2 or count==5)
+        print("author_index : ",author_index)
+    if x and perta < x/2 or count == 5 : break
+    x=perta
 
+# This "book_per_author_index" dictionnary will contain all book's references...
+# If a book has a common url it will be overwritten by the following author, ensuring a list of different books
 
-#livres attribués à un auteur connu
+    book_per_author_index={}
+    
+for i in range(len(author_index)):
+    rqt= author_index[i]+"&Niveau=livres"
+    ret_rqt = req_mtd_get(rqt)
+    soup = ret_rqt[0]
+    book_per_author_index = ret_book_per_author_index(soup,book_per_author_index)
 
-if debug:
-    print("\nje suis a #livres attribués à un auteur connu")
-    print("Trouve ref pour les livres de : ",lrpauteur," connu comme : ",auteura.title(),".")
-
-rqt=indexa+"&Niveau=livres"
-if debug: print("in rqt ajoutée à base_url",rqt)
-
-ret_rqt = req_mtd_get(rqt)
-soup,url_vrai_lpa = ret_rqt[0],ret_rqt[1]
-if debug: print("soup = req_mtd_get(rqt)",soup.prettify())
-
-book_per_author_index = ret_book_per_author_index(soup)
+book_index={}
 for key,ref in book_per_author_index.items():
-    livrelpa,indexlpa = key,ref
-    if debug: print("livrelpa.title() : ",livrelpa.title(),"indexlpa : ",indexlpa)
+    indexlpa, livrelpa = key, ref
+    if debug: print("indexlpa, livrelpa : ",indexlpa," : ",livrelpa)
+    if lrplivre.lower() in livrelpa.lower():                # concept ok mais faut faire mieux...
+        book_index[indexlpa]=[time.time_ns()]
+
+if debug: print("lrplivre",lrplivre)
+
+for key,ref in book_index.items():
+    book_url, book_id = key, ref
+    if debug:
+        print("book_url, lrpid : ",book_url," : ",book_id)
 
 
+sys.exit("ici on s'arrete")   
+    
 
 
 
