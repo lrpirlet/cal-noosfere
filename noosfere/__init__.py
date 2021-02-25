@@ -11,8 +11,9 @@ __license__   = 'GPL v3'
 __copyright__ = '2021, Louis Richard Pirlet'
 __docformat__ = 'restructuredtext en'
 
-import urllib.request
-import urllib.error
+import urllib
+#import urllib.request
+#import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 import time
@@ -22,29 +23,13 @@ from calibre.ebooks.metadata.sources.base import (Source, Option)
 from calibre.ebooks.metadata import check_isbn
 from calibre.utils.icu import lower
 from calibre.utils.localization import get_udc
+
 from difflib import SequenceMatcher as SM
 '''
 s1 = ' It was a dark and stormy night. I was all alone sitting on a red chair. I was not completely alone as I had three cats.'
 s2 = ' It was a murky and stormy night. I was all alone sitting on a crimson chair. I was not completely alone as I had three felines.'
 print(SM(None, s1, s2).ratio())
 '''
-
-##import re
-##try:
-##    from urllib.parse import quote, unquote
-##except ImportError:
-##    from urllib import quote, unquote
-##try:
-##
-##except ImportError:
-##    from Queue import Empty, Queue
-##import six
-##from six import text_type as unicode
-##
-##from lxml.html import fromstring, tostring
-##
-##from calibre import as_unicode
-##from calibre.utils.cleantext import clean_ascii_chars
 
 class noosfere(Source):
 
@@ -59,6 +44,10 @@ class noosfere(Source):
     touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'rating', 'languages',
                                 'comments', 'publisher', 'pubdate', 'series', 'tags'])
     has_html_comments = True
+
+    from_encoding="windows-1252"
+    search_urn="https://www.noosfere.org/livres/noosearch.asp"
+
 
 #    def get_book_url(self, identifiers):
 #    def id_from_url(self, url):
@@ -151,99 +140,7 @@ class noosfere(Source):
             log.info("return from clean_txt\n")
         return text
 
-    def make_soup(self, log, sr):
-        # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
-        # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
-        #
-        # function isolated to find out what is the site character encoding... The announced standard (in meta) is WRONG
-        # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
-        # Maybe I should have tried earlier the working solution as the emitting node is MS
-        # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
-        # It decode correctly to utf_8 with windows-1252 forced as input encoding (but not cp1252 or ISO-8859-1 that nearly works!!!)
-        # watch-out noosfere is talking about making the site better... ;-}
-        #
-        debug=0        # set only to output soup (long, very long)
-
-        if debug: log.info("\nIn make_soup(sr)")
-
-        soup = BS(sr, "html.parser",from_encoding="windows-1252")
-        if debug:
-            log.info(soup.prettify())
-            log.info('return from make_soup\n')
-
-        if debug: log.info("return from make_soup\n")
-        return soup
-
-    def req_mtd_post(self, log, rkt, ModeMoteur = "LITTERAL",ModeRecherche="AND"):
-        # Accède en mode post sur <base_url>/livres/noosearch.asp
-        # Access using "post" method over <base_url>/livres/noosearch.asp
-        #
-        debug=0
-        if debug: log.info("\nIn req_mtd_post(log, rkt, ModeMoteur =",ModeMoteur,", ModeRecherche =",ModeRecherche,")")
-
-        search_urn="https://www.noosfere.org/livres/noosearch.asp"
-        base_rkt={"ModeMoteur":ModeMoteur,"ModeRecherche":ModeRecherche,"recherche":"1","Envoyer":"Envoyer"}
-
-        rkt.update(base_rkt)
-        if debug: log.info("rkt : ",rkt)
-        req=urllib.parse.urlencode(rkt).encode('ascii')
-        try: sr=urllib.request.urlopen(search_urn,req,timeout=30)
-        except TimeoutError:
-            log.error("A network timeout occurred, do you have wide world web access?")
-            sys.exit("désolé")
-        except urllib.error.HTTPError as e:
-            log.error("Une erreur envoyée par le site a été reçue.")
-            log.error("code : ",e.code,"reason : ",e.reason)
-            sys.exit("réponse d'erreur de l'url, désolé")
-        except urllib.error.URLError as e:
-            log.error("Une erreur envoyée par le site a été reçue.")
-            log.error("reason : ",e.reason)
-            sys.exit("réponse d'erreur de l'url, désolé")
-        if debug:
-            log.info("type(sr)  : ",type(sr))
-            log.info("sr.header : ")
-            for i in sr.headers:
-                    log.info(i, " : ",sr.headers[i])
-
-        soup = self.make_soup(log, sr)
-        if debug: log.info('return from req_mtd_post\n')
-        return soup
-
-    def req_mtd_get(self, log, rqt):
-        # Accède <base_url>/livres/auteur.asp?numauteur=366 en mode get, renvoie la soup et le vrai url utilisé.
-        # Access <base_url>/livres/auteur.asp?numauteur=366 using get mode, send back soup and the real url used
-        #
-        debug=0
-        if debug:
-            log.info("\nIn req_mtd_get(self, log, rqt)")
-            log.info("rqt : ",rqt)
-
-        url="https://www.noosfere.org"+rqt
-        if debug: log.info("url : ",url)
-        try: sr=urllib.request.urlopen(url,timeout=30)
-        except TimeoutError:
-            log.error("A network timeout occurred, do you have wide world web access?")
-            sys.exit("désolé")
-        except urllib.error.HTTPError as e:
-            log.error("Une erreur enovyée par le site a été reçue.")
-            log.error("code : ",e.code,"reason : ",e.reason)
-            sys.exit("réponse d'erreur de l'url, désolé")
-        except urllib.error.URLError as e:
-            log.error("Une erreur enovyée par le site a été reçue.")
-            log.error("reason : ",e.reason)
-            sys.exit("réponse d'erreur de l'url, désolé")
-        if debug:
-            log.info("\ntype(sr) : ",type(sr))
-            log.info("sr.info() : ",sr.info())
-            log.info("sr.geturl() : ",sr.geturl())
-            for i in sr.headers:
-                    log.info(i, " : ",sr.headers[i])
-
-        soup = self.make_soup(log, sr)
-        if debug: log.info('return from req_mtd_get\n')
-        return (soup,sr.geturl())
-
-    def ret_author_index(self, log, authors):
+    def ret_author_index(self, log, br, authors):
         # Trouve la reference de l'auteur dans la soupe de noosfere
         # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
         # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial si isbn is indisponible
@@ -260,8 +157,12 @@ class noosfere(Source):
         # try to get a short list of authors using exact match
         #
         for i in range(len(authors)):
-            rkt = {"Mots":authors[i],"auteurs":"auteurs"}
-            soup = self.req_mtd_post(log, rkt, ModeMoteur="MOTS-CLEFS")
+            rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+            if debug: log.info("rkt : ", rkt)
+            req=urllib.parse.urlencode(rkt).encode('ascii')
+            if debug: log.info("req : ", req)
+            sr=br.open(self.search_urn,req,timeout=20)
+            soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
             tmp_ai=soup.select('a[href*="auteur.asp"]')
             if len(tmp_ai):
                 for i in range(len(tmp_ai)):
@@ -277,8 +178,12 @@ class noosfere(Source):
         if not len(all_author_index):
             if debug: log.info("exact match failed, trying fuzzy match")
             for i in range(len(authors)):
-                rkt = {"Mots":authors[i],"auteurs":"auteurs"}
-                soup = self.req_mtd_post(log, rkt)
+                rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+                if debug: log.info("rkt : ", rkt)
+                req=urllib.parse.urlencode(rkt).encode('ascii')
+                if debug: log.info("req : ", req)
+                sr=br.open(self.search_urn,req,timeout=20)
+                soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
                 tmp_ai=soup.select('a[href*="auteur.asp"]')
                 if len(tmp_ai):
                     for i in range(len(tmp_ai)):
@@ -314,7 +219,7 @@ class noosfere(Source):
             if debug: log.info('return from ret_author_index\n')
         return author_index
 
-    def ret_book_per_author_index(self, log, author_index):
+    def ret_book_per_author_index(self, log, br, author_index):
         # Find the books references of a known author from the returned soup for noosfere
         # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
         # Idea is to send back a few references that hopefully contains the title expected
@@ -329,15 +234,21 @@ class noosfere(Source):
         #
         debug=1
         if debug:
-            log.info("\nIn ret_book_per_author_index(self, log, author_index)")
+            log.info("\nIn ret_book_per_author_index(self, log, br, author_index)")
             log.info("author_index : ",author_index)
 
         book_per_author_index={}
 
         for i in range(len(author_index)):
             rqt= author_index[i]+"&Niveau=livres"
-            ret_rqt = self.req_mtd_get(log, rqt)
-            soup = ret_rqt[0]
+            url="https://www.noosfere.org"+rqt
+            if debug: log.info("url : ",url)
+            sr=br.open(url,timeout=20)
+            if debug:
+                log.info("sr.geturl()  : ",sr.geturl())
+                log.info("sr.getcode() : ",sr.getcode())
+            soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+
             tmp_bpai=soup.select('a[href*="EditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
                 bpai_title=tmp_bpai[i].text.lower()
@@ -365,8 +276,13 @@ class noosfere(Source):
         debug=0
         if debug: log.info("\nIn ISBN_ret_book_index(soup)")
 
-        rkt = {"Mots": isbn,"livres":"livres"}
-        soup = self.req_mtd_post(log, rkt, ModeMoteur="MOTS-CLEFS")         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
+        # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
+        rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+        if debug: log.info("rkt : ", rkt)
+        req=urllib.parse.urlencode(rkt).encode('ascii')
+        if debug: log.info("req : ", req)
+        sr=br.open(self.search_urn,req,timeout=20)
+        soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
 
         tmp_rbi=soup.select('a[href*="editionsLivre.asp"]')
 
@@ -414,9 +330,9 @@ class noosfere(Source):
                 log.error("This ISBN was not found: ", isbn, "trying with title and author")
                 return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
         elif title and authors:
-            author_index=self.ret_author_index(log, authors)
+            author_index=self.ret_author_index(log, br, authors)
             if len(author_index):
-                book_per_author_index = self.ret_book_per_author_index(log, author_index)
+                book_per_author_index = self.ret_book_per_author_index(log, br, author_index)
 
             if not len(author_index):
                 log.info("Désolé, aucun auteur trouvé avec : ",authors)
@@ -430,40 +346,32 @@ class noosfere(Source):
                 log.info("book_url : ",book_url,end=" ; ")
                 log.info("book_title : ",book_title)
             if ratio > .6 :
-                unsorted_book_index[ratio]=[book_url,"lrpid:"+str(time.time_ns())]
+                unsorted_book_index[ratio]=[book_url, "lrpid:"+str(time.time_ns()), book_title]
             if ratio == 1:
                 unsorted_book_index={}
-                unsorted_book_index[ratio]=[book_url,"lrpid:"+str(time.time_ns())]
+                unsorted_book_index[ratio]=[book_url, "lrpid:"+str(time.time_ns()), book_title]
                 break
                 
         sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
         for key,ref in sorted_book_index.items():
             book_url = ref[0]
-            book_index[book_url]=("lrpid:"+str(time.time_ns()))
+            book_index[book_url]=("lrpid:"+str(time.time_ns()), book_title)
 
         if not len(book_index):
             log.error("No book found in noosfere... ")
-            sys.exit("ici on stoppe")
-##            return
+            return
 
         if abort.is_set():
             return
 
         tmp_list=[]
         for key,ref in book_index.items():
-            book_url, lrpid = key, ref
-            if debug:log.info("book_url, lrpid : ",book_url," : ",lrpid)
-            tmp_list.append((book_url, lrpid))
+            book_url, lrpid, book_title = key, ref[0], ref[1]
+            if debug:log.info("\nbook_url, lrpid, book_title : ", book_url,", ", lrpid,", ", book_title)
+            tmp_list.append((book_url, lrpid, book_title))
 
         from calibre_plugins.noosfere.worker import Worker
-
-        from calibre_plugins.noosfere.worker import Worker           
-        workers = [Worker(log, data[0], data[1], result_queue, br, i, self) for i, data in enumerate(tmp_list)]
-        if debug:
-            log.info("\nBuild workers in __init__")
-            log.info("workers       : ", workers)
-            log.info("type(workers) : ", type(workers))
-            log.info("tmp_list      : ", tmp_list)
+        workers = [Worker(log, data[0], data[1], data[2], isbn, result_queue, br, i, self) for i, data in enumerate(tmp_list)]
 
         for w in workers:
             w.start()
@@ -482,41 +390,8 @@ class noosfere(Source):
                 break
 
         return None
-##-------------------------------------------------------------------------------------------------
-##Build workers
-##workers :  [<Worker(Thread-1, initial daemon)>, <Worker(Thread-2, initial daemon)>]
-##matches :  [('https://www.kobo.com/ebook/turn-coat-1', ''), ('https://www.kobo.com/ebook/turn-coat', '')]
-##
-##Submit worker one per one
-##worker                 :  <module 'calibre_plugins.kobobooks.worker' (C:\Users\Papa\AppData\Roaming\calibre\plugins\Kobo Books.zip/worker.py)>
-##data[0]                : matches[i][0]
-##data[1]                : matches[i][1]
-##author_tokens          :  ['Jim', 'Butcher']
-##result_queue           :  <queue.Queue object at 0x0000024E4DB19E20>
-##br                     :  <Browser (not visiting a URL)>
-##log                    :  <calibre.utils.logging.ThreadSafeLog object at 0x0000024E4DB19850>
-##i                      : iteration de matches
-##self.category_handling :  individual_tags
-##self                   :  <calibre_plugins.kobobooks.KoboBooks object at 0x0000024E4D388940>
-##
-##Entering worker 0  get_details(self)
-##KoboBooks url: 'https://www.kobo.com/ebook/turn-coat-1'
-##
-##Submit worker one per one
-##worker                 :  <module 'calibre_plugins.kobobooks.worker' (C:\Users\Papa\AppData\Roaming\calibre\plugins\Kobo Books.zip/worker.py)>
-##data[0]                : matches[i][0]
-##data[1]                : matches[i][1]
-##author_tokens          :  ['Jim', 'Butcher']
-##result_queue           :  <queue.Queue object at 0x0000024E4DB19E20>
-##br                     :  <Browser (not visiting a URL)>
-##log                    :  <calibre.utils.logging.ThreadSafeLog object at 0x0000024E4DB19850>
-##i                      : iteration de matches
-##self.category_handling :  individual_tags
-##self                   :  <calibre_plugins.kobobooks.KoboBooks object at 0x0000024E4D388940>
-##-------------------------------------------------------------------------------------------------
 
-######################################### not tested, but needed ################################
-#
+
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
         log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
         log.info('log          : ', log)
