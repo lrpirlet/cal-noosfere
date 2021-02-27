@@ -80,11 +80,12 @@ class noosfere(Source):
 # and the nice think about calibre is the possibility to insert working url in the comments and in the catalog
 #
 
-
     def get_cached_cover_url(self, identifiers):
-        # I guess this routine returns an url that was discovered somewhere else and put into cache (how? where?)
+        # I guess this routine returns an url that was discovered somewhere else and put into cache 
         # probably using cache_identifier_to_cover_url in the worket.py
-        # needs implementing... ISBN is the sole identifier
+        # as ISBN is missing sometime in noosfere
+        # as noosfere does not provide any proprietary id
+        # I will use lrpid, a time stamp, that is: str(time.time_ns())[2:-5], created at the time of noosfere data collection
         #
         url = None
         lrpid = identifiers.get('lrpid', None)
@@ -96,7 +97,6 @@ class noosfere(Source):
             url = self.cached_identifier_to_cover_url(lrpid)
         return url
 
-
     def verify_isbn(self, log, isbn_str):
         # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
         # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
@@ -106,7 +106,7 @@ class noosfere(Source):
         # Characters irrelevant to ISBN and separators inside ISBN must be removed,
         # the resulting word must be either 10 or 13 characters long.
         #
-        debug=0
+        debug=1
         if debug:
             log.info("\nIn verify_isbn(isbn_str)")
             log.info("isbn_str         : ",isbn_str)
@@ -124,7 +124,7 @@ class noosfere(Source):
         # for noosfere search to work smoothly, authors and title needs to be cleaned
         # we need to remove non significant characters and remove useless space character
         #
-        debug=0
+        debug=1
         if debug:
             log.info("\nIn clean_txt(self, log, text)")
             log.info("text         : ", text)
@@ -249,7 +249,7 @@ class noosfere(Source):
                 log.info("sr.getcode() : ",sr.getcode())
             soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
 
-            tmp_bpai=soup.select('a[href*="EditionsLivre.asp"]')
+            tmp_bpai=soup.select('a[href*="ditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
                 bpai_title=tmp_bpai[i].text.lower()
                 bpai_url=(tmp_bpai[i]["href"].replace('./','/livres/').split('&'))[0]
@@ -260,21 +260,21 @@ class noosfere(Source):
         if debug: log.info('return from ret_book_per_author_index\n')
         return book_per_author_index
 
-    def ISBN_ret_book_index(self, log, isbn, book_index):
+    def ISBN_ret_book_index(self, log, br, isbn, book_index):
         # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
-        # retourne book_index{}, un dictionnaire avec key=book_url, val=book_id (lrpid:<nombre unique>)
+        # retourne book_index{}, un dictionnaire avec key=book_url, val=(lrpid,title) avec lrpid etant str(nombre unique)
         # L'idée est de trouver UNE seule reference...
         # Attention: on retourne une reference qui peut contenir PLUSIEURs volumes
         # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
         #
         # Find the book's reference (either title or ISBN) in the returned soup from noosfere
-        # returns book_index{}, a dictionnary with key=book_url, val=book_id (either ISBN, or lrpid:<a unique number>)
+        # returns book_index{}, a dictionnary with key=book_url, val=(lrpid,title) with lrpid being str(a unique number)
         # The idea is to find ONE unique reference...
         # Caution: the reference may contains several volumes,
         # each with potentialy a different editor, a different edition date,... and even a different title
         #
-        debug=0
-        if debug: log.info("\nIn ISBN_ret_book_index(soup)")
+        debug=1
+        if debug: log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
 
         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
         rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
@@ -284,15 +284,17 @@ class noosfere(Source):
         sr=br.open(self.search_urn,req,timeout=20)
         soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
 
-        tmp_rbi=soup.select('a[href*="editionsLivre.asp"]')
+        tmp_rbi=soup.select('a[href*="ditionsLivre.asp"]')
 
         if len(tmp_rbi):
             for i in range(len(tmp_rbi)):
                 if debug:
                     log.info("tmp_rbi["+str(i)+"].text, tmp_rbi["+str(i)+"]['href'] : ",tmp_rbi[i].text,tmp_rbi[i]["href"])
-                book_index[tmp_rbi[i]["href"]]="lrpid:"+str(time.time_ns())      # time since epoch will be lrpid identifier to cache cover, should be different each time :-)
+                book_index[tmp_rbi[i]["href"]]=(str(time.time_ns())[2:-5],tmp_rbi[i].text)     # time since epoch will be lrpid identifier to cache cover, should be different each time :-)
 
-        if debug: log.info("return from ISBN_ret_book_index\n")
+        if debug:
+            log.info("book_index : ",book_index)
+            log.info("return from ISBN_ret_book_index\n")
         return book_index
 
     def identify(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
@@ -325,7 +327,7 @@ class noosfere(Source):
         book_index={}
         unsorted_book_index={}
         if isbn:
-            book_index = self.ISBN_ret_book_index(log, isbn, book_index)
+            book_index = self.ISBN_ret_book_index(log, br, isbn, book_index)
             if not len(book_index):
                 log.error("This ISBN was not found: ", isbn, "trying with title and author")
                 return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
@@ -338,24 +340,25 @@ class noosfere(Source):
                 log.info("Désolé, aucun auteur trouvé avec : ",authors)
                 return                                       # maybe procedure avec titre seul... a dessiner lrp todo
 
-        for key,ref in book_per_author_index.items():
-            book_url, book_title = key, ref
-            ratio = SM(None, title, self.ret_clean_text(log, book_title)).ratio()
-            if debug:
-                log.info("SM.ratio : {:.3f}".format(ratio),end=" ; ")
-                log.info("book_url : ",book_url,end=" ; ")
-                log.info("book_title : ",book_title)
-            if ratio > .6 :
-                unsorted_book_index[ratio]=[book_url, "lrpid:"+str(time.time_ns()), book_title]
-            if ratio == 1:
-                unsorted_book_index={}
-                unsorted_book_index[ratio]=[book_url, "lrpid:"+str(time.time_ns()), book_title]
-                break
+            for key,ref in book_per_author_index.items():
+                book_url, book_title = key, ref
+                ratio = SM(None, title, self.ret_clean_text(log, book_title)).ratio()
+                if debug:
+                    log.info("SM.ratio : {:.3f}".format(ratio),end=" ; ")
+                    log.info("book_url : ",book_url,end=" ; ")
+                    log.info("book_title : ",book_title)
+                if ratio > .6 :
+                    unsorted_book_index[ratio]=[book_url, "", book_title]
+                if ratio == 1:
+                    unsorted_book_index={}
+                    unsorted_book_index[ratio]=[book_url, "", book_title]
+                    break
                 
-        sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
-        for key,ref in sorted_book_index.items():
-            book_url = ref[0]
-            book_index[book_url]=("lrpid:"+str(time.time_ns()), book_title)
+            sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
+            for key,ref in sorted_book_index.items():
+                book_url = ref[0]
+                book_index[book_url]=(str(time.time_ns())[2:-5], book_title)
+                log.info('book_indexbook_index[book_url]=(str(time.time_ns())[2:-5], book_title) : ',book_index)
 
         if not len(book_index):
             log.error("No book found in noosfere... ")
@@ -450,39 +453,24 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-            ( # A book with no ISBN specified
-                {'identifiers':{},
-                    'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-                [title_test("Le Printemps d'Helliconia",
-                    exact=True), authors_test(['Brian Aldiss']),
-                    series_test('Helliconia', 1.0)]
-                ),
-##            ),
-##
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '9780748111824'},
-##                    'title':"Turn Coat", 'authors':['Jim Butcher']},
-##                [title_test("Turn Coat",
-##                    exact=True), authors_test(['Jim Butcher']),
-##                    series_test('Dresden Files', 11.0)]
-##
+##            ( # A book with no ISBN specified
+##                {'identifiers':{}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
 ##            ),
 
             ( # A book with an ISBN
-                {'identifiers':{'isbn': '2-221-10703-9'},
-                    'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-                [title_test("Le Printemps d'Helliconia",
-                    exact=True), authors_test(['Brian Aldiss']),
-                    series_test('Helliconia', 1.0)]
-                ),
+                {'identifiers':{'isbn': '2-253-04908-5'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+            ),
+
+##            ( # A book with an ISBN
+##                {'identifiers':{'isbn': '2-221-10703-9'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+##            ),
 
 ##            ( # A book with a KoboBooks id
-##                {'identifiers':{'kobo': 'across-the-sea-of-suns-1'},
-##                    'title':'Across the Sea of Suns', 'authors':['Gregory Benford']},
-##                [title_test('Across the Sea of Suns',
-##                    exact=True), authors_test(['Gregory Benford']),
-##                    series_test('Galactic Centre', 2.0)]
-##
+##                {'identifiers':{'kobo': 'across-the-sea-of-suns-1'}, 'title':'Across the Sea of Suns', 'authors':['Gregory Benford']},
+##                [title_test('Across the Sea of Suns', exact=True), authors_test(['Gregory Benford']), series_test('Galactic Centre', 2.0)]
 ##            ),
 
         ])

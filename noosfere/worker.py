@@ -8,8 +8,9 @@ __copyright__ = '2021, Louis Richard Pirlet'
 __docformat__ = 'restructuredtext en'
 
 from bs4 import BeautifulSoup as BS
-import socket, re, datetime
+import socket, datetime
 from threading import Thread
+from random import randint
 
 from lxml.html import fromstring, tostring
 
@@ -39,7 +40,6 @@ class Worker(Thread):
         self.relevance = relevance
         self.plugin = plugin
         self.timeout = timeout
-        self.cover_url = None
         self.who="[worker "+str(relevance)+"]"
         self.from_encoding="windows-1252"
 
@@ -127,8 +127,7 @@ class Worker(Thread):
         debug=1
         if debug:
             self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
-            self.log.info(self.who,"url        : ",url)
-            self.log.info(self.log,"book_title : ",book_title)
+            self.log.info(self.who,"url : ",url,", book_title : ",book_title)
 
         sr=self.br.open(url,timeout=20)
         soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
@@ -155,7 +154,7 @@ class Worker(Thread):
 
             if subsoup.select("span[class='SousFicheNiourf']"):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                self.log.info(self.log,"vol_isbn : ",vol_isbn)
+                self.log.info(self.who,"vol_isbn              : ",vol_isbn)
                 vol_isbn = self.verify_isbn(vol_isbn)
                 if vol_isbn:
                     point+=500
@@ -296,6 +295,7 @@ class Worker(Thread):
                 vol_auteur_prenom += " "+vol_auteur.split()[i]
             else:
                 vol_auteur_nom += " "+vol_auteur.split()[i].title()
+        vol_auteur = vol_auteur.title()
         vol_auteur_prenom = vol_auteur_prenom.strip()
         if debug: self.log.info(self.who,"vol_auteur_prenom found")
         vol_auteur_nom = vol_auteur_nom.strip()
@@ -336,12 +336,17 @@ class Worker(Thread):
             if "Dépôt légal" in elemnt:
                 vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
             if len(str(vol_dp_lgl))<3:
-                for i in ("trimestre","janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
+                for i in ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
                     if i in elemnt:
                         vol_dp_lgl=elemnt
+                        vol_dp_lgl=datetime.datetime.strptime(vol_dp_lgl,"%B %Y") 
+                        break
+                    elif "trimestre" in elemnt:
+                        self.log.info(self.who,"*************vol_dp_lg bizare*************do some*************",elemnt)
+                        vol_dp_lgl=datetime.datetime.min
                         break
             if "ISBN" in elemnt:
-                vol_isbn = elemnt.lower().replace(" ","")
+                vol_isbn = elemnt.lower().replace(" ","").replace('isbn:','')
                 if "néant" in vol_isbn: vol_isbn=""
                 if debug: self.log.info(self.who,"vol_isbn found")
             if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
@@ -449,25 +454,235 @@ class Worker(Thread):
         if vol_comment_soup.select_one("img[src*='arrow_right']"): vol_comment_soup.select_one("img[src*='arrow_right']").replace_with(fd)
 
         if debug:
-            self.log.info(self.who,"vol_title              : ",vol_title)
-            self.log.info(self.who,"vol_auteur             : ",vol_auteur)
-            self.log.info(self.who,"vol_auteur_prenom      : ",vol_auteur_prenom)
-            self.log.info(self.who,"vol_auteur_nom         : ",vol_auteur_nom)
-            self.log.info(self.who,"vol_serie              : ",vol_serie)
-            self.log.info(self.who,"vol_serie_seq          : ",vol_serie_seq)
-            self.log.info(self.who,"vol_editor             : ",vol_editor)
-            self.log.info(self.who,"vol_coll               : ",vol_coll)
-            self.log.info(self.who,"vol_coll_nbr           : ",vol_coll_nbr)
-            self.log.info(self.who,"vol_dp_lgl             : ",vol_dp_lgl)
-            self.log.info(self.who,"vol_isbn               : ",vol_isbn)
-            self.log.info(self.who,"vol_genre              : ",vol_genre)
-            self.log.info(self.who,"vol_cover_index        : ",vol_cover_index)
-            self.log.info(self.who,"vol_comment_soup       :\n",vol_comment_soup)          # Maybe a bit long sometimes
+            self.log.info(self.who,"lrpid, type()                  : ",self.lrpid, type(self.lrpid))                    # must be <class 'str'>
+            self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
+            self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
+            self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
+            self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
+            self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'> 
+            self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
+            self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))              # must be <class 'float'>
+            self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
+            self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be 
+            self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be 
+            self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
+            self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
+            self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
+            self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be 
+            self.log.info(self.who,"vol_comment_soup, type()       :\n",vol_comment_soup, type(vol_comment_soup))       # must be byte encoded (start with b'blablabla... Maybe a bit long sometimes
+                                                                                                               # language must be <class 'str'>
+                                                                                                                # rating  must be <class 'str'>
             self.log.info(self.who,"=======================")
+##        vol_comment_soup = sanitize_comments_html(vol_comment_soup.encode())   rejette mon formatage des titres...
+##        if debug:
+##            self.log.info(self.who,"vol_comment_soup       :\n",vol_comment_soup)          # Maybe a bit long sometimes
 
-        vol_comment_soup = sanitize_comments_html(vol_comment_soup.encode())
-        if debug:
-            self.log.info(self.who,"vol_comment_soup       :\n",vol_comment_soup)          # Maybe a bit long sometimes
+        if vol_isbn and vol_cover_index:
+                self.plugin.cache_isbn_to_identifier(vol_isbn, self.lrpid)
+        self.plugin.cache_identifier_to_cover_url(self.lrpid, vol_cover_index)
+
+        mi = Metadata(vol_title, [vol_auteur])
+        mi.set_identifier('lrpid', self.lrpid)
+        mi.pubdate = vol_dp_lgl                         #<==  'str' object has no attribute 'isoformat'
+        mi.publisher = vol_editor
+        mi.isbn = vol_isbn
+        mi.series = vol_serie
+        mi.series_index = float(vol_serie_seq)
+        mi.tags = [vol_genre]
+        mi.rating = float(0)
+        mi.comments = vol_comment_soup.encode()               # needs to be byte encoded b'blablabla
+        mi.language = "fra"
+        mi.source_relevance = self.relevance
+        mi.has_cover = bool(vol_cover_index)
+
+        self.log.info(self.who,mi)
+
+        try:
+            self.plugin.clean_downloaded_metadata(mi)
+        except:
+            self.log.exception("self.plugin.clean_downloaded_metadata(mi)")
+
+        self.log.info(self.who,mi)
+
+        self.result_queue.put(mi)
 
 
-            
+##
+##        mi = Metadata(title, authors)
+##        mi.set_identifier('kobo', kobobooks_id)
+##        self.kobobooks_id = kobobooks_id
+##
+##        # Some of the metadata is in a JSON object in script tag.
+##        try:
+##            import json
+##            scripts = root.xpath('//div[@data-kobo-widget="RatingAndReviewWidget"]/script')
+##            if len(scripts) > 0:
+##                json_details = scripts[1].text
+##                if json_details is not None:
+##                    page_metadata = json.loads(json_details, strict=False)
+##                    self.log("Script page_metadata=", page_metadata)
+###                     self.log("Script page_metadata keys=", page_metadata.keys())
+##                    try:
+##                        pubdate = page_metadata["releasedate"]
+##                        pubdate = datetime.datetime.strptime(pubdate, "%Y-%m-%dT%H:%M:%S")
+##                        mi.pubdate = pubdate
+##                        self.log("pubdate from JSON:", mi.pubdate)
+##                    except:
+##                        self.log.exception('Error parsing page for pubdate: url=%r'%self.url)
+##
+##                    try:
+##                        mi.publisher = page_metadata["brand"]
+##                    except:
+##                        self.log.exception('Error parsing page for publisher: url=%r'%self.url)
+##
+##                    try:
+##                        isbn = page_metadata["gtin13"]
+##                        if isbn:
+##                            self.isbn = mi.isbn = isbn
+##                    except:
+##                        self.log.exception('Error parsing ISBN for url: %r'%self.url)
+##
+##            else:
+##                self.log("No scripts founds for book details metadata????")
+##        except Exception as e:
+##            self.log("Exception thrown getting scripts:", e)
+##
+##
+##        try:
+##            (mi.series, mi.series_index) = self.parse_series(root)
+##        except:
+##            self.log.exception('Error parsing series for url: %r'%self.url)
+##
+##        try:
+##            mi.tags = self.parse_tags(root)
+##        except:
+##            self.log.exception('Error parsing tags for url: %r'%self.url)
+##
+##        try:
+##            mi.rating = self.parse_rating(root)
+##        except:
+##            self.log.exception('Error parsing ratings for url: %r'%self.url)
+##
+##        try:
+##            self.cover_url = self.parse_cover(root)
+##        except:
+##            self.log.exception('Error parsing cover for url: %r'%self.url)
+##        mi.has_cover = bool(self.cover_url)
+##
+##        try:
+##            mi.comments = self.parse_comments(root)
+##        except:
+##            self.log.exception('Error parsing comments for url: %r'%self.url)
+##
+##        try:
+##            language = self.parse_language(root)
+##            if language:
+##                self.lang = mi.language = language
+##        except:
+##            self.log.exception('Error parsing languages for url: %r'%self.url)
+##
+##        mi.source_relevance = self.relevance
+##
+##        if self.kobobooks_id:
+##            if self.cover_url:
+##                self.plugin.cache_identifier_to_cover_url(self.kobobooks_id, self.cover_url)
+##
+##        self.plugin.clean_downloaded_metadata(mi)
+##
+##        self.result_queue.put(mi)
+
+
+##
+##    def _get_metadata(self, book_id, get_user_categories=True):  # {{{
+##        mi = Metadata(None, template_cache=self.formatter_template_cache)
+##
+##        mi._proxy_metadata = ProxyMetadata(self, book_id, formatter=mi.formatter)
+##
+##        author_ids = self._field_ids_for('authors', book_id)
+##        adata = self._author_data(author_ids)
+##        aut_list = [adata[i] for i in author_ids]
+##        aum = []
+##        aus = {}
+##        aul = {}
+##        for rec in aut_list:
+##            aut = rec['name']
+##            aum.append(aut)
+##            aus[aut] = rec['sort']
+##            aul[aut] = rec['link']
+##        mi.title       = self._field_for('title', book_id,
+##                default_value=_('Unknown'))
+##        mi.authors     = aum
+##        mi.author_sort = self._field_for('author_sort', book_id,
+##                default_value=_('Unknown'))
+##        mi.author_sort_map = aus
+##        mi.author_link_map = aul
+##        mi.comments    = self._field_for('comments', book_id)
+##        mi.publisher   = self._field_for('publisher', book_id)
+##        n = utcnow()
+##        mi.timestamp   = self._field_for('timestamp', book_id, default_value=n)
+##        mi.pubdate     = self._field_for('pubdate', book_id, default_value=n)
+##        mi.uuid        = self._field_for('uuid', book_id,
+##                default_value='dummy')
+##        mi.title_sort  = self._field_for('sort', book_id,
+##                default_value=_('Unknown'))
+##        mi.last_modified = self._field_for('last_modified', book_id,
+##                default_value=n)
+##        formats = self._field_for('formats', book_id)
+##        mi.format_metadata = {}
+##        mi.languages = list(self._field_for('languages', book_id))
+##        if not formats:
+##            good_formats = None
+##        else:
+##            mi.format_metadata = FormatMetadata(self, book_id, formats)
+##            good_formats = FormatsList(sorted(formats), mi.format_metadata)
+##        # These three attributes are returned by the db2 get_metadata(),
+##        # however, we dont actually use them anywhere other than templates, so
+##        # they have been removed, to avoid unnecessary overhead. The templates
+##        # all use _proxy_metadata.
+##        # mi.book_size   = self._field_for('size', book_id, default_value=0)
+##        # mi.ondevice_col = self._field_for('ondevice', book_id, default_value='')
+##        # mi.db_approx_formats = formats
+##        mi.formats = good_formats
+##        mi.has_cover = _('Yes') if self._field_for('cover', book_id,
+##                default_value=False) else ''
+##        mi.tags = list(self._field_for('tags', book_id, default_value=()))
+##        mi.series = self._field_for('series', book_id)
+##        if mi.series:
+##            mi.series_index = self._field_for('series_index', book_id,
+##                    default_value=1.0)
+##        mi.rating = self._field_for('rating', book_id)
+##        mi.set_identifiers(self._field_for('identifiers', book_id,
+##            default_value={}))
+##        mi.application_id = book_id
+##        mi.id = book_id
+##        composites = []
+##        for key, meta in self.field_metadata.custom_iteritems():
+##            mi.set_user_metadata(key, meta)
+##            if meta['datatype'] == 'composite':
+##                composites.append(key)
+##            else:
+##                val = self._field_for(key, book_id)
+##                if isinstance(val, tuple):
+##                    val = list(val)
+##                extra = self._field_for(key+'_index', book_id)
+##                mi.set(key, val=val, extra=extra)
+##        for key in composites:
+##            mi.set(key, val=self._composite_for(key, book_id, mi))
+##
+##        user_cat_vals = {}
+##        if get_user_categories:
+##            user_cats = self.backend.prefs['user_categories']
+##            for ucat in user_cats:
+##                res = []
+##                for name,cat,ign in user_cats[ucat]:
+##                    v = mi.get(cat, None)
+##                    if isinstance(v, list):
+##                        if name in v:
+##                            res.append([name,cat])
+##                    elif name == v:
+##                        res.append([name,cat])
+##                user_cat_vals[ucat] = res
+##        mi.user_categories = user_cat_vals
+##
+##        return mi
+##    # }}}
