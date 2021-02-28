@@ -8,6 +8,7 @@
 import urllib.request
 import urllib.error
 from bs4 import BeautifulSoup as BS
+import html5lib
 import sys
 
 
@@ -25,7 +26,7 @@ def make_soup(sr):
     debug=0
     if debug: print("\n in make_soup(sr)")
 
-    soup = BS(sr, "html.parser",from_encoding="windows-1252")
+    soup = BS(sr, "html5lib",from_encoding="windows-1252")
     if debug: print(soup.prettify())
 
     return soup
@@ -374,7 +375,7 @@ def extr_vol_details(soup):
     tmp_lst=[]
     vol_info={}
     vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_serie=vol_serie_seq=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
-    vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html.parser")
+    vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html5lib")
     comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=None
 
     if debug: print(soup.prettify())
@@ -448,7 +449,7 @@ def extr_vol_details(soup):
                     if debug: print("vol_cover_index")
 
     if vol_cover_index:
-        comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html.parser")
+        comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html5lib")
 
 # select the fields I want... More exist such as film adaptations or references to advises to read
 # but that is not quite consistant around all the books (noosfere is a common database from many poeple)
@@ -458,23 +459,23 @@ def extr_vol_details(soup):
     if debug: print(tmp_comm_lst)
     for i in range(len(tmp_comm_lst)):
         if "Quatrième de couverture" in str(tmp_comm_lst[i]):
-            comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html.parser")
+            comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html5lib")
             comment_resume = soup.select("div[id='Résumes']")[0]
             if debug: print("comment_resume")
 
         if "Critique" in str(tmp_comm_lst[i]):
             if not "autres" in str(tmp_comm_lst[i]):
-                comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"html.parser")
+                comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"html5lib")
                 comment_Critique = soup.select("div[id='Critique']")[0]
                 if debug: print("comment_Critique")
 
         if "Sommaire" in str(tmp_comm_lst[i]):
-            comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"html.parser")
+            comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"html5lib")
             comment_Sommaire = soup.select("div[id='Sommaire']")[0]
             if debug: print("comment_Sommaire")
 
         if "Critiques des autres" in str(tmp_comm_lst[i]):
-            comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html.parser")
+            comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html5lib")
             comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
             if debug: print("comment_AutresCritique",comment_AutresCritique.prettify())
             if comment_AutresCritique.select('a[href*="serie.asp"]'):
@@ -593,11 +594,11 @@ if not len(lrplivre):
     lrplivre = "kwest"          # un livre
     lrplivre = "fondation"      # un tas de livres
     lrplivre = "Fondation Et Empire"      # un livre dans serie mais ca marche pas car noosfere groupe livres similaires
-    lrplivre = "2-277-12381-1"  # a poursuite des slans
     lrplivre = "2864243806"  #ISBN mars blanche
     lrplivre = "2-277-11880-X"  #serie anthologie J sadoul
     lrplivre = "2-265-03148-8"
     lrplivre = "2266085360"
+    lrplivre = "2-277-12381-1"  # a poursuite des slans
 
 ##print("lrpauteur : ",lrpauteur)
 lrplivre = lrplivre.replace(","," ")
@@ -635,8 +636,10 @@ soup,url_vrai = ret_rqt[0],ret_rqt[1]
 if debug:
     print("soup = req_mtd_get(rqt)",soup.prettify())
     print("url_vrai : ",url_vrai)
+    
+url_vrai="/livres/editionsLivre.asp?numitem=3490"
 
-if "numitem" in url_vrai:           #url_vrai contient .../livres/editionsLivre.asp?numitem=69&Tri=3 si plusieurs volumes du livre
+if "numitem" in url_vrai:           #url_vrai contient .../livres/editionsLivre.asp?numitem=69&Tri=3 si plusieurs volumes du livre../livres/editionsLivre.asp?numitem=3490
     if debug: print("allez, ecore un effort, faut trouver le bon volume")
     top_vol_indx = ret_top_vol_indx(soup,livrel)   #vol_indx est un pointeur vers le livre
     if debug: print(top_vol_indx)

@@ -34,7 +34,7 @@ print(SM(None, s1, s2).ratio())
 class noosfere(Source):
 
     name                    = 'noosfere DB'
-    description             = _('Downloads and sets metadata and cover from noosfere.org over volumes (will force, potentially, low res cover image)')
+    description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
     version                 = (0, 1, 0)
     minimum_calibre_version = (5, 11, 0)
@@ -162,7 +162,7 @@ class noosfere(Source):
             req=urllib.parse.urlencode(rkt).encode('ascii')
             if debug: log.info("req : ", req)
             sr=br.open(self.search_urn,req,timeout=20)
-            soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+            soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
             tmp_ai=soup.select('a[href*="auteur.asp"]')
             if len(tmp_ai):
                 for i in range(len(tmp_ai)):
@@ -183,7 +183,7 @@ class noosfere(Source):
                 req=urllib.parse.urlencode(rkt).encode('ascii')
                 if debug: log.info("req : ", req)
                 sr=br.open(self.search_urn,req,timeout=20)
-                soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+                soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
                 tmp_ai=soup.select('a[href*="auteur.asp"]')
                 if len(tmp_ai):
                     for i in range(len(tmp_ai)):
@@ -247,7 +247,7 @@ class noosfere(Source):
             if debug:
                 log.info("sr.geturl()  : ",sr.geturl())
                 log.info("sr.getcode() : ",sr.getcode())
-            soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+            soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
 
             tmp_bpai=soup.select('a[href*="ditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
@@ -282,7 +282,7 @@ class noosfere(Source):
         req=urllib.parse.urlencode(rkt).encode('ascii')
         if debug: log.info("req : ", req)
         sr=br.open(self.search_urn,req,timeout=20)
-        soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
 
         tmp_rbi=soup.select('a[href*="ditionsLivre.asp"]')
 
@@ -453,10 +453,10 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-##            ( # A book with no ISBN specified
-##                {'identifiers':{}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
-##            ),
+            ( # A book with no ISBN specified
+                {'identifiers':{}, 'title':"La Guerre contre le Rull", 'authors':['A.e. VAN VOGT']},
+                [title_test("La Guerre contre le Rull", exact=True), authors_test(['Alfred Elton Van Vogt']), series_test('Helliconia', 1.0)]
+            ),
 
             ( # A book with an ISBN
                 {'identifiers':{'isbn': '2-253-04908-5'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},

@@ -10,13 +10,12 @@ __docformat__ = 'restructuredtext en'
 from bs4 import BeautifulSoup as BS
 import socket, datetime
 from threading import Thread
-from random import randint
 
 from lxml.html import fromstring, tostring
 
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.ebooks.metadata import check_isbn
-from calibre.library.comments import sanitize_comments_html
+# from calibre.library.comments import sanitize_comments_html
 from calibre.utils.cleantext import clean_ascii_chars
 from calibre.utils.icu import lower
 
@@ -130,7 +129,7 @@ class Worker(Thread):
             self.log.info(self.who,"url : ",url,", book_title : ",book_title)
 
         sr=self.br.open(url,timeout=20)
-        soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
 
         ts_vol_index={}
 
@@ -219,7 +218,7 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
 
         sr=self.br.open(critic_url,timeout=20)
-        soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
         if debug:
 #            self.log.info(self.who,"""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # trop grand, mais peut servir
             self.log.info(self.who,"critique de la serie found")
@@ -274,7 +273,7 @@ class Worker(Thread):
             self.log.info(self.who,"sr.getcode()  : ",sr.getcode())
             self.log.info(self.who,"url_vrai      : ",url_vrai)
 
-        soup = BS(sr, "html.parser",from_encoding=self.from_encoding)
+        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
 #        if debug: self.log.info(self.who,soup.prettify())              # useful but too big...
 
         tmp_lst=[]
@@ -282,7 +281,7 @@ class Worker(Thread):
         vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_serie=vol_serie_seq=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
         comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=None
 
-        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html.parser")
+        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"html5lib")
         if debug: self.log.info(self.who,"vol reference found")
 
         if soup.select("span[class='TitreNiourf']"): vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
@@ -307,7 +306,7 @@ class Worker(Thread):
             for i in range(len(tmp_vss)):
                 if "vol." in tmp_vss[i]:
                     vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
-        if debug: self.log.info(self.who,"vol_cycle, vol_serie_seq found")
+        if debug: self.log.info(self.who,"vol_serie, vol_serie_seq found")
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
         new_div=soup.new_tag('div')
@@ -334,16 +333,16 @@ class Worker(Thread):
 
         for elemnt in soup.select("span[class='sousFicheNiourf']")[0].stripped_strings:
             if "Dépôt légal" in elemnt:
-                vol_dp_lgl = elemnt.replace("Dépôt légal :","").strip()
+                elemnt = elemnt.replace("Dépôt légal :","").strip()
             if len(str(vol_dp_lgl))<3:
+                if "trimestre" in elemnt:
+                    self.log.info(self.who,"*************vol_dp_lg bizare*************do some*************",elemnt)
+                    ele=elemnt.split()
+                    vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
                 for i in ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
                     if i in elemnt:
                         vol_dp_lgl=elemnt
-                        vol_dp_lgl=datetime.datetime.strptime(vol_dp_lgl,"%B %Y") 
-                        break
-                    elif "trimestre" in elemnt:
-                        self.log.info(self.who,"*************vol_dp_lg bizare*************do some*************",elemnt)
-                        vol_dp_lgl=datetime.datetime.min
+                        vol_dp_lgl=datetime.datetime.strptime(vol_dp_lgl,"%B %Y")
                         break
             if "ISBN" in elemnt:
                 vol_isbn = elemnt.lower().replace(" ","").replace('isbn:','')
@@ -360,7 +359,7 @@ class Worker(Thread):
                         if debug: self.log.info(self.who,"vol_cover_index found")
 
         if vol_cover_index:
-            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html.parser")
+            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">Link to image </a></p></div>',"html5lib")
 
     # select the fields I want... More exist such as film adaptations or references to advises to read
     # but that is not quite consistant around all the books (noosfere is a common database from many people)
@@ -370,23 +369,23 @@ class Worker(Thread):
 #        if debug: self.log.info(self.who,tmp_comm_lst)             #usefull but too long
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
-                comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html.parser")
+                comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"html5lib")
                 comment_resume = soup.select("div[id='Résumes']")[0]
                 if debug: self.log.info(self.who,"comment_resume found")
 
             if "Critique" in str(tmp_comm_lst[i]):
                 if not "autres" in str(tmp_comm_lst[i]):
-                    comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"html.parser")
+                    comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"html5lib")
                     comment_Critique = soup.select("div[id='Critique']")[0]
                     if debug: self.log.info(self.who,"comment_Critique found")
 
             if "Sommaire" in str(tmp_comm_lst[i]):
-                comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"html.parser")
+                comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"html5lib")
                 comment_Sommaire = soup.select("div[id='Sommaire']")[0]
                 if debug: self.log.info(self.who,"comment_Sommaire found")
 
             if "Critiques des autres" in str(tmp_comm_lst[i]):
-                comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html.parser")
+                comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"html5lib")
                 comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
                 if debug: self.log.info(self.who,"comment_AutresCritique found")
                 if comment_AutresCritique.select('a[href*="serie.asp"]'):
@@ -405,15 +404,15 @@ class Worker(Thread):
         if comment_resume:
             vol_comment_soup.append(comment_pre_resume)
             vol_comment_soup.append(comment_resume)
-        if comment_Critique:
-            vol_comment_soup.append(comment_pre_Critique)
-            vol_comment_soup.append(comment_Critique)
-        if comment_Sommaire:
-            vol_comment_soup.append(comment_pre_Sommaire)
-            vol_comment_soup.append(comment_Sommaire)
-        if comment_AutresCritique:
-            vol_comment_soup.append(comment_pre_AutresCritique)
-            vol_comment_soup.append(comment_AutresCritique)
+##        if comment_Critique:
+##            vol_comment_soup.append(comment_pre_Critique)
+##            vol_comment_soup.append(comment_Critique)
+##        if comment_Sommaire:
+##            vol_comment_soup.append(comment_pre_Sommaire)
+##            vol_comment_soup.append(comment_Sommaire)
+##        if comment_AutresCritique:
+##            vol_comment_soup.append(comment_pre_AutresCritique)
+##            vol_comment_soup.append(comment_AutresCritique)
     #
     # Make a minimum of "repair" over vol_comment_soup so that it displays correctly in the comments and in my catalogs
     # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
@@ -454,28 +453,29 @@ class Worker(Thread):
         if vol_comment_soup.select_one("img[src*='arrow_right']"): vol_comment_soup.select_one("img[src*='arrow_right']").replace_with(fd)
 
         if debug:
+            self.log.info(self.who,"+"*50)
             self.log.info(self.who,"lrpid, type()                  : ",self.lrpid, type(self.lrpid))                    # must be <class 'str'>
             self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
             self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
             self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
             self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
-            self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'> 
+            self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
             self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
             self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))              # must be <class 'float'>
             self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
-            self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be 
-            self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be 
+            self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be
+            self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be
             self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
             self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
             self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
-            self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be 
-            self.log.info(self.who,"vol_comment_soup, type()       :\n",vol_comment_soup, type(vol_comment_soup))       # must be byte encoded (start with b'blablabla... Maybe a bit long sometimes
+            self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
+            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                         # must be byte encoded (start with b'blablabla...
+            self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
                                                                                                                # language must be <class 'str'>
                                                                                                                 # rating  must be <class 'str'>
-            self.log.info(self.who,"=======================")
-##        vol_comment_soup = sanitize_comments_html(vol_comment_soup.encode())   rejette mon formatage des titres...
-##        if debug:
-##            self.log.info(self.who,"vol_comment_soup       :\n",vol_comment_soup)          # Maybe a bit long sometimes
+            self.log.info(self.who,"="*50)
+
+
 
         if vol_isbn and vol_cover_index:
                 self.plugin.cache_isbn_to_identifier(vol_isbn, self.lrpid)
@@ -483,26 +483,34 @@ class Worker(Thread):
 
         mi = Metadata(vol_title, [vol_auteur])
         mi.set_identifier('lrpid', self.lrpid)
-        mi.pubdate = vol_dp_lgl                         #<==  'str' object has no attribute 'isoformat'
+        if mi.pubdate:
+            pubdate = vol_dp_lgl                         #<==  'str' object has no attribute 'isoformat'
         mi.publisher = vol_editor
         mi.isbn = vol_isbn
-        mi.series = vol_serie
-        mi.series_index = float(vol_serie_seq)
+        if vol_serie:
+            mi.series = vol_serie
+            mi.series_index = float(vol_serie_seq)
         mi.tags = [vol_genre]
         mi.rating = float(0)
-        mi.comments = vol_comment_soup.encode()               # needs to be byte encoded b'blablabla
+        
+#        comments = tostring(description_node, method='html') from kobobook
+
+#        mi.comments = vol_comment_soup.encode()               # original that failed... needs to be byte encoded b'blablabla
+
+        tmp_comments = vol_comment_soup.encode('utf-8')
+        self.log.info("\n"*3, type(tmp_comments),"\n",tmp_comments)
+
+        root = fromstring(tmp_comments)
+        self.log.info("\n"*3, type(root),"\n",root,"\n")
+       
+        mi.comments = tostring(root, method='html')              # needs to be lxml byte encoded b'blablabla
         mi.language = "fra"
         mi.source_relevance = self.relevance
         mi.has_cover = bool(vol_cover_index)
 
-        self.log.info(self.who,mi)
+        self.log.info(self.who,"mi\n",mi,"\n")
 
-        try:
-            self.plugin.clean_downloaded_metadata(mi)
-        except:
-            self.log.exception("self.plugin.clean_downloaded_metadata(mi)")
-
-        self.log.info(self.who,mi)
+        self.plugin.clean_downloaded_metadata(mi)
 
         self.result_queue.put(mi)
 
