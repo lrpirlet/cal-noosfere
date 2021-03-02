@@ -453,10 +453,10 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-            ( # A book with no ISBN specified
-                {'identifiers':{}, 'title':"La Guerre contre le Rull", 'authors':['A.e. VAN VOGT']},
-                [title_test("La Guerre contre le Rull", exact=True), authors_test(['Alfred Elton Van Vogt']), series_test('Helliconia', 1.0)]
-            ),
+##            ( # A book with no ISBN specified
+##                {'identifiers':{}, 'title':"La Guerre contre le Rull", 'authors':['A.e. VAN VOGT']},
+##                [title_test("La Guerre contre le Rull", exact=True), authors_test(['Alfred Elton Van Vogt']), series_test('Helliconia', 1.0)]
+##            ),
 
             ( # A book with an ISBN
                 {'identifiers':{'isbn': '2-253-04908-5'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
