@@ -12,8 +12,6 @@ __copyright__ = '2021, Louis Richard Pirlet'
 __docformat__ = 'restructuredtext en'
 
 import urllib
-#import urllib.request
-#import urllib.error
 from bs4 import BeautifulSoup as BS
 import sys
 import time
@@ -31,6 +29,48 @@ s2 = ' It was a murky and stormy night. I was all alone sitting on a crimson cha
 print(SM(None, s1, s2).ratio())
 '''
 
+def ret_soup(log, br, url, rkt=None, who='[__init__]'):
+    # Function to return the soup for beautifullsoup to work on.
+    #
+    debug=0
+    if debug:
+        log.info(who, "(ret_soup) In ret_soup(log, br, url, rkt=none, who='[__init__]'")
+
+    # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
+    # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
+    #
+    # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
+    # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
+    # Maybe I should have tried earlier the working solution as the emitting node is MS
+    # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
+    # It decode correctly to utf_8 with windows-1252 forced as from_encoding
+    # watch-out noosfere is talking about making the site better... ;-}
+    #'
+    from_encoding="windows-1252"
+    
+
+    try:
+        log.info(who, "(ret_soup) Accessing url : ", url)
+        if rkt :
+            log.info(who, "(ret_soup) search parameters : ",rkt)
+            rkt=urllib.parse.urlencode(rkt).encode('ascii')
+            if debug: log.info(who, "formated parameters : ", rkt)
+        sr = br.open(url,data=rkt,timeout=20)
+        if debug:
+            log.info(who,"(ret_soup) sr.info()     : ", sr.info())
+            log.info(who,"(ret_soup) ha ouais, vraiment? charset=iso-8859-1... c'est pas vrai, c'est du", from_encoding,"...")
+            log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
+            log.info(who,"(ret_soup) url_vrai      : ",sr.geturl())
+    except Exception as e:
+        log.exception(e)
+        raise Exception('(ret_soup) Failed while acessing url : ',url ,'-', e)
+
+    soup = BS(sr, "html5lib", from_encoding="windows-1252")
+    if debug:
+#        log.info(who,"soup.prettify() :\n",soup.prettify())               # très utile parfois, mais que c'est long...
+        log.info(who,"(ret_soup) return (soup,sr.geturl()) from ret_soup\n")
+    return (soup,sr.geturl())
+
 class noosfere(Source):
 
     name                    = 'noosfere DB'
@@ -44,16 +84,10 @@ class noosfere(Source):
     touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'rating', 'languages',
                                 'comments', 'publisher', 'pubdate', 'series', 'tags'])
     has_html_comments = True
+    supports_gzip_transfer_encoding = True
 
     from_encoding="windows-1252"
-    search_urn="https://www.noosfere.org/livres/noosearch.asp"
 
-
-#    def get_book_url(self, identifiers):
-#    def id_from_url(self, url):
-#
-# No need for the above, there is absolutely no  way to construct a direct link to a volume
-#
 # noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
 # noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
 # last but not least noosfere is in french ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
@@ -81,7 +115,7 @@ class noosfere(Source):
 #
 
     def get_cached_cover_url(self, identifiers):
-        # I guess this routine returns an url that was discovered somewhere else and put into cache 
+        # I guess this routine returns an url that was discovered somewhere else and put into cache
         # probably using cache_identifier_to_cover_url in the worket.py
         # as ISBN is missing sometime in noosfere
         # as noosfere does not provide any proprietary id
@@ -106,7 +140,7 @@ class noosfere(Source):
         # Characters irrelevant to ISBN and separators inside ISBN must be removed,
         # the resulting word must be either 10 or 13 characters long.
         #
-        debug=1
+        debug=0
         if debug:
             log.info("\nIn verify_isbn(isbn_str)")
             log.info("isbn_str         : ",isbn_str)
@@ -116,15 +150,14 @@ class noosfere(Source):
                 isbn_str=isbn_str.replace(k,"")
         if debug:
             log.info("isbn_str cleaned : ",isbn_str)
-            log.info("return from verify_isbn\n")
-
+            log.info("return check_isbn(isbn_str) from verify_isbn\n")
         return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
 
     def ret_clean_text(self, log, text):
         # for noosfere search to work smoothly, authors and title needs to be cleaned
         # we need to remove non significant characters and remove useless space character
         #
-        debug=1
+        debug=0
         if debug:
             log.info("\nIn clean_txt(self, log, text)")
             log.info("text         : ", text)
@@ -137,7 +170,7 @@ class noosfere(Source):
 
         if debug:
             log.info("cleaned text : ", text)
-            log.info("return from clean_txt\n")
+            log.info("return text from clean_txt\n")
         return text
 
     def ret_author_index(self, log, br, authors):
@@ -148,7 +181,7 @@ class noosfere(Source):
         # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
         # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
         #
-        debug=1
+        debug=0
         if debug:
             log.info("\nIn ret_author_index(soup)")
             log.info("authors : ",authors)
@@ -156,13 +189,12 @@ class noosfere(Source):
 
         # try to get a short list of authors using exact match
         #
+        # ret_soup(log, br, url, rkt=none, who='[__init__]'):
+        
         for i in range(len(authors)):
             rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-            if debug: log.info("rkt : ", rkt)
-            req=urllib.parse.urlencode(rkt).encode('ascii')
-            if debug: log.info("req : ", req)
-            sr=br.open(self.search_urn,req,timeout=20)
-            soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
+            url = "https://www.noosfere.org/livres/noosearch.asp"           
+            soup = ret_soup(log, br, url, rkt=rkt)[0]
             tmp_ai=soup.select('a[href*="auteur.asp"]')
             if len(tmp_ai):
                 for i in range(len(tmp_ai)):
@@ -179,11 +211,8 @@ class noosfere(Source):
             if debug: log.info("exact match failed, trying fuzzy match")
             for i in range(len(authors)):
                 rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-                if debug: log.info("rkt : ", rkt)
-                req=urllib.parse.urlencode(rkt).encode('ascii')
-                if debug: log.info("req : ", req)
-                sr=br.open(self.search_urn,req,timeout=20)
-                soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
+                url = "https://www.noosfere.org/livres/noosearch.asp"           
+                soup = ret_soup(log, br, url, rkt=rkt)[0]
                 tmp_ai=soup.select('a[href*="auteur.asp"]')
                 if len(tmp_ai):
                     for i in range(len(tmp_ai)):
@@ -232,7 +261,7 @@ class noosfere(Source):
         # The "book_per_author_index" dictionnary will contain all book's references...
         # If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
         #
-        debug=1
+        debug=0
         if debug:
             log.info("\nIn ret_book_per_author_index(self, log, br, author_index)")
             log.info("author_index : ",author_index)
@@ -242,13 +271,7 @@ class noosfere(Source):
         for i in range(len(author_index)):
             rqt= author_index[i]+"&Niveau=livres"
             url="https://www.noosfere.org"+rqt
-            if debug: log.info("url : ",url)
-            sr=br.open(url,timeout=20)
-            if debug:
-                log.info("sr.geturl()  : ",sr.geturl())
-                log.info("sr.getcode() : ",sr.getcode())
-            soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
-
+            soup = ret_soup(log, br, url)[0]
             tmp_bpai=soup.select('a[href*="ditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
                 bpai_title=tmp_bpai[i].text.lower()
@@ -257,7 +280,7 @@ class noosfere(Source):
                 if debug:
                     log.info('book_per_author_url,tmp_bpai[i]["href"], title : ', bpai_url, tmp_bpai[i]["href"], " ; ", tmp_bpai[i].text)
 
-        if debug: log.info('return from ret_book_per_author_index\n')
+        if debug: log.info('return book_per_author_index from ret_book_per_author_index\n')
         return book_per_author_index
 
     def ISBN_ret_book_index(self, log, br, isbn, book_index):
@@ -273,19 +296,14 @@ class noosfere(Source):
         # Caution: the reference may contains several volumes,
         # each with potentialy a different editor, a different edition date,... and even a different title
         #
-        debug=1
+        debug=0
         if debug: log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
 
         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
         rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-        if debug: log.info("rkt : ", rkt)
-        req=urllib.parse.urlencode(rkt).encode('ascii')
-        if debug: log.info("req : ", req)
-        sr=br.open(self.search_urn,req,timeout=20)
-        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
-
+        url = "https://www.noosfere.org/livres/noosearch.asp"           
+        soup = ret_soup(log, br, url, rkt=rkt)[0]
         tmp_rbi=soup.select('a[href*="ditionsLivre.asp"]')
-
         if len(tmp_rbi):
             for i in range(len(tmp_rbi)):
                 if debug:
@@ -294,7 +312,7 @@ class noosfere(Source):
 
         if debug:
             log.info("book_index : ",book_index)
-            log.info("return from ISBN_ret_book_index\n")
+            log.info("return book_index from ISBN_ret_book_index\n")
         return book_index
 
     def identify(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
@@ -302,7 +320,7 @@ class noosfere(Source):
         # Note this method will retry without identifiers automatically if no
         # match is found with identifiers.
         #
-        debug=1
+        debug=0
         if debug:
             log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
             log.info('log          : ', log)
@@ -314,7 +332,6 @@ class noosfere(Source):
             log.info('\n')
 
         br = self.browser
-        if debug: log.info('br : ',br)
 
         isbn = identifiers.get('isbn', None)
         if isbn: isbn = self.verify_isbn(log, isbn)
@@ -353,7 +370,7 @@ class noosfere(Source):
                     unsorted_book_index={}
                     unsorted_book_index[ratio]=[book_url, "", book_title]
                     break
-                
+
             sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
             for key,ref in sorted_book_index.items():
                 book_url = ref[0]
@@ -392,45 +409,49 @@ class noosfere(Source):
             if not a_worker_is_alive:
                 break
 
+        if debug: log.info("return None from identify")
         return None
 
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
-        log.info('log          : ', log)
-        log.info('result_queue : ', result_queue)
-        log.info('abort        : ', abort)
-        log.info('title        : ', title)
-        log.info('authors      : ', authors)
-        log.info('identifiers  : ', identifiers)
-        log.info('timeout      : ', timeout)
+        # willl download cover from Noosfere provided it was found (and then cached)
+        debug=0
+        if debug:
+            log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
+            log.info('log          : ', log)
+            log.info('result_queue : ', result_queue)
+            log.info('abort        : ', abort)
+            log.info('title        : ', title)
+            log.info('authors      : ', authors)
+            log.info('identifiers  : ', identifiers)
+            log.info('timeout      : ', timeout)
 
         cached_url = self.get_cached_cover_url(identifiers)
-##        if cached_url is None:
-##            log.info('No cached cover found, running identify')
-##            rq = Queue()
-##            self.identify(log, rq, abort, title=title, authors=authors,
-##                    identifiers=identifiers)
-##            if abort.is_set():
-##                return
-##            results = []
-##            while True:
-##                try:
-##                    results.append(rq.get_nowait())
-##                except Empty:
-##                    break
-##            results.sort(key=self.identify_results_keygen(
-##                title=title, authors=authors, identifiers=identifiers))
-##            for mi in results:
-##                cached_url = self.get_cached_cover_url(mi.identifiers)
-##                if cached_url is not None:
-##                    break
+        if cached_url is None:
+            log.info('No cached cover found, running identify')
+            rq = Queue()
+            self.identify(log, rq, abort, title=title, authors=authors, identifiers=identifiers)
+            if abort.is_set():
+                return
+            results = []
+            while True:
+                try:
+                    results.append(rq.get_nowait())
+                except Empty:
+                    break
+            results.sort(key=self.identify_results_keygen(
+                title=title, authors=authors, identifiers=identifiers))
+            for mi in results:
+                cached_url = self.get_cached_cover_url(mi.identifiers)
+                if cached_url is not None:
+                    break
         if cached_url is None:
             log.info('No cover found')
             return
 
         if abort.is_set():
             return
+        
         br = self.browser
         log('Downloading cover from:', cached_url)
         try:
@@ -453,19 +474,19 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-##            ( # A book with no ISBN specified
-##                {'identifiers':{}, 'title':"La Guerre contre le Rull", 'authors':['A.e. VAN VOGT']},
-##                [title_test("La Guerre contre le Rull", exact=True), authors_test(['Alfred Elton Van Vogt']), series_test('Helliconia', 1.0)]
-##            ),
-
-            ( # A book with an ISBN
-                {'identifiers':{'isbn': '2-253-04908-5'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+            ( # A book with no ISBN specified
+                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
+                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
             ),
 
 ##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '2-221-10703-9'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
 ##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+##            ),
+
+##            ( # A book with an ISBN
+##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},
+##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
 ##            ),
 
 ##            ( # A book with a KoboBooks id
