@@ -70,7 +70,6 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"Entering run(self)")
 
         wrk_url = self.book_url
-        self.log.info(self.who,"lrp"*10, "wrk_url : ",wrk_url)
         if "ditionsLivre" in wrk_url:
             book_url="https://www.noosfere.org"+self.book_url+"&Tri=3"
             if debug: self.log.info(self.who,"book_url : ",book_url)
@@ -229,6 +228,23 @@ class Worker(Thread):
 
         return top_vol_index
 
+    def get_decoupage_annexe(self, dec_anx_url):
+        # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
+        # I want to catch it so I can get the info for the numbering
+        #
+        debug=1
+        if debug: self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
+        if debug:
+            self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
+            self.log.info(self.who,"critic_url : ", dec_anx_url, "who : ", self.who)
+        soup = ret_soup(self.log, self.br, dec_anx_url, who=self.who)[0]
+
+        if debug:
+#            self.log.info(self.who,soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  #long
+            self.log.info(self.who,"découpage annexe found")
+        
+        return soup.select_one("div#Série").select_one("div").select_one("tbody")
+
     def get_Critique_de_la_serie(self, critic_url):
         # La critique de la serie peut etre developpée dans une autre page dont seul l(url est d'interet
         # cette fondtion remplce le pointeur par le contenu.
@@ -241,7 +257,7 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", critic_url, "who : ", self.who)
-        soup = ret_soup(self.log, self.br, critic_url, who=self.who)
+        soup = ret_soup(self.log, self.br, critic_url, who=self.who)[0]
 
         if debug:
 #            self.log.info(self.who,"""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # trop grand, mais peut servir
@@ -290,7 +306,7 @@ class Worker(Thread):
         tmp_lst=[]
         vol_info={}
         vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_serie=vol_serie_seq=vol_editor=vol_coll=vol_coll_nbr=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
-        comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=None
+        comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=comment_decoupage_annexe=None
 
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"vol reference found")
@@ -318,6 +334,10 @@ class Worker(Thread):
                 for i in range(len(tmp_vss)):
                     if "vol." in tmp_vss[i]:
                         vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+                    if "découpage" in tmp_vss[i]:
+                        dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
+                        comment_pre_decoupage_annexe = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px"> (découpage annexe) </p></div>',"lxml")
+                        comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
                 if debug: self.log.info(self.who,"vol_serie, vol_serie_seq found")
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -426,6 +446,10 @@ class Worker(Thread):
         if comment_AutresCritique:
             vol_comment_soup.append(comment_pre_AutresCritique)
             vol_comment_soup.append(comment_AutresCritique)
+        if comment_decoupage_annexe:
+            vol_comment_soup.append(comment_pre_decoupage_annexe)
+            vol_comment_soup.append(comment_decoupage_annexe)
+
     #
     # Make a minimum of "repair" over vol_comment_soup so that it displays correctly in the comments and in my catalogs
     # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
@@ -467,7 +491,9 @@ class Worker(Thread):
 
     # ok, all collected, make it fit typewise for mi cache cover and set mi
 
-        if vol_serie: series_index = float(vol_serie_seq)
+        if vol_serie:
+            if vol_serie_seq.isnumeric(): vol_serie_seq = float(vol_serie_seq)
+            else: vol_serie_seq = 1.0
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
         if debug:
@@ -479,8 +505,8 @@ class Worker(Thread):
             self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
             self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
             if vol_serie:
-                self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
-                self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))              # must be <class 'float'>
+                self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                  # must be <class 'str'>
+                self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
             self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
             self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be
             self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be
@@ -488,8 +514,8 @@ class Worker(Thread):
             self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
             self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
             self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
-            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                         # must be byte encoded (start with b'blablabla...
-            self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
+            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
+#            self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
                                                                                                                # language must be <class 'str'>
 
         if vol_isbn and vol_cover_index:

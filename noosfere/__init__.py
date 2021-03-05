@@ -32,9 +32,13 @@ print(SM(None, s1, s2).ratio())
 def ret_soup(log, br, url, rkt=None, who='[__init__]'):
     # Function to return the soup for beautifullsoup to work on.
     #
-    debug=0
+    debug=1
     if debug:
         log.info(who, "(ret_soup) In ret_soup(log, br, url, rkt=none, who='[__init__]'")
+        log.info(who, "(ret_soup) br  : ", br)
+        log.info(who, "(ret_soup) url : ", url)
+        log.info(who, "(ret_soup) rkt : ", rkt)
+        log.info(who, "(ret_soup) who : ", who)
 
     # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
@@ -47,23 +51,32 @@ def ret_soup(log, br, url, rkt=None, who='[__init__]'):
     # watch-out noosfere is talking about making the site better... ;-}
     #'
     from_encoding="windows-1252"
-    
 
+
+    log.info(who, "(ret_soup) Accessing url : ", url)
+    if rkt :
+        log.info(who, "(ret_soup) search parameters : ",rkt)
+        rkt=urllib.parse.urlencode(rkt).encode('ascii')
+        if debug: log.info(who, "formated parameters : ", rkt)
     try:
-        log.info(who, "(ret_soup) Accessing url : ", url)
-        if rkt :
-            log.info(who, "(ret_soup) search parameters : ",rkt)
-            rkt=urllib.parse.urlencode(rkt).encode('ascii')
-            if debug: log.info(who, "formated parameters : ", rkt)
         sr = br.open(url,data=rkt,timeout=20)
-        if debug:
-            log.info(who,"(ret_soup) sr.info()     : ", sr.info())
-            log.info(who,"(ret_soup) ha ouais, vraiment? charset=iso-8859-1... c'est pas vrai, c'est du", from_encoding,"...")
-            log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
-            log.info(who,"(ret_soup) url_vrai      : ",sr.geturl())
-    except Exception as e:
-        log.exception(e)
-        raise Exception('(ret_soup) Failed while acessing url : ',url ,'-', e)
+    except TimeoutError:
+        log.info(who, "The network timed out")
+        raise Exception('(ret_soup) Failed while acessing url : ',url)
+    except urllib.error.HTTPError as e:
+        log.info(who, "urllib.error.HTTPError received.")
+        log.info(who, "code : ",e.code,"reason : ",e.reason)
+        raise Exception('(ret_soup) Failed while acessing url : ',url)
+    except urllib.error.URLError as e:
+        log.info(who, "urllib.error.URLError received")
+        log.info(who, "reason : ",e.reason)
+        raise Exception('(ret_soup) Failed while acessing url : ',url)
+
+    if debug:
+        log.info(who,"(ret_soup) sr.info()     : ", sr.info())
+        log.info(who,"(ret_soup) ha ouais, vraiment? charset=iso-8859-1... c'est pas vrai, c'est du", from_encoding,"...")
+        log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
+        log.info(who,"(ret_soup) url_vrai      : ",sr.geturl())
 
     soup = BS(sr, "html5lib", from_encoding="windows-1252")
     if debug:
@@ -190,10 +203,10 @@ class noosfere(Source):
         # try to get a short list of authors using exact match
         #
         # ret_soup(log, br, url, rkt=none, who='[__init__]'):
-        
+
         for i in range(len(authors)):
             rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-            url = "https://www.noosfere.org/livres/noosearch.asp"           
+            url = "https://www.noosfere.org/livres/noosearch.asp"
             soup = ret_soup(log, br, url, rkt=rkt)[0]
             tmp_ai=soup.select('a[href*="auteur.asp"]')
             if len(tmp_ai):
@@ -211,7 +224,7 @@ class noosfere(Source):
             if debug: log.info("exact match failed, trying fuzzy match")
             for i in range(len(authors)):
                 rkt = {"Mots":authors[i],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-                url = "https://www.noosfere.org/livres/noosearch.asp"           
+                url = "https://www.noosfere.org/livres/noosearch.asp"
                 soup = ret_soup(log, br, url, rkt=rkt)[0]
                 tmp_ai=soup.select('a[href*="auteur.asp"]')
                 if len(tmp_ai):
@@ -301,7 +314,7 @@ class noosfere(Source):
 
         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
         rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
-        url = "https://www.noosfere.org/livres/noosearch.asp"           
+        url = "https://www.noosfere.org/livres/noosearch.asp"
         soup = ret_soup(log, br, url, rkt=rkt)[0]
         tmp_rbi=soup.select('a[href*="ditionsLivre.asp"]')
         if len(tmp_rbi):
@@ -451,7 +464,7 @@ class noosfere(Source):
 
         if abort.is_set():
             return
-        
+
         br = self.browser
         log('Downloading cover from:', cached_url)
         try:
@@ -474,10 +487,10 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-            ( # A book with no ISBN specified
-                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
-                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
-            ),
+##            ( # A book with no ISBN specified
+##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
+##                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
+##            ),
 
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
@@ -489,9 +502,14 @@ if __name__ == '__main__':
 ##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
 ##            ),
 
-##            ( # A book with a KoboBooks id
-##                {'identifiers':{'kobo': 'across-the-sea-of-suns-1'}, 'title':'Across the Sea of Suns', 'authors':['Gregory Benford']},
-##                [title_test('Across the Sea of Suns', exact=True), authors_test(['Gregory Benford']), series_test('Galactic Centre', 2.0)]
+            ( # A book with an ISBN
+                {'identifiers':{'isbn': '2265044016'}, 'title':"L'Homme-requin", 'authors':['Jean-Christophe Chaumette']},
+                [title_test("L'Homme-requin", exact=True), authors_test(['Jean-Christophe Chaumette']), series_test('Neuvième cercle', 1.0)]
+            ),
+
+##            ( # A book with an ISBN
+##                {'identifiers':{'isbn': ''}, 'title':"", 'authors':['']},
+##                [title_test("", exact=True), authors_test(['']), series_test('', 0)]
 ##            ),
 
         ])
