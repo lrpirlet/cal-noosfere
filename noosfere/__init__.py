@@ -3,7 +3,7 @@
 #
 # Note: If this work (done to learn both python and the Hyper Text Markup Language) finds its way to the public domain, so be it.
 # I have no problem with, and reserve the right to ignore, any error, choice and poor optimization.
-# I use it, it is MY problem... You use it, it is YOUR problem
+# I use it, it is MY problem... You use it, it is YOUR problem.
 # For example, my mother language is French and my variable's names are MY choise for MY easy use...
 # Anyway, I'll comment (or not) in english or in french or in both depending when I write it (no comment please :-) )
 #
@@ -29,12 +29,32 @@ s2 = ' It was a murky and stormy night. I was all alone sitting on a crimson cha
 print(SM(None, s1, s2).ratio())
 '''
 
+def urlopen_with_retry(log, br, url, rkt, who):
+    debug=0
+    log.info(who, "(urlopen_with_retry) In urlopen_with_retry(log, br, url, rkt, who)")
+    if debug:
+        log.info(who, "(urlopen_with_retry) br  : ", br)
+        log.info(who, "(urlopen_with_retry) url : ", url)
+        log.info(who, "(urlopen_with_retry) rkt : ", rkt)
+        log.info(who, "(urlopen_with_retry) who : ", who)
+
+    tries, delay, backoff=3, 3, 2
+    while tries > 1:
+        try:
+            return br.open(url,data=rkt,timeout=8)
+        except urllib.error.URLError as e:
+            log.info(who,"(urlopen_with_retry)", str(e),", will retry in", delay, "seconds...")
+            time.sleep(delay)
+            tries -= 1
+            delay *= backoff
+            return br.open(url,data=rkt,timeout=8)
+
 def ret_soup(log, br, url, rkt=None, who='[__init__]'):
     # Function to return the soup for beautifullsoup to work on.
     #
-    debug=1
+    debug=0
+    log.info(who, "(ret_soup) In ret_soup(log, br, url, rkt=none, who='[__init__]'")
     if debug:
-        log.info(who, "(ret_soup) In ret_soup(log, br, url, rkt=none, who='[__init__]'")
         log.info(who, "(ret_soup) br  : ", br)
         log.info(who, "(ret_soup) url : ", url)
         log.info(who, "(ret_soup) rkt : ", rkt)
@@ -59,7 +79,7 @@ def ret_soup(log, br, url, rkt=None, who='[__init__]'):
         rkt=urllib.parse.urlencode(rkt).encode('ascii')
         if debug: log.info(who, "formated parameters : ", rkt)
     try:
-        sr = br.open(url,data=rkt,timeout=20)
+        sr = urlopen_with_retry(log, br, url, rkt, who)
     except TimeoutError:
         log.info(who, "The network timed out")
         raise Exception('(ret_soup) Failed while acessing url : ',url)
@@ -71,11 +91,14 @@ def ret_soup(log, br, url, rkt=None, who='[__init__]'):
         log.info(who, "urllib.error.URLError received")
         log.info(who, "reason : ",e.reason)
         raise Exception('(ret_soup) Failed while acessing url : ',url)
+    except Exception as e:
+        log.exception(e)
+        raise Exception('(ret_soup) Failed while acessing url : ',url ,'-', e)
 
+    log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
     if debug:
         log.info(who,"(ret_soup) sr.info()     : ", sr.info())
         log.info(who,"(ret_soup) ha ouais, vraiment? charset=iso-8859-1... c'est pas vrai, c'est du", from_encoding,"...")
-        log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
         log.info(who,"(ret_soup) url_vrai      : ",sr.geturl())
 
     soup = BS(sr, "html5lib", from_encoding="windows-1252")
@@ -122,7 +145,6 @@ class noosfere(Source):
 #
 #
 # the nice think about noosfere is the power of the search (each word may be "ANDed, exact or fuzzy match, etc...)
-#
 # the result gives a LOT of information about the book, author, translator...
 # and the nice think about calibre is the possibility to insert working url in the comments and in the catalog
 #
@@ -154,8 +176,8 @@ class noosfere(Source):
         # the resulting word must be either 10 or 13 characters long.
         #
         debug=0
+        log.info("\nIn verify_isbn(isbn_str)")
         if debug:
-            log.info("\nIn verify_isbn(isbn_str)")
             log.info("isbn_str         : ",isbn_str)
 
         for k in ['(',')','-',' ']:
@@ -172,7 +194,7 @@ class noosfere(Source):
         #
         debug=0
         if debug:
-            log.info("\nIn clean_txt(self, log, text)")
+            log.info("\nIn ret_clean_txt(self, log, text)")
             log.info("text         : ", text)
 
         text=lower(get_udc().decode(text))
@@ -183,7 +205,7 @@ class noosfere(Source):
 
         if debug:
             log.info("cleaned text : ", text)
-            log.info("return text from clean_txt\n")
+            log.info("return text from ret_clean_txt\n")
         return text
 
     def ret_author_index(self, log, br, authors):
@@ -195,8 +217,8 @@ class noosfere(Source):
         # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
         #
         debug=0
+        log.info("\nIn ret_author_index(soup)")
         if debug:
-            log.info("\nIn ret_author_index(soup)")
             log.info("authors : ",authors)
         all_author_index={}
 
@@ -275,8 +297,8 @@ class noosfere(Source):
         # If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
         #
         debug=0
+        log.info("\nIn ret_book_per_author_index(self, log, br, author_index)")
         if debug:
-            log.info("\nIn ret_book_per_author_index(self, log, br, author_index)")
             log.info("author_index : ",author_index)
 
         book_per_author_index={}
@@ -310,7 +332,7 @@ class noosfere(Source):
         # each with potentialy a different editor, a different edition date,... and even a different title
         #
         debug=0
-        if debug: log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
+        log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
 
         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
         rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
@@ -334,8 +356,8 @@ class noosfere(Source):
         # match is found with identifiers.
         #
         debug=0
+        log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
         if debug:
-            log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
             log.info('log          : ', log)
             log.info('result_queue : ', result_queue)
             log.info('abort        : ', abort)
@@ -348,6 +370,7 @@ class noosfere(Source):
 
         isbn = identifiers.get('isbn', None)
         if isbn: isbn = self.verify_isbn(log, isbn)
+        lrpid = identifiers.get('lrpid', None)
 
         for i in range(len(authors)):
             authors[i] = self.ret_clean_text(log, authors[i])
@@ -387,8 +410,9 @@ class noosfere(Source):
             sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
             for key,ref in sorted_book_index.items():
                 book_url = ref[0]
-                book_index[book_url]=(str(time.time_ns())[2:-5], book_title)
-                log.info('book_indexbook_index[book_url]=(str(time.time_ns())[2:-5], book_title) : ',book_index)
+                if not lrpid: lrpid = str(time.time_ns())[2:-5]
+                book_index[book_url]=(lrpid, book_title)
+                log.info('book_indexbook_index[book_url]=(lrpid, book_title) : ',book_index)
 
         if not len(book_index):
             log.error("No book found in noosfere... ")
@@ -429,8 +453,8 @@ class noosfere(Source):
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
         # willl download cover from Noosfere provided it was found (and then cached)
         debug=0
+        log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
         if debug:
-            log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
             log.info('log          : ', log)
             log.info('result_queue : ', result_queue)
             log.info('abort        : ', abort)

@@ -29,7 +29,7 @@ class Worker(Thread):
 
     def __init__(self, log, book_url, lrpid, book_title, isbn, result_queue, browser, relevance, plugin, timeout=20):
 
-        debug=1
+        debug=0
 
         Thread.__init__(self)
         self.daemon = True
@@ -46,8 +46,8 @@ class Worker(Thread):
         self.who="[worker "+str(relevance)+"]"
         self.from_encoding="windows-1252"
 
+        self.log.info("\nEntering worker", relevance)
         if debug:
-            self.log.info("\nEntering worker", relevance)
             self.log.info(self.who,"self                  : ", self)
             self.log.info(self.who,"log                   : ", log)
             self.log.info(self.who,"book_url              : ", book_url)
@@ -66,8 +66,8 @@ class Worker(Thread):
         # OK, il faut se connecter sur wrk_url et remonter url_vrai...
         # On decide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
         #
-        debug=1
-        if debug: self.log.info(self.who,"Entering run(self)")
+        debug=0
+        self.log.info(self.who,"Entering run(self)")
 
         wrk_url = self.book_url
         if "ditionsLivre" in wrk_url:
@@ -97,9 +97,9 @@ class Worker(Thread):
         # Characters irrelevant to ISBN and separators inside ISBN must be removed,
         # the resulting word must be either 10 or 13 characters long.
         #
-        debug=1
+        debug=0
+        self.log.info(self.who,"\nIn verify_isbn(isbn_str)")
         if debug:
-            self.log.info(self.who,"\nIn verify_isbn(isbn_str)")
             self.log.info(self.who,"isbn_str         : ",isbn_str)
 
         for k in ['(',')','-',' ']:
@@ -131,16 +131,16 @@ class Worker(Thread):
         # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
         # en cas d'egalité, le plus ancien reçoit la préférence
         # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-        debug=1
+        debug=0
+        self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
         if debug:
-            self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
             self.log.info(self.who,"url : ",url,", book_title : ",book_title)
 
 ##        sr=self.br.open(url,timeout=20)
 ##        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
 
+        self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
         if debug:
-            self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"url : ", url, "who : ", self.who)
         rsp = ret_soup(self.log, self.br, url, who=self.who)
         soup = rsp[0]
@@ -175,7 +175,6 @@ class Worker(Thread):
 
             if subsoup.select("span[class='SousFicheNiourf']"):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                self.log.info(self.who,"vol_isbn              : ",vol_isbn)
                 vol_isbn = self.verify_isbn(vol_isbn)
                 if vol_isbn:
                     point+=500
@@ -195,20 +194,21 @@ class Worker(Thread):
                 elif "S" in tmp_presence[i].text: point+=1
 
         # lrp todo?? Ce choix constitue un racourci qui devrait etre remplacé par une presentation à l'utilisateur pour qu'il choisisse
+        # problem:  autogrouping of similar books...
+        #           how could we know if mass sourcing or one book sourcing?
 
             ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
 
 
-            if debug:
-                self.log.info(self.who,"key                   : ",str(int(count/2)))
-                self.log.info(self.who,"vol_index             : ",vol_index)
-                self.log.info(self.who,"vol_title             : ",vol_title)
-                self.log.info(self.who,"vol_cover_index       : ",vol_cover_index)
-                self.log.info(self.who,"vol_editor            : ",vol_editor)
-                self.log.info(self.who,"vol_isbn              : ",vol_isbn)
-                self.log.info(self.who,"vol_collection        : ",vol_collection)
-                self.log.info(self.who,"point                 : ",point)
-                self.log.info(self.who,"found",int(count/2+1),"volumes différents")
+            self.log.info(self.who,"found",int(count/2+1),"volumes différents")
+            self.log.info(self.who,"key                   : ",str(int(count/2)))
+            self.log.info(self.who,"vol_index             : ",vol_index)
+            self.log.info(self.who,"vol_title             : ",vol_title)
+            self.log.info(self.who,"vol_cover_index       : ",vol_cover_index)
+            self.log.info(self.who,"vol_editor            : ",vol_editor)
+            self.log.info(self.who,"vol_isbn              : ",vol_isbn)
+            self.log.info(self.who,"vol_collection        : ",vol_collection)
+            self.log.info(self.who,"point                 : ",point)
 
         top_vol_point,top_vol_index,serie_editeur=0,"",[]
 
@@ -232,8 +232,8 @@ class Worker(Thread):
         # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
         # I want to catch it so I can get the info for the numbering
         #
-        debug=1
-        if debug: self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
+        debug=0
+        self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
         if debug:
             self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", dec_anx_url, "who : ", self.who)
@@ -252,8 +252,8 @@ class Worker(Thread):
         # The critic for a serie may be set appart in another page. The vol url refers to that other loacation.
         # I want to have it local to my volume.
         #
-        debug=1
-        if debug: self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
+        debug=0
+        self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
         if debug:
             self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", critic_url, "who : ", self.who)
@@ -290,9 +290,9 @@ class Worker(Thread):
         #   . Critiques about the serie and/or about another volume of the book
         #
 
-        debug=1
+        debug=0
+        self.log.info(self.who,"\nIn extract_vol_details(soup)")
         if debug:
-            self.log.info(self.who,"\nIn extract_vol_details(soup)")
             self.log.info(self.who,"vol_url       : ",vol_url)
 
         if debug:
@@ -496,26 +496,25 @@ class Worker(Thread):
             else: vol_serie_seq = 1.0
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
-        if debug:
-            self.log.info(self.who,"+++"*25)
-            self.log.info(self.who,"lrpid, type()                  : ",self.lrpid, type(self.lrpid))                    # must be <class 'str'>
-            self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
-            self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
-            self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
-            self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
-            self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
-            if vol_serie:
-                self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                  # must be <class 'str'>
-                self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
-            self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
-            self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be
-            self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be
-            self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
-            self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
-            self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
-            self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
-            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
-#            self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
+        self.log.info(self.who,"+++"*25)
+        self.log.info(self.who,"lrpid, type()                  : ",self.lrpid, type(self.lrpid))                    # must be <class 'str'>
+        self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
+        self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
+        self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
+        self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
+        self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
+        if vol_serie:
+            self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                  # must be <class 'str'>
+            self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
+        self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
+        self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be
+        self.log.info(self.who,"vol_coll_nbr, type()           : ",vol_coll_nbr, type(vol_coll_nbr))                # must be
+        self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
+        self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
+        self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
+        self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
+        self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
+#        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
                                                                                                                # language must be <class 'str'>
 
         if vol_isbn and vol_cover_index:
