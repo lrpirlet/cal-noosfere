@@ -518,9 +518,11 @@ class Worker(Thread):
                                                                                                                # language must be <class 'str'>
 
         if vol_isbn and vol_cover_index:
-                self.plugin.cache_isbn_to_identifier(vol_isbn, self.lrpid)
+            self.plugin.cache_identifier_to_cover_url(self.lrpid, vol_cover_index)
 
-        self.plugin.cache_identifier_to_cover_url(self.lrpid, vol_cover_index)
+        if vol_isbn:
+            self.plugin.cache_isbn_to_identifier(vol_isbn, self.lrpid)
+
 
         mi = Metadata(vol_title, [vol_auteur])
         mi.set_identifier('lrpid', self.lrpid)

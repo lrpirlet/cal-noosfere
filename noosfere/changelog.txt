@@ -1,0 +1,37 @@
+# noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
+# noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
+# last but not least noosfere is in french ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
+#
+# A volume has in common with a book the author and the title but not the cover, not the editor, not the isbn, not.."
+# I want the information about a volume... I want a coherent information.
+#
+# In order to collect the information about a volume one must use either the ISBN, the author and the title or at least the title
+#
+# If the ISBN exists a search in noosfere points to a serie of volumes (yet only one book :-) )
+#
+# if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authorss :-( )
+# out of this list, a match to the title will point to a serie of volumes
+#
+# if the title is the only reference, a search in noosfere will output a list of books sorted by best mactch along with a score
+# again a book will point to a serie of volume
+#
+# out of the volume list one must choose the best candidate to get a coherent set of volumes attributes (cover, isbn, editor, critics, serie, serie #, etc...
+#
+#
+# the nice think about noosfere is the power of the search (each word may be "ANDed, exact or fuzzy match, etc...)
+# the result gives a LOT of information about the book, author, translator...
+# and the nice think about calibre is the possibility to insert working url in the comments and in the catalog
+#
+#
+# File worker.py is NOT stricly needed (read absolutely useless) but it was nice to develop so I learned how to create spawned process... :-)
+#
+# REGISTERIT.BAT will create a zip file that will be pushed to the righ place... It must be invoked any time a change is done to a .py file.
+#
+# TESTIT.BAT will bost register and execute some testing (usefull when debuging an url that behave differently (read when it displays one of my bugs leftover)
+#
+# This is a beta version (alpha is I guess when only me can make it work...). I mean "c'est juste une bête version"... 
+# For the english speaking people, this is a very very funny word play in french... all right, at least it makes me laugh, even if I am the only one...
+# 
+# I still need to add some custom columns but I have not decided if I need to design a config program  in a window...
+#
+# I have to decide how to give me the possiblity to choose what volume I want in calibre...

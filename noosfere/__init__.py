@@ -165,6 +165,17 @@ class noosfere(Source):
         if lrpid is not None:
             url = self.cached_identifier_to_cover_url(lrpid)
         return url
+####from KG
+####    def get_cached_cover_url(self, identifiers):  # {{{
+####        url = None
+####        ovrdrv_id = identifiers.get('overdrive', None)
+####        if ovrdrv_id is None:
+####            isbn = identifiers.get('isbn', None)
+####            if isbn is not None:
+####                ovrdrv_id = self.cached_isbn_to_identifier(isbn)
+####        if ovrdrv_id is not None:
+####            url = self.cached_identifier_to_cover_url(ovrdrv_id)
+
 
     def verify_isbn(self, log, isbn_str):
         # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"

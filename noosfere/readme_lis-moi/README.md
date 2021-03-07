@@ -4,7 +4,7 @@ The URL to access nooSFere is <https://https://www.noosfere.org/>.
 
 Here is a site really rich that covers French publications about what they call "publications de l’imaginaire".
 
-one is able to find reference to books, note about the authors copy of the last cover page... to name a few. This site just looks to me like an encyclopedia. : [What noosfere claims as content (sure, in French...)](https://www.noosfere.org/noosfere/pro/stats_bases.asp))..
+Anybody is able to find reference to books, note about the authors, copy of the last cover page... to name a few. This site just looks to me like an encyclopedia. : [What noosfere claims as content (sure, in French...)](https://www.noosfere.org/noosfere/pro/stats_bases.asp))..
 
 nooSFere gives home to non professional sites: [nooSFere - Sites
 d'adherents](https://www.noosfere.org/noosfere/heberges.asp)
