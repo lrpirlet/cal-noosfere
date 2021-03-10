@@ -46,4 +46,4 @@ l'association](https://www.noosfere.org/noosfere/assoc/don.asp)
 ## cal-noosfere
 
 Mon idée est de me permettre de télécharger les informations relatives à un
-livre dans calibre
+volume du livre dans calibre

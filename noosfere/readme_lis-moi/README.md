@@ -34,4 +34,4 @@ Carefull noosfere has anounced some changes in the future:
 
 ## cal-noosfere
 
-My idea about this development is to be able to download the information into Calibre.
+My idea about this development is to be able to download the information about a volume into Calibre.

@@ -27,9 +27,9 @@ class Worker(Thread):
     # Get volume details, in a separate thread, from noosfere vol page from (book_url)s found in __init__
 
 
-    def __init__(self, log, book_url, lrpid, book_title, isbn, result_queue, browser, relevance, plugin, timeout=20):
+    def __init__(self, log, book_url, lrpid, book_title, isbn, result_queue, browser, relevance, plugin, timeout=30):
 
-        debug=0
+        debug=1
 
         Thread.__init__(self)
         self.daemon = True
@@ -66,7 +66,7 @@ class Worker(Thread):
         # OK, il faut se connecter sur wrk_url et remonter url_vrai...
         # On decide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
         #
-        debug=0
+        debug=1
         self.log.info(self.who,"Entering run(self)")
 
         wrk_url = self.book_url
@@ -131,7 +131,7 @@ class Worker(Thread):
         # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
         # en cas d'egalité, le plus ancien reçoit la préférence
         # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-        debug=0
+        debug=1
         self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
         if debug:
             self.log.info(self.who,"url : ",url,", book_title : ",book_title)
@@ -232,7 +232,7 @@ class Worker(Thread):
         # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
         # I want to catch it so I can get the info for the numbering
         #
-        debug=0
+        debug=1
         self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
         if debug:
             self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
@@ -252,7 +252,7 @@ class Worker(Thread):
         # The critic for a serie may be set appart in another page. The vol url refers to that other loacation.
         # I want to have it local to my volume.
         #
-        debug=0
+        debug=1
         self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
         if debug:
             self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
@@ -290,7 +290,7 @@ class Worker(Thread):
         #   . Critiques about the serie and/or about another volume of the book
         #
 
-        debug=0
+        debug=1
         self.log.info(self.who,"\nIn extract_vol_details(soup)")
         if debug:
             self.log.info(self.who,"vol_url       : ",vol_url)
