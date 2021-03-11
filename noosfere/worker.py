@@ -26,8 +26,7 @@ from calibre_plugins.noosfere import ret_soup
 class Worker(Thread):
     # Get volume details, in a separate thread, from noosfere vol page from (book_url)s found in __init__
 
-
-    def __init__(self, log, book_url, lrpid, book_title, isbn, result_queue, browser, relevance, plugin, timeout=30):
+    def __init__(self, log, book_url, book_title, isbn, result_queue, browser, relevance, plugin, timeout=30):
 
         debug=1
 
@@ -35,7 +34,7 @@ class Worker(Thread):
         self.daemon = True
         self.log = log
         self.book_url = book_url
-        self.lrpid = lrpid
+        self.nsfr_id = ""
         self.book_title = book_title
         self.isbn = isbn
         self.result_queue = result_queue
@@ -51,7 +50,6 @@ class Worker(Thread):
             self.log.info(self.who,"self                  : ", self)
             self.log.info(self.who,"log                   : ", log)
             self.log.info(self.who,"book_url              : ", book_url)
-            self.log.info(self.who,"lrpid                 : ", lrpid)
             self.log.info(self.who,"book_title            : ", book_title)
             self.log.info(self.who,"isbn                  : ", isbn)
             self.log.info(self.who,"result_queue          : ", result_queue)
@@ -136,9 +134,6 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"url : ",url,", book_title : ",book_title)
 
-##        sr=self.br.open(url,timeout=20)
-##        soup = BS(sr, "html5lib",from_encoding=self.from_encoding)
-
         self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
         if debug:
             self.log.info(self.who,"url : ", url, "who : ", self.who)
@@ -151,7 +146,11 @@ class Worker(Thread):
 
         if "niourf.asp" in url_vrai:
             self.log.info(self.who,"Bypassing to extract_vol_details, we have only one volume")
-            self.extract_vol_details(url_vrai)
+            return url_vrai.replace("https://www.noosfere.org","")                     #will setup wrk_url to url vrai
+
+        self.nsfr_id+= "bk$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
+        if debug:
+            self.log.info(self.who,"self.nsfr_id : ", self.nsfr_id)
 
         ts_vol_index={}
 
@@ -300,8 +299,16 @@ class Worker(Thread):
             self.log.info(self.who,"vol_url : ", vol_url, "who : ", self.who)
         rsp = ret_soup(self.log, self.br, vol_url, who=self.who)
         soup = rsp[0]
-        url_vrai = rsp[1]
+        url_vrai = rsp[1].replace("&Tri=3","")
 #        if debug: self.log.info(self.who,soup.prettify())              # useful but too big...
+
+        self.nsfr_id = self.nsfr_id+"$vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
+      # self.nsfr_id = (self.nfsr_id).strip("$")                        # If I use this form, it gives this error: 'Worker' object has no attribute 'nfsr_id'
+        tmp=self.nsfr_id
+        self.nsfr_id=tmp.strip('$')
+
+        if debug:
+            self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
         tmp_lst=[]
         vol_info={}
@@ -497,7 +504,7 @@ class Worker(Thread):
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
         self.log.info(self.who,"+++"*25)
-        self.log.info(self.who,"lrpid, type()                  : ",self.lrpid, type(self.lrpid))                    # must be <class 'str'>
+        self.log.info(self.who,"nsfr_id, type()                : ",self.nsfr_id, type(self.nsfr_id))                    # must be <class 'str'>
         self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
         self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
         self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
@@ -518,14 +525,14 @@ class Worker(Thread):
                                                                                                                # language must be <class 'str'>
 
         if vol_isbn and vol_cover_index:
-            self.plugin.cache_identifier_to_cover_url(self.lrpid, vol_cover_index)
+            self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)
 
         if vol_isbn:
-            self.plugin.cache_isbn_to_identifier(vol_isbn, self.lrpid)
+            self.plugin.cache_isbn_to_identifier(vol_isbn, self.nsfr_id)
 
 
         mi = Metadata(vol_title, [vol_auteur])
-        mi.set_identifier('lrpid', self.lrpid)
+        mi.set_identifier('nsfr_id', self.nsfr_id)
         mi.publisher = vol_editor
         mi.isbn = vol_isbn
         mi.tags = [vol_genre]

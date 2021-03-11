@@ -117,7 +117,7 @@ class noosfere(Source):
 
     ID_NAME = 'noosfere'
     capabilities = frozenset(['identify', 'cover'])
-    touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'identifier:lrpid', 'rating', 'languages',
+    touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'identifier:nsfr_id', 'rating', 'languages',
                                 'comments', 'publisher', 'pubdate', 'series', 'tags'])
     has_html_comments = True
     supports_gzip_transfer_encoding = True
@@ -154,16 +154,17 @@ class noosfere(Source):
         # probably using cache_identifier_to_cover_url in the worket.py
         # as ISBN is missing sometime in noosfere
         # as noosfere does not provide any proprietary id
-        # I will use lrpid, a time stamp, that is: str(time.time_ns())[2:-5], created at the time of noosfere data collection
+        # I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
+        # this should allow to go directly to the book page (that could be the vol page if there is only one vol for the book)
         #
-        url = None
-        lrpid = identifiers.get('lrpid', None)
-        if lrpid is None:
-            isbn = identifiers.get('isbn', None)
+        url=None
+        nsfr_id = identifiers.get('nsfr_id', None)
+        if nsfr_id is None:
+            isbn = identifiers.get('nsfr_id', None)
             if isbn is not None:
-                lrpid = self.cached_isbn_to_identifier(isbn)
-        if lrpid is not None:
-            url = self.cached_identifier_to_cover_url(lrpid)
+                nsfr_id = self.cached_isbn_to_identifier(isbn)
+        if nsfr_id is not None:
+            url = self.cached_identifier_to_cover_url(nsfr_id)
         return url
 
     def verify_isbn(self, log, isbn_str):
@@ -223,7 +224,7 @@ class noosfere(Source):
             log.info("return text from ret_clean_txt\n")
         return text
 
-    def ret_author_index(self, log, br, authors, ModeMoteur="MOTS-CLEFS"):
+    def ret_author_index(self, log, br, authors):
         # Trouve la reference de l'auteur dans la soupe de noosfere
         # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
         # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial si isbn is indisponible
@@ -235,14 +236,13 @@ class noosfere(Source):
         log.info("\nIn ret_author_index(soup)")
         if debug:
             log.info("authors    : ", authors)
-            log.info("ModeMoteur : ", ModeMoteur)
         all_author_index={}
         author_index=[]
 
         # try to get a short list of authors using "MOTS-CLEFS" match
 
         for j in range(len(authors)):
-            rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":ModeMoteur,"ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+            rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
             url = "https://www.noosfere.org/livres/noosearch.asp"
             soup = ret_soup(log, br, url, rkt=rkt)[0]
             tmp_ai=soup.select('a[href*="auteur.asp"]')
@@ -259,10 +259,33 @@ class noosfere(Source):
                     if ratio > .6 :
                         all_author_index[url_author]=[ratio, author]
 
-        if ModeMoteur == "MOTS-CLEFS":
             if not len(all_author_index):                          # failed the short list, let's go for the long list using "LITTERAL" match
                 if debug: log.info("exact match failed, trying fuzzy match")
-                return ret_author_index(self, log, br, authors, ModeMoteur="LITTERAL")
+              # return self.ret_author_index(self, log, br, authors, ModeMoteur="LITTERAL")
+              # ca marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
+              # this is NOT a function but a class method
+                for j in range(len(authors)):
+                    rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
+                    url = "https://www.noosfere.org/livres/noosearch.asp"
+                    soup = ret_soup(log, br, url, rkt=rkt)[0]
+                    tmp_ai=soup.select('a[href*="auteur.asp"]')
+                    if len(tmp_ai):
+                        for i in range(len(tmp_ai)):
+                            url_author, author, perta=tmp_ai[i]["href"], tmp_ai[i].text, tmp_ai[i].find_previous('tr').select_one('td').text
+                            ratio = SM(None, self.ret_clean_text(log, author,swap=True), authors[j]).ratio()
+                            if debug:
+                                log.info("pertinence : ", perta, end=" ; ")
+                                log.info("SM.ratio : {:.3f}".format(ratio), end=" ; ")
+                                log.info("url_author : ", url_author, end=" ; ")
+                                log.info("authors[j] : ", authors[j], end=" ; ")
+                                log.info("author : ", self.ret_clean_text(log, author))
+                            if ratio > .6 :
+                                all_author_index[url_author]=[ratio, author]
+
+
+
+
+
 
         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
 
@@ -292,7 +315,7 @@ class noosfere(Source):
         if debug: log.info('return from ret_author_index\n')
         return author_index
 
-    def ret_book_per_author_index(self, log, br, author_index, title, book_index, lrpid):
+    def ret_book_per_author_index(self, log, br, author_index, title, book_index):
         # Find the books references of a known author from the returned soup for noosfere
         # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
         # Idea is to send back a few references that hopefully contains the title expected
@@ -306,12 +329,11 @@ class noosfere(Source):
         # If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
         #
         debug=1
-        log.info("\nIn ret_book_per_author_index(self, log, br, author_index, title, book_index, lrpid)")
+        log.info("\nIn ret_book_per_author_index(self, log, br, author_index, title, book_index)")
         if debug:
             log.info("author_index : ",author_index)
             log.info("title        : ",title)
             log.info("book_index   : ",book_index)
-            log.info("lrpid        : ",lrpid)
 
         book_per_author_index={}
         unsorted_book_index={}
@@ -340,28 +362,29 @@ class noosfere(Source):
                 if ratio == 1:
                     unsorted_book_index={}
                     unsorted_book_index[ratio]=[book_url, "", book_title]
-                    break
+                    break                       # we have a perfect match no need to go further in the author books
 
             sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
             for key,ref in sorted_book_index.items():
                 book_url = ref[0]
-                if not lrpid: lrpid = str(time.time_ns())[2:-5]
-                book_index[book_url]=(lrpid, book_title)
-                log.info('book_indexbook_index[book_url]=(lrpid, book_title) : ',book_index)
+                book_index[book_url] = book_title
+                log.info('book_index[book_url] = book_title : ',book_index)
 
+            if ratio == 1:
+                break                           # we have a perfect match no need to examine other authors
 
         if debug: log.info('return book_index from ret_book_per_author_index\n')
         return book_index
 
     def ISBN_ret_book_index(self, log, br, isbn, book_index):
         # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
-        # retourne book_index{}, un dictionnaire avec key=book_url, val=(lrpid,title) avec lrpid etant str(nombre unique)
+        # retourne book_index{}, un dictionnaire avec key=book_url, val=title
         # L'idée est de trouver UNE seule reference...
         # Attention: on retourne une reference qui peut contenir PLUSIEURs volumes
         # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
         #
         # Find the book's reference (either title or ISBN) in the returned soup from noosfere
-        # returns book_index{}, a dictionnary with key=book_url, val=(lrpid,title) with lrpid being str(a unique number)
+        # returns book_index{}, a dictionnary with key=book_url, val=title
         # The idea is to find ONE unique reference...
         # Caution: the reference may contains several volumes,
         # each with potentialy a different editor, a different edition date,... and even a different title
@@ -378,7 +401,7 @@ class noosfere(Source):
             for i in range(len(tmp_rbi)):
                 if debug:
                     log.info("tmp_rbi["+str(i)+"].text, tmp_rbi["+str(i)+"]['href'] : ",tmp_rbi[i].text,tmp_rbi[i]["href"])
-                book_index[tmp_rbi[i]["href"]]=(str(time.time_ns())[2:-5],tmp_rbi[i].text)     # time since epoch will be lrpid identifier to cache cover, should be different each time :-)
+                book_index[tmp_rbi[i]["href"]]=tmp_rbi[i].text
 
         if debug:
             log.info("book_index : ",book_index)
@@ -405,7 +428,8 @@ class noosfere(Source):
 
         isbn = identifiers.get('isbn', None)
         if isbn: isbn = self.verify_isbn(log, isbn)
-        lrpid = identifiers.get('lrpid', None)
+
+        nsfr_id = identifiers.get('nsfr_id', None)
 
         log.info('Clean both the authors and the title, keeping ')
         for i in range(len(authors)):
@@ -413,22 +437,35 @@ class noosfere(Source):
 
         title = self.ret_clean_text(log, title)
 
-        book_index={}
-        if isbn:
-            book_index = self.ISBN_ret_book_index(log, br, isbn, book_index)
-            if not len(book_index):
-                log.error("This ISBN was not found: ", isbn, "trying with title and author")
-                return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
-        elif title and authors:
-            author_index=self.ret_author_index(log, br, authors)
-            if len(author_index):
-                book_index = self.ret_book_per_author_index(log, br, author_index, title, book_index, lrpid)
+        book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
+        if nsfr_id:
+            log.info('trying noosfere id, ', nsfr_id )
+            nsfr = nsfr_id.split("$")
+            if "bk" in nsfr[0] :
+                url = "/livres/EditionsLivre.asp?numitem="+nsfr[1]
+                book_index[url]=title
+            elif "vl" in nsfr[0] :
+                url = "/livres/niourf.asp?numlivre="+nsfr[1]
+                book_index[url]=title
+            else:
+                log.info('noosfere id not valid, trying ISBN', isbn)
 
-            if not len(author_index):
-                log.info("Désolé, aucun auteur trouvé avec : ",authors)
-                return                                       # maybe procedure avec titre seul... a dessiner lrp todo
+        if not book_index:
+            if isbn:
+                book_index = self.ISBN_ret_book_index(log, br, isbn, book_index)
+                if not len(book_index):
+                    log.error("This ISBN was not found: ", isbn, "trying with title", title,"and author", author)
+                    return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
+            elif title and authors:
+                author_index=self.ret_author_index(log, br, authors)
+                if len(author_index):
+                    book_index = self.ret_book_per_author_index(log, br, author_index, title, book_index)
+                if not len(author_index):
+                    log.info("Désolé, aucun auteur trouvé avec : ",authors)
+                    return
+        # here maybe try with title alone... a dessiner lrp todo... ouais peut-etre pour le cas ou l'auteur serait trop noyé dans une masse de noms similaires
 
-        if not len(book_index):
+        if not book_index:
             log.error("No book found in noosfere... ")
             return
 
@@ -438,12 +475,12 @@ class noosfere(Source):
 
         tmp_list=[]
         for key,ref in book_index.items():
-            book_url, lrpid, book_title = key, ref[0], ref[1]
-            if debug:log.info("\nbook_url, lrpid, book_title : ", book_url,", ", lrpid,", ", book_title)
-            tmp_list.append((book_url, lrpid, book_title))
+            book_url, book_title = key, ref
+            if debug:log.info("\nbook_url, book_title : ", book_url,", ", book_title)
+            tmp_list.append((book_url, book_title))
 
         from calibre_plugins.noosfere.worker import Worker
-        workers = [Worker(log, data[0], data[1], data[2], isbn, result_queue, br, i, self) for i, data in enumerate(tmp_list)]
+        workers = [Worker(log, data[0], data[1], isbn, result_queue, br, i, self) for i, data in enumerate(tmp_list)]
 
         for w in workers:
             w.start()
