@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import (unicode_literals, division, absolute_import,
@@ -241,7 +240,7 @@ class Worker(Thread):
         if debug:
 #            self.log.info(self.who,soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  #long
             self.log.info(self.who,"découpage annexe found")
-        
+
         return soup.select_one("div#Série").select_one("div").select_one("tbody")
 
     def get_Critique_de_la_serie(self, critic_url):
@@ -544,7 +543,8 @@ class Worker(Thread):
             mi.series = vol_serie
             mi.series_index = vol_serie_seq
         mi.language = "fra"
-        
+
+
         # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
         # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
         # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
@@ -561,6 +561,8 @@ class Worker(Thread):
         self.plugin.clean_downloaded_metadata(mi)
 
         self.result_queue.put(mi)
+
+## https://manual.calibre-ebook.com/_modules/calibre/db/cache.html#Cache.get_metadata
 
 ##
 ##    def _get_metadata(self, book_id, get_user_categories=True):  # {{{

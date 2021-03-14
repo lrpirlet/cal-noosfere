@@ -26,7 +26,8 @@ from difflib import SequenceMatcher as SM
 '''
 s1 = ' It was a dark and stormy night. I was all alone sitting on a red chair. I was not completely alone as I had three cats.'
 s2 = ' It was a murky and stormy night. I was all alone sitting on a crimson chair. I was not completely alone as I had three felines.'
-print(SM(None, s1, s2).ratio())
+result = SM(None, s1, s2).ratio()
+result is 0.9112903225806451... anything above .6 may be considered similar
 '''
 
 def urlopen_with_retry(log, br, url, rkt, who):
@@ -122,7 +123,38 @@ class noosfere(Source):
     has_html_comments = True
     supports_gzip_transfer_encoding = True
 
-    from_encoding="windows-1252"
+###    from_encoding="windows-1252"
+
+    PRIORITY_HANDLING={'le_plus_ancien':_('le plus ancien'),
+                       'avec_un_isbn_defini':_('avec un isbn defini'),
+                       'le_plus_récent':_('le plus récent'),
+                       'le_plus_ancien_du_top_editeur':_('le plus ancien du top editeur'),
+                       'le_plus_recent_du_top_editeur':_('le plus recent du top editeur')
+                       }
+
+    options = (
+            Option(
+                   'priority_handling',
+                   'choices',
+                   'avec_un_isbn_defini',
+                   _('priority handling:'),
+                   _("Comment pousser la priorité d'un volume, si plusieurs existent."),
+                   choices=PRIORITY_HANDLING
+                   ),
+               )
+
+    @property
+    def priority_handling(self):
+        x = getattr(self, 'prio_handling', None)
+        if x is not None:
+            return x
+        prio_handling = self.prefs['priority_handling']
+        if prio_handling not in self.PRIORITY_HANDLING:
+            prio_handling = self.PRIORITY_HANDLING[0]
+
+        return prio_handling
+
+
 
 # noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
 # noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
@@ -282,11 +314,6 @@ class noosfere(Source):
                             if ratio > .6 :
                                 all_author_index[url_author]=[ratio, author]
 
-
-
-
-
-
         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
 
         if debug: log.info("sorted_author_index\n\n",sorted_author_index)
@@ -431,10 +458,9 @@ class noosfere(Source):
 
         nsfr_id = identifiers.get('nsfr_id', None)
 
-        log.info('Clean both the authors and the title, keeping ')
+        log.info('"Clean" both the authors list and the title... ')
         for i in range(len(authors)):
             authors[i] = self.ret_clean_text(log, authors[i])
-
         title = self.ret_clean_text(log, title)
 
         book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
@@ -454,7 +480,7 @@ class noosfere(Source):
             if isbn:
                 book_index = self.ISBN_ret_book_index(log, br, isbn, book_index)
                 if not len(book_index):
-                    log.error("This ISBN was not found: ", isbn, "trying with title", title,"and author", author)
+                    log.error("This ISBN was not found: ", isbn, "trying with title", title,"and author", authors)
                     return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
             elif title and authors:
                 author_index=self.ret_author_index(log, br, authors)
@@ -564,20 +590,20 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-            ( # A book with ISBN specified not in noosfere
-                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
-                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
-            ),
+##            ( # A book with ISBN specified not in noosfere
+##                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
+##                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
+##            ),
 
 ##            ( # A book with no ISBN specified
 ##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
 ##                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
 ##            ),
 
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
-##            ),
+            ( # A book with an ISBN
+                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+            ),
 
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},
