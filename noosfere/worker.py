@@ -25,7 +25,7 @@ from calibre_plugins.noosfere import ret_soup
 class Worker(Thread):
     # Get volume details, in a separate thread, from noosfere vol page from (book_url)s found in __init__
 
-    def __init__(self, log, book_url, book_title, isbn, result_queue, browser, relevance, plugin, timeout=30):
+    def __init__(self, log, book_url, book_title, isbn, result_queue, browser, relevance, plugin, dbg_lvl, timeout=30):
 
         debug=1
 
@@ -40,6 +40,7 @@ class Worker(Thread):
         self.br = browser.clone_browser()
         self.relevance = relevance
         self.plugin = plugin
+        self.dbg_lvl = dbg_lvl
         self.timeout = timeout
         self.who="[worker "+str(relevance)+"]"
         self.from_encoding="windows-1252"
@@ -55,6 +56,7 @@ class Worker(Thread):
             self.log.info(self.who,"browser, self.browser : ", browser, self.br)
             self.log.info(self.who,"relevance             : ", relevance)
             self.log.info(self.who,"plugin                : ", plugin)
+            self.log.info(self.who,"dbg_lvl               : ", dbg_lvl)
             self.log.info(self.who,"timeout               : ", timeout)
 
     def run(self):
@@ -63,11 +65,12 @@ class Worker(Thread):
         # OK, il faut se connecter sur wrk_url et remonter url_vrai...
         # On decide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
         #
-        debug=1
+        debug=self.dbg_lvl & 2
         self.log.info(self.who,"Entering run(self)")
 
         wrk_url = self.book_url
         if "ditionsLivre" in wrk_url:
+            self.log.info("several volumes exist for this book")
             book_url="https://www.noosfere.org"+self.book_url+"&Tri=3"
             if debug: self.log.info(self.who,"book_url : ",book_url)
             try:
@@ -77,6 +80,7 @@ class Worker(Thread):
                 self.log.exception("ret_top_vol_indx failed for url: ",book_url)
 
         if "niourf" in wrk_url:
+            self.log.info("only one volume exists for this book")
             vol_url="https://www.noosfere.org"+wrk_url.replace("./niourf","/livres/niourf")+"&Tri=3"
             if debug: self.log.info(self.who,"vol_url  : ",vol_url)
             try:
@@ -94,9 +98,9 @@ class Worker(Thread):
         # Characters irrelevant to ISBN and separators inside ISBN must be removed,
         # the resulting word must be either 10 or 13 characters long.
         #
-        debug=0
-        self.log.info(self.who,"\nIn verify_isbn(isbn_str)")
+        debug=self.dbg_lvl & 4
         if debug:
+            self.log.info(self.who,"\nIn verify_isbn(isbn_str)")
             self.log.info(self.who,"isbn_str         : ",isbn_str)
 
         for k in ['(',')','-',' ']:
@@ -124,19 +128,20 @@ class Worker(Thread):
         # information verifiée                  v   1pt
         # titre identique                       t   1pt
         # image presente                        p   1pt
-        # isbn present                          i   50pt
+        # isbn present                          i  50pt
+        # isbn present et identique a calibre   100pt
         # le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus representé... MON choix
         # en cas d'egalité, le plus ancien reçoit la préférence
         # plus tard, je pense visualiser, par volume, une image et les charateristiques du volume avec un bouton de selection
-        debug=1
+        debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
         if debug:
             self.log.info(self.who,"url : ",url,", book_title : ",book_title)
 
-        self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
+        self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
         if debug:
             self.log.info(self.who,"url : ", url, "who : ", self.who)
-        rsp = ret_soup(self.log, self.br, url, who=self.who)
+        rsp = ret_soup(self.log, self.dbg_lvl, self.br, url, who=self.who)
         soup = rsp[0]
         url_vrai = rsp[1]
         if debug:
@@ -175,9 +180,9 @@ class Worker(Thread):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
                 vol_isbn = self.verify_isbn(vol_isbn)
                 if vol_isbn:
-                    point+=500
+                    point+=50
                     if self.isbn:
-                        if self.verify_isbn(self.isbn)== vol_isbn: point+=1000
+                        if self.verify_isbn(self.isbn)== vol_isbn: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -219,7 +224,7 @@ class Worker(Thread):
             top_vol_editor[editr]+=1
 
         for key,ref in ts_vol_index.items():
-            if debug: self.log.info(self.who,"La clé est", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"le pointeur est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
+            if debug: self.log.info(self.who,"pour la clé", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"le pointeur est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
             if ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]>top_vol_point:
                 top_vol_point=ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]
                 top_vol_index=ts_vol_index[key][1]
@@ -230,12 +235,12 @@ class Worker(Thread):
         # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
         # I want to catch it so I can get the info for the numbering
         #
-        debug=1
+        debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
         if debug:
-            self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
+            self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", dec_anx_url, "who : ", self.who)
-        soup = ret_soup(self.log, self.br, dec_anx_url, who=self.who)[0]
+        soup = ret_soup(self.log, self.dbg_lvl, self.br, dec_anx_url, who=self.who)[0]
 
         if debug:
 #            self.log.info(self.who,soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  #long
@@ -250,12 +255,12 @@ class Worker(Thread):
         # The critic for a serie may be set appart in another page. The vol url refers to that other loacation.
         # I want to have it local to my volume.
         #
-        debug=1
+        debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
         if debug:
-            self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
+            self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", critic_url, "who : ", self.who)
-        soup = ret_soup(self.log, self.br, critic_url, who=self.who)[0]
+        soup = ret_soup(self.log, self.dbg_lvl, self.br, critic_url, who=self.who)[0]
 
         if debug:
 #            self.log.info(self.who,"""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # trop grand, mais peut servir
@@ -288,15 +293,15 @@ class Worker(Thread):
         #   . Critiques about the serie and/or about another volume of the book
         #
 
-        debug=1
+        debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn extract_vol_details(soup)")
         if debug:
             self.log.info(self.who,"vol_url       : ",vol_url)
 
         if debug:
-            self.log.info(self.who,"calling ret_soup(log, br, url, rkt=None, who='[__init__]')")
+            self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"vol_url : ", vol_url, "who : ", self.who)
-        rsp = ret_soup(self.log, self.br, vol_url, who=self.who)
+        rsp = ret_soup(self.log, self.dbg_lvl, self.br, vol_url, who=self.who)
         soup = rsp[0]
         url_vrai = rsp[1].replace("&Tri=3","")
 #        if debug: self.log.info(self.who,soup.prettify())              # useful but too big...

@@ -30,10 +30,10 @@ result = SM(None, s1, s2).ratio()
 result is 0.9112903225806451... anything above .6 may be considered similar
 '''
 
-def urlopen_with_retry(log, br, url, rkt, who):
-    debug=0
-    log.info(who, "(urlopen_with_retry) In urlopen_with_retry(log, br, url, rkt, who)")
+def urlopen_with_retry(log, dbg_lvl, br, url, rkt, who):
+    debug=dbg_lvl & 4
     if debug:
+        log.info(who, "In urlopen_with_retry(log, dbg_lvl, br, url, rkt, who)")
         log.info(who, "(urlopen_with_retry) br  : ", br)
         log.info(who, "(urlopen_with_retry) url : ", url)
         log.info(who, "(urlopen_with_retry) rkt : ", rkt)
@@ -50,12 +50,12 @@ def urlopen_with_retry(log, br, url, rkt, who):
             delay *= backoff
             return br.open(url,data=rkt,timeout=30)
 
-def ret_soup(log, br, url, rkt=None, who='[__init__]'):
+def ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]'):
     # Function to return the soup for beautifullsoup to work on.
     #
-    debug=0
-    log.info(who, "(ret_soup) In ret_soup(log, br, url, rkt=none, who='[__init__]'")
+    debug=dbg_lvl & 4
     if debug:
+        log.info(who, "In ret_soup(log, dbg_lvl, br, url, rkt=none, who='[__init__]')")
         log.info(who, "(ret_soup) br  : ", br)
         log.info(who, "(ret_soup) url : ", url)
         log.info(who, "(ret_soup) rkt : ", rkt)
@@ -80,7 +80,7 @@ def ret_soup(log, br, url, rkt=None, who='[__init__]'):
         rkt=urllib.parse.urlencode(rkt).encode('ascii')
         if debug: log.info(who, "formated parameters : ", rkt)
     try:
-        sr = urlopen_with_retry(log, br, url, rkt, who)
+        sr = urlopen_with_retry(log, dbg_lvl, br, url, rkt, who)
     except TimeoutError:
         log.info(who, "The network timed out")
         raise Exception('(ret_soup) Failed while acessing url : ',url)
@@ -113,35 +113,96 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 1, 0)
+    version                 = (0, 5, 0)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
     capabilities = frozenset(['identify', 'cover'])
-    touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'identifier:nsfr_id', 'rating', 'languages',
+    touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'identifier:nsfr_id', 'languages',
                                 'comments', 'publisher', 'pubdate', 'series', 'tags'])
     has_html_comments = True
     supports_gzip_transfer_encoding = True
 
-###    from_encoding="windows-1252"
+    # Since the noosfere is written in french for french talking poeple, I took the liberty to output the foollowing information
+    # in french. I will comment with a translation in the english language.
 
-    PRIORITY_HANDLING={'le_plus_ancien':_('le plus ancien'),
-                       'avec_un_isbn_defini':_('avec un isbn defini'),
-                       'le_plus_récent':_('le plus récent'),
-                       'le_plus_ancien_du_top_editeur':_('le plus ancien du top editeur'),
-                       'le_plus_recent_du_top_editeur':_('le plus recent du top editeur')
+    config_help_message = '<p>'+_(" noosfere est une base de donnée qui propose des informations"
+                                  " à propos des ouvrages, de genre science fiction, disponibles en langue française."
+                                  " Ces informations vont de l'auteur aux films produits sur base de l'ouvrage en"
+                                  " passant par les auteurs, les traducteurs, les illustrateurs, les critiquess..."
+                                  " et bien sur, leurs oeuvres. Les livres qui ont été publiés plusieurs fois"
+                                  " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépot legal"
+                                  " (repris sous la date de publication, souvent méconnue), la couverture, l'éditeur,"
+                                  " la collection de l'editeur et son numèro d'ordre. Le choix, programmé, du volume"
+                                  " est quelque peu paramétrable par la boite de dialogue `priorité de tri´. "
+                                  " D'autre part, il n'existe pas de moyens officiels de remplir une colonne définie"
+                                  " par l'utilisateur. Pour rester dans les clous, je propose de remplir le champs"
+                                  " de l'editeur avec, conjointement à celui-ci, la collection et son numero d'ordre."
+                                  " Une petite procédure, décrite dans la doc devrait remettre tout en ordre."
+                                  )
+
+####class Option(object):
+####    __slots__ = ['type', 'default', 'label', 'desc', 'name', 'choices']
+####
+####    def __init__(self, name, type_, default, label, desc, choices=None):
+####        '''
+####        :param name: The name of this option. Must be a valid python identifier
+####        :param type_: The type of this option, one of ('number', 'string',
+####                        'bool', 'choices')
+####        :param default: The default value for this option
+####        :param label: A short (few words) description of this option
+####        :param desc: A longer description of this option
+####        :param choices: A dict of possible values, used only if type='choices'.
+####        dict is of the form {key:human readable label, ...}
+####        '''
+####        self.name, self.type, self.default, self.label, self.desc = (name,
+####                type_, default, label, desc)
+####        if choices and not isinstance(choices, dict):
+####            choices = dict([(x, x) for x in choices])
+####        self.choices = choices
+
+    PRIORITY_HANDLING={'1le_plus_ancien_avec_un_isbn':_('le plus ancien avec un isbn existant'),
+                       '2le_plus_recent_avec_un_isbn':_('le plus récent avec un isbn existant'),
+                       '3le_plus_ancien_du_top_editeur':_("le plus ancien de l'éditeur défini"),
+                       '4le_plus_recent_du_top_editeur':_("le plus recent de l'éditeur défini")
                        }
 
     options = (
             Option(
                    'priority_handling',
                    'choices',
-                   'avec_un_isbn_defini',
-                   _('priority handling:'),
+                   '1le_plus_ancien_avec_un_isbn',
+                   _('priorité de tri:'),
                    _("Comment pousser la priorité d'un volume, si plusieurs existent."),
                    choices=PRIORITY_HANDLING
                    ),
-               )
+            Option(
+                   'fat_publisher',
+                   'bool',
+                   False,
+                   _("Ajoute collection et son numéro d'ordre au champ èditeur"),
+                   _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur.")
+                   ),
+            Option(
+                   'debug_level',
+                   'number',
+                   0,
+                   _('Loquacité du journal, de 0 à 7'),
+                   _('Le niveau de loquacité. O un minimum de rapport, 1 rapport etendu de __init__,'
+                     ' 2 rapport étendu de worker, 4 rapport etendu des annexes... La somme 3, 5 ou 7'
+                     ' peut etre introduite. Ainsi 7 donne un maximun de rapport. Note: ce sont les 3'
+                     ' derniers bits de debug_level en notation binaire')
+                   ),
+##            Option(
+##                   'Top_editor',
+##                   'string',
+##                   None,
+##                   _("impose un éditeur"),
+##                   _("Remplir ce champ pour forcer un éditeur defini... DOIT"
+##                      " ETRE UN MATCH PARFAIT A COPIER DANS LE JOURNAL D'ERREUR..."
+##                      " Nécécite DEUX passes.")
+##                   ),
+            )
 
     @property
     def priority_handling(self):
@@ -151,10 +212,39 @@ class noosfere(Source):
         prio_handling = self.prefs['priority_handling']
         if prio_handling not in self.PRIORITY_HANDLING:
             prio_handling = self.PRIORITY_HANDLING[0]
-
         return prio_handling
 
+    @property
+    def extended_publisher(self):
+        x = getattr(self, 'ext_pub', None)
+        if x is not None:
+            return x
+        ext_pub = self.prefs.get('fat_publisher', False)
+        return ext_pub
 
+    @property
+    def dbg_lvl(self):
+        x = getattr(self, 'dl', None)
+        if x is not None:
+            return x
+        dl = self.prefs.get('debug_level', False)
+        return dl
+
+
+
+
+
+    # Each module will output some informaytion if debug is set to 1...
+    # dbg_lvl should be set to 1 for __init__ , 2 for workers and 4 for low risk
+    # the sum of the values is possible... so 7 will debug all
+    # dbg_lvl=3
+
+##    @property
+##    def debug_level(self):
+##        dbg_lvl = self.prefs['debug_level']
+##        return dbg_lvl
+
+##    dbg_lvl = prefs['debug_level']
 
 # noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
 # noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
@@ -208,7 +298,7 @@ class noosfere(Source):
         # Characters irrelevant to ISBN and separators inside ISBN must be removed,
         # the resulting word must be either 10 or 13 characters long.
         #
-        debug=0
+        debug=self.dbg_lvl & 4
         if debug:
             log.info("\nIn verify_isbn(isbn_str)")
             log.info("isbn_str         : ",isbn_str)
@@ -225,7 +315,7 @@ class noosfere(Source):
         # for noosfere search to work smoothly, authors and title needs to be cleaned
         # we need to remove non significant characters and remove useless space character
         #
-        debug=0
+        debug=self.dbg_lvl & 4
         if debug:
             log.info("\nIn ret_clean_txt(self, log, text, swap =)",swap)
             log.info("text         : ", text)
@@ -264,7 +354,7 @@ class noosfere(Source):
         # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
         # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
         #
-        debug=1
+        debug=self.dbg_lvl & 1
         log.info("\nIn ret_author_index(soup)")
         if debug:
             log.info("authors    : ", authors)
@@ -276,7 +366,7 @@ class noosfere(Source):
         for j in range(len(authors)):
             rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
             url = "https://www.noosfere.org/livres/noosearch.asp"
-            soup = ret_soup(log, br, url, rkt=rkt)[0]
+            soup = ret_soup(log, self.dbg_lvl, br, url, rkt=rkt )[0]
             tmp_ai=soup.select('a[href*="auteur.asp"]')
             if len(tmp_ai):
                 for i in range(len(tmp_ai)):
@@ -299,7 +389,7 @@ class noosfere(Source):
                 for j in range(len(authors)):
                     rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
                     url = "https://www.noosfere.org/livres/noosearch.asp"
-                    soup = ret_soup(log, br, url, rkt=rkt)[0]
+                    soup = ret_soup(log, self.dbg_lvl, br, url, rkt=rkt )[0]
                     tmp_ai=soup.select('a[href*="auteur.asp"]')
                     if len(tmp_ai):
                         for i in range(len(tmp_ai)):
@@ -316,7 +406,7 @@ class noosfere(Source):
 
         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
 
-        if debug: log.info("sorted_author_index\n\n",sorted_author_index)
+        if debug: log.info("sorted_author_index :\n",sorted_author_index)
 
         # With python 3.6 onward, the standard dict type maintains insertion order by default.
         # Python 3.7 elevates this implementation detail to a language specification,
@@ -339,7 +429,7 @@ class noosfere(Source):
 #                log.info("author_index : ",author_index)       # may be long
             if count == 8 : break
 
-        if debug: log.info('return from ret_author_index\n')
+        if debug: log.info('return from ret_author_index')
         return author_index
 
     def ret_book_per_author_index(self, log, br, author_index, title, book_index):
@@ -355,7 +445,7 @@ class noosfere(Source):
         # The "book_per_author_index" dictionnary will contain all book's references...
         # If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
         #
-        debug=1
+        debug=self.dbg_lvl & 1
         log.info("\nIn ret_book_per_author_index(self, log, br, author_index, title, book_index)")
         if debug:
             log.info("author_index : ",author_index)
@@ -368,7 +458,7 @@ class noosfere(Source):
         for i in range(len(author_index)):
             rqt= author_index[i]+"&Niveau=livres"
             url="https://www.noosfere.org"+rqt
-            soup = ret_soup(log, br, url)[0]
+            soup = ret_soup(log, self.dbg_lvl, br, url)[0]
             tmp_bpai=soup.select('a[href*="ditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
                 bpai_title=tmp_bpai[i].text.lower()
@@ -416,13 +506,13 @@ class noosfere(Source):
         # Caution: the reference may contains several volumes,
         # each with potentialy a different editor, a different edition date,... and even a different title
         #
-        debug=1
+        debug=self.dbg_lvl & 1
         log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
 
         # if isbn valid then we want to select exact match (correspondance exacte = MOTS-CLEFS)
         rkt={"Mots": isbn,"livres":"livres","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
         url = "https://www.noosfere.org/livres/noosearch.asp"
-        soup = ret_soup(log, br, url, rkt=rkt)[0]
+        soup = ret_soup(log, self.dbg_lvl, br, url, rkt=rkt )[0]
         tmp_rbi=soup.select('a[href*="ditionsLivre.asp"]')
         if len(tmp_rbi):
             for i in range(len(tmp_rbi)):
@@ -440,7 +530,12 @@ class noosfere(Source):
         # Note this method will retry without identifiers automatically if no
         # match is found with identifiers.
         #
-        debug=1
+
+        log.info('self.dgb_lvl : ', self.dbg_lvl)
+        #log.info('self.debug_level : ', self.debug_level)
+
+
+        debug=self.dbg_lvl & 1
         log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
         if debug:
             log.info('log          : ', log)
@@ -455,14 +550,17 @@ class noosfere(Source):
 
         isbn = identifiers.get('isbn', None)
         if isbn: isbn = self.verify_isbn(log, isbn)
+        log.info('ISBN value is : ', isbn)
 
         nsfr_id = identifiers.get('nsfr_id', None)
+        log.info('nsfr_id value is : ', nsfr_id)
 
         log.info('"Clean" both the authors list and the title... ')
         for i in range(len(authors)):
             authors[i] = self.ret_clean_text(log, authors[i])
         title = self.ret_clean_text(log, title)
 
+        log.info('getting one or more book url')
         book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
         if nsfr_id:
             log.info('trying noosfere id, ', nsfr_id )
@@ -474,15 +572,17 @@ class noosfere(Source):
                 url = "/livres/niourf.asp?numlivre="+nsfr[1]
                 book_index[url]=title
             else:
-                log.info('noosfere id not valid, trying ISBN', isbn)
+                log.info('noosfere id not valid...')
 
         if not book_index:
+            log.info('trying ISBN', isbn)
             if isbn:
                 book_index = self.ISBN_ret_book_index(log, br, isbn, book_index)
                 if not len(book_index):
                     log.error("This ISBN was not found: ", isbn, "trying with title", title,"and author", authors)
                     return self.identify(log, result_queue, abort, title=title, authors=authors, timeout=timeout)
             elif title and authors:
+                log.info('trying using authors and title')
                 author_index=self.ret_author_index(log, br, authors)
                 if len(author_index):
                     book_index = self.ret_book_per_author_index(log, br, author_index, title, book_index)
@@ -506,7 +606,7 @@ class noosfere(Source):
             tmp_list.append((book_url, book_title))
 
         from calibre_plugins.noosfere.worker import Worker
-        workers = [Worker(log, data[0], data[1], isbn, result_queue, br, i, self) for i, data in enumerate(tmp_list)]
+        workers = [Worker(log, data[0], data[1], isbn, result_queue, br, i, self, self.dbg_lvl) for i, data in enumerate(tmp_list)]
 
         for w in workers:
             w.start()
@@ -531,7 +631,7 @@ class noosfere(Source):
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
         # willl download cover from Noosfere provided it was found (and then cached)
-        debug=0
+        debug=self.dbg_lvl & 1
         log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
         if debug:
             log.info('log          : ', log)
