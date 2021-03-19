@@ -35,3 +35,7 @@ Carefull noosfere has anounced some changes in the future:
 ## cal-noosfere
 
 My idea about this development is to be able to download the information about a volume into Calibre.
+
+## Note
+
+Have a look in folder noosfere/readme_lis-moi for some (little) more information in French.

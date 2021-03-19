@@ -174,4 +174,4 @@ Au pointeur de l'auteur, le site noosfere retourne par defaut la bibliographie d
 
 ## couvertures
 
-Noosfere ne donne pas toujours de grandes et belles couverture, mais, sauf quand elle manque (rare), elle retourne la couverture associée avec le volume. Je récupère cette couverture, SANS laisser le choix. Libre à l'utilisateur de rechercher une meilleure image ou même une autre (si la cohérence du volume n'importe pas).
+Noosfere ne donne pas toujours de grandes et belles couverture, mais, sauf quand elle manque (rare), elle retourne la couverture associée avec le volume. Je récupère cette couverture, SANS laisser le choix d'une autre. Libre à l'utilisateur de rechercher une meilleure image ou même une autre (si la cohérence du volume n'importe pas).

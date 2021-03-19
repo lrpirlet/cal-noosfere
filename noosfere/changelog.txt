@@ -7,14 +7,14 @@ Science-Fiction."
 
 Definition: A volume has in common with a book the author and the title but
 not the cover, not the editor, not the isbn, not.. I want the information
-about a volume... I want a coherent information. I hate swapping the cover 
+about a volume... I want a coherent information. I hate swapping the cover
 of a volume with that of another one because "it's nicer".
 
 In order to collect the information about a volume one must use either the
 ISBN, the author and the title. Because of that, author and title should be
 as accurate as possible, or rather as similar as possible to noosfere...
 (that is a hint: when it fails got to noosfere manualy, if the book exists
-there, copy paste isbn, author and title in calibre, pay attention to the 
+there, copy paste isbn, author and title in calibre, pay attention to the
 order of the author's first name and LAST NAME)
 
 If the ISBN exists a search in noosfere points to a serie of volumes (yet
@@ -27,29 +27,29 @@ to the title will point to a serie of volumes
 If the title is the only reference, a search in noosfere will output a list
 of books sorted by best mactch along with a score again a book will point to
 a serie of volume. (In theory, it is yet to be implemented...
- 
+
 Out of the volume list one must choose the best candidate to get a coherent
 set of volumes attributes (cover, isbn, editor, critics, serie, serie nbr,
 etc...
- 
- 
+
+
 The nice think about noosfere is the power of the search (each word may be
 "ANDed, exact or fuzzy match, etc...) The result gives a LOT of information
 about the book, author, translator... And the nice think about calibre is
 the possibility to insert working url in the comments and in the catalogs..
 Thanks for that.
- 
+
 File worker.py is NOT stricly needed (read absolutely useless as I very
 often reduce the match to ONE book) but it was nice to develop so I learned
 how to create spawned process... :-)
- 
+
 REGISTERIT.BAT will create a zip file that will be pushed to the righ
 place... It must be invoked any time a change is done to a .py file.
- 
+
 TESTIT.BAT will bost register and execute some testing (usefull when
 debuging an url that behave differently (read when it displays one of my
 bugs leftover)
- 
+
 This is a beta version (alpha is I guess when only me can make it work...).
 Beta version translate to "c'est juste une bête version"... For the english
 speaking people, this is a very very funny word play in french... all right,
@@ -57,7 +57,7 @@ at least it makes me laugh, even if I am the only one...
 
 I still need to add some custom columns but I have not decided if I need to
 design a config program in a window...
- 
+
 I have to decide how to give me the possiblity to choose what volume I want
 in calibre... here: from preference, metadata download, (tickbox) Keep more
 than one entry per source, the comment says: "Disable any metadata sources
@@ -65,7 +65,7 @@ you do not want by unchecking them. You can also set the cover priority.
 Covers from sources that have a higher (smaller) priority will be preferred
 when bulk downloading metadata.". Could I have lrpid to differenciate
 different volumes of a same book??
- 
+
 ouch... bad surprise, noosfere find so many match to "G.-J. Arnaud"... even
 with 'exact' match...I need to find a better way to filter the author list
 provided... done: use from difflib import SequenceMatcher and swapping first
@@ -77,3 +77,19 @@ name to the id name)... I use both the book and the volume noosfere's
 identifier (bk$<book-number-in-noosfere>$vl$<vol-number-in-noosfere>). With
 that info, I can reach immediately to the book and/or to the volume, and
 each volume gets a unique nsfr_id
+
+Introduced (via calibre Options) a boolean to expand or not the publisher
+field. Now, publisher contains publisher§collection name€serial code. § and €
+used because very low probability to exist. Metadata bulk edit created to
+help push the data to the right place.
+
+Introduced (via calibre Options) a number to select the debug level
+
+Introduced (via calibre Options) a choice to select how to push the priority
+to get oldest or latest with or without preference over volume with ISBN.
+Caution, this still choose the most verbose comments.
+
+Introduced (via calibre Options) a string box. Filled with the (exact!!)
+publisher name, it tries to give a match on publisher name.
+
+

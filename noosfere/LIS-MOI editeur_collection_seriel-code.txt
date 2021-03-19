@@ -1,0 +1,58 @@
+*********************************************************************************************************
+*********************************************************************************************************
+** Attention, tu fais une erreur, tu ne me comprends pas, c'est pas mon problème... Fais un bon backup **
+** avant de tout demolir... Je t'aurai prévenu...                                                      **
+*********************************************************************************************************
+*********************************************************************************************************
+
+
+
+
+
+Il n'est pas prévu de pouvoir remplir les colonnes ajoutées par l'utilisateur depuis une extention Metadata source.
+Pour rester dans les clous, j'ai décidé de donner la possibilité d'étendre le champ editeur (publisher en anglais).
+
+Si on choisit cette option on aura editeur§collection€ code seriel dans la colonne editeur.
+
+Pour utiliser cette option, je me suis créer une colonne
+"collection" (nom recherché: #collection, type: Texte, colonne affichée dans le Navigateur d'étiquette)
+"coll_srl" (nom recherché: #coll_srt, type: Texte long, comme les commentaires, non affiché dans le Navigateur d'étiquette
+           interpréter cette colonne comme: Texte court, comme un titre)
+
+Apres le travail de recherche des metadata, on peut rectifier a la main... 
+OU
+utiliser editer les metadonées par lot.. !!!.backup.!!!
+
+preparation:
+onglet 'Rechercher et remplacer'
+champ de recherche: publisher (et oui, en interne, c'est en anglais :-) )
+Rechercher: .*§(.*)€(.*) 
+Remplacer par: \2
+Champ de destination: #coll_srl
+ICI ON SAUVE et on donne un nom facile a retrouver tel que: "de editeur vers #coll_str (separateur § €)"
+
+onglet 'Rechercher et remplacer'
+champ de recherche: publisher 
+Rechercher: .*§(.*)€(.*) 
+Remplacer par: \1
+Champ de destination: #collection
+ICI ON SAUVE et on donne un nom facile a retrouver tel que: "de editeur vers #collection (separateur § €)"
+
+onglet 'Rechercher et remplacer'
+champ de recherche: publisher 
+Rechercher: (.*)§(.*)
+Remplacer par: \1
+Champ de destination: publisher
+ICI ON SAUVE et on donne un nom facile a retrouver tel que: "de editeur vers editeur(on efface tout depuis §)"
+
+On peut maintenant passer a l'action.. Tu as fais un backup? non? fais-le...
+rechercher le signe § (signe de paragraphe) suivi d'assez de lettres pour verifier que l'on ne selectionne 
+que ce que l'on veut rectifier et rien d'autre
+onglet 'Rechercher et remplacer'
+recopier une ligne depuis une boite "livre" vers la boite "votre test"
+à partir de Charger rechercher/remplacer: choisir "de editeur vers #coll_str (separateur § €)"
+verifier que le resultat attendu est bien celui obtenu sous tester le resultat... Appliquer
+idem avec "de editeur vers #collection (separateur § €)"
+et avec "de editeur vers editeur(on efface tout depuis §)"
+
+on restore le backup si on a merdé (mais on a pas merdé... ouaiii...)
