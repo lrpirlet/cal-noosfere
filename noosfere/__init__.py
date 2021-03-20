@@ -136,6 +136,63 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]'):
         log.info(who,"(ret_soup) return (soup,sr.geturl()) from ret_soup\n")
     return (soup,sr.geturl())
 
+def verify_isbn(log, dbg_lvl, isbn_str):
+    # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
+    # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
+    # et que l'on traite un mot de 10 ou 13 characteres.
+    #
+    # isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
+    # Characters irrelevant to ISBN and separators inside ISBN must be removed,
+    # the resulting word must be either 10 or 13 characters long.
+    #
+    debug=dbg_lvl & 4
+    if debug:
+        log.info("\nIn verify_isbn(log, dbg_lvl, isbn_str)")
+        log.info("isbn_str         : ",isbn_str)
+
+    for k in ['(',')','-',' ']:
+        if k in isbn_str:
+            isbn_str=isbn_str.replace(k,"")
+    if debug:
+        log.info("isbn_str cleaned : ",isbn_str)
+        log.info("return check_isbn(isbn_str) from verify_isbn\n")
+    return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
+
+def ret_clean_text(log, dbg_lvl, text, swap=False):
+    # for noosfere search to work smoothly, authors and title needs to be cleaned
+    # we need to remove non significant characters and remove useless space character
+    #
+    debug=dbg_lvl & 4
+    if debug:
+        log.info("\nIn ret_clean_txt(self, log, text, swap =",swap,")")
+        log.info("text         : ", text)
+
+    # Calibre per default presents the author as "Firstname Lastname", cleaned to be become "firstname lastname"
+    # Noosfere present the author as "LASTNAME Firstname", let's get "Firstname LASTNAME" cleaned to "firstname lastname"
+    #
+    for k in [',','.','-',"'",'"','(',')']:             # yes I found a name with '(' and ')' in it...
+        if k in text:
+            text = text.replace(k," ")
+    text=" ".join(text.split())
+
+    if swap:
+        if debug:
+            log.info("swap name and surname")
+        nom=prenom=""
+        for i in range(len(text.split())):
+            if (len(text.split()[i])==1) or (not text.split()[i].isupper()):
+                prenom += " "+text.split()[i]
+            else:
+                nom += " "+text.split()[i]
+        text=prenom+" "+nom
+        if debug: log.info("text         : ", text)
+
+    if debug:
+        log.info("cleaned text : ", text)
+        log.info("return text from ret_clean_txt\n")
+        
+    return lower(get_udc().decode(text))
+
 class noosfere(Source):
     # see https://manual.calibre-ebook.com/fr/plugins.html#calibre.ebooks.metadata.sources.base.Source
     # and https://manual.calibre-ebook.com/fr/_modules/calibre/ebooks/metadata/sources/base.html#Source
@@ -295,63 +352,6 @@ class noosfere(Source):
             url = self.cached_identifier_to_cover_url(nsfr_id)
         return url
 
-    def verify_isbn(self, log, isbn_str):
-        # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
-        # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
-        # et que l'on traite un mot de 10 ou 13 characteres.
-        #
-        # isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
-        # Characters irrelevant to ISBN and separators inside ISBN must be removed,
-        # the resulting word must be either 10 or 13 characters long.
-        #
-        debug=self.dbg_lvl & 4
-        if debug:
-            log.info("\nIn verify_isbn(isbn_str)")
-            log.info("isbn_str         : ",isbn_str)
-
-        for k in ['(',')','-',' ']:
-            if k in isbn_str:
-                isbn_str=isbn_str.replace(k,"")
-        if debug:
-            log.info("isbn_str cleaned : ",isbn_str)
-            log.info("return check_isbn(isbn_str) from verify_isbn\n")
-        return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
-
-    def ret_clean_text(self, log, text, swap=False):
-        # for noosfere search to work smoothly, authors and title needs to be cleaned
-        # we need to remove non significant characters and remove useless space character
-        #
-        debug=self.dbg_lvl & 4
-        if debug:
-            log.info("\nIn ret_clean_txt(self, log, text, swap =",swap,")")
-            log.info("text         : ", text)
-
-        # Calibre per default presents the author as "Firstname Lastname", cleaned to be become "firstname lastname"
-        # Noosfere present the author as "LASTNAME Firstname", let's get "Firstname LASTNAME" cleaned to "firstname lastname"
-        #
-        for k in [',','.','-',"'",'"','(',')']:             # yes I found a name with '(' and ')' in it...
-            if k in text:
-                text = text.replace(k," ")
-        text=" ".join(text.split())
-
-        if swap:
-            if debug: log.info("swap name and surname")
-            nom=prenom=""
-            for i in range(len(text.split())):
-                if (len(text.split()[i])==1) or (not text.split()[i].isupper()):
-                    prenom += " "+text.split()[i]
-                else:
-                    nom += " "+text.split()[i]
-            text=prenom+" "+nom
-            if debug: log.info("text         : ", text)
-
-        text=lower(get_udc().decode(text))
-
-        if debug:
-            log.info("cleaned text : ", text)
-            log.info("return text from ret_clean_txt\n")
-        return text
-
     def ret_author_index(self, log, br, authors):
         # Trouve la reference de l'auteur dans la soupe de noosfere
         # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
@@ -377,13 +377,13 @@ class noosfere(Source):
             if len(tmp_ai):
                 for i in range(len(tmp_ai)):
                     url_author, author, perta=tmp_ai[i]["href"], tmp_ai[i].text, tmp_ai[i].find_previous('tr').select_one('td').text
-                    ratio = SM(None, self.ret_clean_text(log, author,swap=True), authors[j]).ratio()
+                    ratio = SM(None, ret_clean_text(log, self.dbg_lvl, author,swap=True), authors[j]).ratio()
                     if debug:
                         log.info("pertinence : ", perta, end=" ; ")
                         log.info("SM.ratio : {:.3f}".format(ratio), end=" ; ")
                         log.info("url_author : ", url_author, end=" ; ")
                         log.info("authors[j] : ", authors[j], end=" ; ")
-                        log.info("author : ", self.ret_clean_text(log, author))
+                        log.info("author : ", ret_clean_text(log, self.dbg_lvl, author))
                     if ratio > .6 :
                         all_author_index[url_author]=[ratio, author]
 
@@ -402,13 +402,13 @@ class noosfere(Source):
                     if len(tmp_ai):
                         for i in range(len(tmp_ai)):
                             url_author, author, perta=tmp_ai[i]["href"], tmp_ai[i].text, tmp_ai[i].find_previous('tr').select_one('td').text
-                            ratio = SM(None, self.ret_clean_text(log, author,swap=True), authors[j]).ratio()
+                            ratio = SM(None, ret_clean_text(log, self.dbg_lvl, author,swap=True), authors[j]).ratio()
                             if debug:
                                 log.info("pertinence : ", perta, end=" ; ")
                                 log.info("SM.ratio : {:.3f}".format(ratio), end=" ; ")
                                 log.info("url_author : ", url_author, end=" ; ")
                                 log.info("authors[j] : ", authors[j], end=" ; ")
-                                log.info("author : ", self.ret_clean_text(log, author))
+                                log.info("author : ", ret_clean_text(log, self.dbg_lvl, author))
                             if ratio > .6 :
                                 all_author_index[url_author]=[ratio, author]
 
@@ -477,7 +477,7 @@ class noosfere(Source):
 
             for key,ref in book_per_author_index.items():
                 book_url, book_title = key, ref
-                ratio = SM(None, title, self.ret_clean_text(log, book_title)).ratio()
+                ratio = SM(None, title, ret_clean_text(log, self.dbg_lvl, book_title)).ratio()
                 if debug:
                     log.info("SM.ratio : {:.3f}".format(ratio),end=" ; ")
                     log.info("book_url : ",book_url,end=" ; ")
@@ -560,7 +560,7 @@ class noosfere(Source):
         br = self.browser
 
         isbn = identifiers.get('isbn', None)
-        if isbn: isbn = self.verify_isbn(log, isbn)
+        if isbn: isbn = verify_isbn(log, self.dbg_lvl, isbn)
         log.info('ISBN value is : ', isbn)
 
         # the nsfr_id is designed to be the significant part of the url:
@@ -572,8 +572,8 @@ class noosfere(Source):
 
         log.info('"Clean" both the authors list and the title... ')
         for i in range(len(authors)):
-            authors[i] = self.ret_clean_text(log, authors[i])
-        title = self.ret_clean_text(log, title)
+            authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
+        title = ret_clean_text(log, self.dbg_lvl, title)
 
         log.info('getting one or more book url')
         book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
@@ -709,20 +709,20 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-##            ( # A book with ISBN specified not in noosfere
-##                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
-##                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
-##            ),
+            ( # A book with ISBN specified not in noosfere
+                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
+                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
+            ),
 
 ##            ( # A book with no ISBN specified
 ##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
 ##                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
 ##            ),
 
-            ( # A book with an ISBN
-                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
-            ),
+##            ( # A book with an ISBN
+##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+##            ),
 
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},

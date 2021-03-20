@@ -19,7 +19,7 @@ from calibre.library.comments import sanitize_comments_html
 from calibre.utils.cleantext import clean_ascii_chars
 from calibre.utils.icu import lower
 
-from calibre_plugins.noosfere import ret_soup
+from calibre_plugins.noosfere import ret_soup, verify_isbn
 from calibre_plugins.noosfere import noosfere
 
 
@@ -94,30 +94,6 @@ class Worker(Thread):
                 self.extract_vol_details(vol_url)
             except:
                 self.log.exception("extract_vol_details failed for url: ",vol_url)
-
-
-    def verify_isbn(self, isbn_str):
-        # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
-        # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
-        # et que l'on traite un mot de 10 ou 13 characteres.
-        #
-        # isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
-        # Characters irrelevant to ISBN and separators inside ISBN must be removed,
-        # the resulting word must be either 10 or 13 characters long.
-        #
-        debug=self.dbg_lvl & 4
-        if debug:
-            self.log.info(self.who,"\nIn verify_isbn(isbn_str)")
-            self.log.info(self.who,"isbn_str         : ",isbn_str)
-
-        for k in ['(',')','-',' ']:
-            if k in isbn_str:
-                isbn_str=isbn_str.replace(k,"")
-        if debug:
-            self.log.info(self.who,"isbn_str cleaned : ",isbn_str)
-            self.log.info(self.who,"return from verify_isbn\n")
-
-        return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
 
     def ret_top_vol_indx(self, url, book_title):
         # cette fonction reçoit l'url du livre qui contient plusieur volumes du meme auteur,
@@ -201,12 +177,12 @@ class Worker(Thread):
 
             if subsoup.select("span[class='SousFicheNiourf']"):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                vol_isbn = self.verify_isbn(vol_isbn)
+                vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn)
                 if vol_isbn:
                     if push_isbn:
                         point+=100
                         if self.isbn:
-                            if self.verify_isbn(self.isbn)== vol_isbn: point+=100
+                            if verify_isbn(self.log, self.dbg_lvl, self.isbn)== vol_isbn: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
