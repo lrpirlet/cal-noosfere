@@ -28,8 +28,6 @@ class Worker(Thread):
 
     def __init__(self, log, book_url, book_title, isbn, result_queue, browser, relevance, plugin, dbg_lvl, timeout=30):
 
-        debug=1
-
         Thread.__init__(self)
         self.daemon = True
         self.log = log
@@ -49,7 +47,8 @@ class Worker(Thread):
         self.priority_handling = self.plugin.priority_handling
         self.must_be_editor = self.plugin.must_be_editor
 
-        self.log.info("\nEntering worker", relevance)
+        debug=self.dbg_lvl & 2
+        self.log.info(self.who,"\nEntering worker")
         if debug:
             self.log.info(self.who,"self                  : ", self)
             self.log.info(self.who,"log                   : ", log)
@@ -156,6 +155,9 @@ class Worker(Thread):
         ts_vol_index={}
         # we like better volumes with an identifier, but some are edited on a particular publisher without isbn
         push_isbn = True if "isbn" in self.priority_handling else False
+        if debug:
+            self.log.info(self.who,"priority pushes isbn  : ", push_isbn)
+            self.log.info(self.who,"priority balanced : ", bool( not "very" in self.priority_handling))
 
         nbr_of_vol=soup.select("td[class='item_bib']")
         for count in range(0,len(nbr_of_vol),2):
@@ -177,12 +179,12 @@ class Worker(Thread):
 
             if subsoup.select("span[class='SousFicheNiourf']"):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn)
+                vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn, who=self.who)
                 if vol_isbn:
                     if push_isbn:
                         point+=100
                         if self.isbn:
-                            if verify_isbn(self.log, self.dbg_lvl, self.isbn)== vol_isbn: point+=100
+                            if verify_isbn(self.log, self.dbg_lvl, self.isbn, who=self.who)== vol_isbn: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -190,11 +192,12 @@ class Worker(Thread):
                 point+=2
 
             tmp_presence=subsoup.select("span[title*='Présence']")
-            for i in range(len(tmp_presence)):
-                if "R" in tmp_presence[i].text: point+=1
-                elif "C" in tmp_presence[i].text: point+=1
-                elif "CS" in tmp_presence[i].text: point+=1
-                elif "S" in tmp_presence[i].text: point+=1
+            if not "very" in self.priority_handling:
+                for i in range(len(tmp_presence)):
+                    if "R" in tmp_presence[i].text: point+=1
+                    elif "C" in tmp_presence[i].text: point+=1
+                    elif "CS" in tmp_presence[i].text: point+=1
+                    elif "S" in tmp_presence[i].text: point+=1
 
             ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
 
@@ -212,6 +215,7 @@ class Worker(Thread):
         top_vol_index = ""
         serie_editeur = []
         reverse_it = True if "latest" in self.priority_handling else False
+        if debug: self.log.info(self.who,"priority pushes latest : ", reverse_it)
 
         # in python 3 a dict keeps the order of introduction... In this case, as noosfere present it chronologic oreder,
         # let's invert the dict by sorting reverse if the latest volume is asked
@@ -358,7 +362,8 @@ class Worker(Thread):
                 tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
                 for i in range(len(tmp_vss)):
                     if "vol." in tmp_vss[i]:
-                        vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+                        if not vol_serie_seq:
+                            vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
                         dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
                         comment_pre_decoupage_annexe = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px"> (découpage annexe) </p></div>',"lxml")
@@ -384,6 +389,7 @@ class Worker(Thread):
                 if k in vol_coll_srl:
                     vol_coll_srl=vol_coll_srl.replace(k,"")
             vol_coll_srl = vol_coll_srl.strip()
+            vol_coll_srl = vol_coll_srl.split("/")[0]
             if vol_coll_srl[0].isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
         else:
             vol_coll_srl = ""
@@ -569,7 +575,7 @@ class Worker(Thread):
 #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
                                                                                                                # language must be <class 'str'>
 
-        if vol_isbn and vol_cover_index:
+        if vol_cover_index:
             self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)
 
         if vol_isbn:

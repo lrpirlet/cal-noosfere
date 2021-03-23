@@ -90,6 +90,11 @@ to get oldest or latest with or without preference over volume with ISBN.
 Caution, this still choose the most verbose comments.
 
 Introduced (via calibre Options) a string box. Filled with the (exact!!)
-publisher name, it tries to give a match on publisher name.
+publisher name, it pushes priority to give a match on publisher name... Yes,
+I know that the collection may still be wrong. The only way is to change the
+nsfr_id to reflect what volume of the book we really want (the number,
+including the sign if any, after the equal sign should show up glued to the
+vl$<number>) and restart the metadata download.
 
-
+Pushed to version 0,7,0 after refactoring some code to become function instead
+of method...

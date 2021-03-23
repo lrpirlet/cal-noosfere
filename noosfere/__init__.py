@@ -39,7 +39,7 @@ __docformat__ = 'restructuredtext en'           # whatever that means???
 # those are python code that are directly available in calibre closed environment (test import... using calibre-debug)
 import urllib                                   # to access the web
 from bs4 import BeautifulSoup as BS             # to dismantle and manipulate HTTP (HyperText Markup Language)
-#import sys                                      # so I can access sys (mainly during development may be useless now)
+#import sys                                      # so I can access sys (mainly during development, probably useless now)
 import time                                     # guess that formats data and time in a common understanding
 from queue import Empty, Queue                  # to submit jobs to another process (worker use it to pass results to calibre
 from difflib import SequenceMatcher as SM
@@ -78,7 +78,7 @@ def urlopen_with_retry(log, dbg_lvl, br, url, rkt, who):
             delay *= backoff
             return br.open(url,data=rkt,timeout=30)
 
-def ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]'):
+def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     # Function to return the soup for beautifullsoup to work on.
     #
     debug=dbg_lvl & 4
@@ -136,7 +136,7 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]'):
         log.info(who,"(ret_soup) return (soup,sr.geturl()) from ret_soup\n")
     return (soup,sr.geturl())
 
-def verify_isbn(log, dbg_lvl, isbn_str):
+def verify_isbn(log, dbg_lvl, isbn_str, who=''):
     # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
     # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
     # et que l'on traite un mot de 10 ou 13 characteres.
@@ -158,7 +158,7 @@ def verify_isbn(log, dbg_lvl, isbn_str):
         log.info("return check_isbn(isbn_str) from verify_isbn\n")
     return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
 
-def ret_clean_text(log, dbg_lvl, text, swap=False):
+def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
     # for noosfere search to work smoothly, authors and title needs to be cleaned
     # we need to remove non significant characters and remove useless space character
     #
@@ -189,8 +189,8 @@ def ret_clean_text(log, dbg_lvl, text, swap=False):
 
     if debug:
         log.info("cleaned text : ", text)
-        log.info("return text from ret_clean_txt\n")
-        
+        log.info("return text from ret_clean_txt")
+
     return lower(get_udc().decode(text))
 
 class noosfere(Source):
@@ -200,7 +200,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 5, 0)
+    version                 = (0, 7, 0)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
@@ -244,10 +244,12 @@ class noosfere(Source):
                                   )
 
     # priority handling, a choice box that propose to set the priority over
-    # the oldest published volume with a preference for an ISBN
-    # the latest published volume with a preference for an ISBN
-    # the oldest
-    # the latest
+    # the oldest published volume with a preference for an ISBN balanced for a maximum of comments
+    # the latest published volume with a preference for an ISBN balanced for a maximum of comments
+    # the oldest balanced for a maximum of comments
+    # the latest balanced for a maximum of comments
+    # the very oldest
+    # the very latest
     # note that the selected volume will have the most represented editor
     # (if editor x reedited 4 time the book, and editor Y only once,
     # editor x will certainly be selected)
@@ -257,7 +259,9 @@ class noosfere(Source):
                        '0_oldest_with_isbn':_("le plus ancien pondéré, préfère un isbn"),
                        '1_latest_with_isbn':_("le plus récent pondéré, préfère un isbn"),
                        '2_oldest':_("un plus ancien pondéré"),
-                       '3_latest':_("un plus recent pondéré")
+                       '3_latest':_("un plus recent pondéré"),
+                       '4_very_oldest':_("vraiment plus ancien"),
+                       '5_very_latest':_("vraiment plus recent")
                         }
 
     options = (
@@ -342,10 +346,10 @@ class noosfere(Source):
         # I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
         # this should allow to go directly to the book page (that could be the vol page if there is only one vol for the book)
         #
-        url=None
+        url = None
         nsfr_id = identifiers.get('nsfr_id', None)
         if nsfr_id is None:
-            isbn = identifiers.get('nsfr_id', None)
+            isbn = identifiers.get('isbn', None)
             if isbn is not None:
                 nsfr_id = self.cached_isbn_to_identifier(isbn)
         if nsfr_id is not None:
@@ -469,18 +473,13 @@ class noosfere(Source):
             soup = ret_soup(log, self.dbg_lvl, br, url)[0]
             tmp_bpai=soup.select('a[href*="ditionsLivre.asp"]')
             for i in range(len(tmp_bpai)):
-                bpai_title=tmp_bpai[i].text.lower()
-                bpai_url=(tmp_bpai[i]["href"].replace('./','/livres/').split('&'))[0]
-                book_per_author_index[bpai_url]=bpai_title
-                if debug:
-                    log.info('book_per_author_url,tmp_bpai[i]["href"], title : ', bpai_url, tmp_bpai[i]["href"], " ; ", tmp_bpai[i].text)
-
-            for key,ref in book_per_author_index.items():
-                book_url, book_title = key, ref
+                book_title=tmp_bpai[i].text.lower()
+                book_url=(tmp_bpai[i]["href"].replace('./','/livres/').split('&'))[0]
                 ratio = SM(None, title, ret_clean_text(log, self.dbg_lvl, book_title)).ratio()
                 if debug:
                     log.info("SM.ratio : {:.3f}".format(ratio),end=" ; ")
                     log.info("book_url : ",book_url,end=" ; ")
+                    log.info('tmp_bpai[i]["href"] : ',tmp_bpai[i]["href"],end=" ; ")
                     log.info("book_title : ",book_title)
                 if ratio > .6 :
                     unsorted_book_index[ratio]=[book_url, "", book_title]
@@ -488,8 +487,7 @@ class noosfere(Source):
                     unsorted_book_index={}
                     unsorted_book_index[ratio]=[book_url, "", book_title]
                     break                        # we have a perfect match no need to go further in the author books
-                                                 # and I know it could cause problem when several authors produce a identical title
-                                                 # but Calibre will merge them, anyway...
+                                                 # and I know it could cause problem iff several authors produce an identical title
 
             sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
             for key,ref in sorted_book_index.items():
@@ -498,6 +496,7 @@ class noosfere(Source):
                 log.info('book_index[book_url] = book_title : ',book_index)
 
             if ratio == 1:
+                log.info("Perfect match, we got it and we can stop looking further")
                 break                           # we have a perfect match no need to examine other authors
 
         if debug: log.info('return book_index from ret_book_per_author_index\n')
@@ -647,17 +646,8 @@ class noosfere(Source):
 
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        # willl download cover from Noosfere provided it was found (and then cached)
-        debug=self.dbg_lvl & 1
-        log.info('\nEntering download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30)')
-        if debug:
-            log.info('log          : ', log)
-            log.info('result_queue : ', result_queue)
-            log.info('abort        : ', abort)
-            log.info('title        : ', title)
-            log.info('authors      : ', authors)
-            log.info('identifiers  : ', identifiers)
-            log.info('timeout      : ', timeout)
+        # willl download cover from Noosfere provided it was found (and then cached)... If not, it will
+        # run the metadata download and try to cache the cover url...
 
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
@@ -672,8 +662,7 @@ class noosfere(Source):
                     results.append(rq.get_nowait())
                 except Empty:
                     break
-            results.sort(key=self.identify_results_keygen(
-                title=title, authors=authors, identifiers=identifiers))
+            results.sort(key=self.identify_results_keygen(title=title, authors=authors, identifiers=identifiers))
             for mi in results:
                 cached_url = self.get_cached_cover_url(mi.identifiers)
                 if cached_url is not None:
@@ -698,21 +687,22 @@ class noosfere(Source):
 if __name__ == '__main__':
 
     # Run these tests from the directory contatining all files needed for the plugin (the files that go into the zip file)
-    # that is, __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
+    # that is: __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
     # issue in sequence:
     # calibre-customize -b .
     # calibre-debug -e __init__.py
     # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log...
-    # Careful, a message may pop up about an error... however this message is isssued function of the lengh of the log...
+    # Careful, a message may pop up about an error... however this message pops up function of the lengh of the log...
+    # anyway, verify... I have been caught at least once
 
     from calibre.ebooks.metadata.sources.test import (test_identify_plugin, title_test, authors_test, series_test)
     test_identify_plugin(noosfere.name,
         [
 
-            ( # A book with ISBN specified not in noosfere
-                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
-                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
-            ),
+##            ( # A book with ISBN specified not in noosfere
+##                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
+##                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
+##            ),
 
 ##            ( # A book with no ISBN specified
 ##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
@@ -729,10 +719,10 @@ if __name__ == '__main__':
 ##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
 ##            ),
 
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '2265044016'}, 'title':"L'Homme-requin", 'authors':['Jean-Christophe Chaumette']},
-##                [title_test("L'Homme-requin", exact=True), authors_test(['Jean-Christophe Chaumette']), series_test('Neuvième cercle', 1.0)]
-##            ),
+            ( # A book with no ISBN
+                {'identifiers':{}, 'title':"La Septième saison", 'authors':['Pierre Suragne']},
+                [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
+            ),
 
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': ''}, 'title':"", 'authors':['']},
