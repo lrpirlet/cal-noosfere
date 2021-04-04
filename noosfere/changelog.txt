@@ -101,3 +101,14 @@ of method...
 
 Corrected instructions cause some volume have no value for coll_rsl, yet they 
 have a value for collection...
+
+Intention:
+access each book in book_index and determine if several volume exists funtion 
+of returned url address (url_vrai) if several volume, get each and every 
+url_adrres and pass it to extract_vol_detail for each ref found...
+We may get lucky and NOT combine those even if title, author and isbn are 
+identical... nsfr_id will be different... hopefully this is enough ( I could 
+not find the associated code in the sources)
+Besides this could help insert a "manual choice via  Qwebengine"... of course 
+using a file as feedback and sync since spawed process and queue do not work 
+in calibre (I cannot make it work, I mean :-o)

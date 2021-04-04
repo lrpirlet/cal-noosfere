@@ -93,7 +93,7 @@ class Worker(Thread):
                 self.extract_vol_details(vol_url)
             except:
                 self.log.exception("extract_vol_details failed for url: ",vol_url)
-
+"""
     def ret_top_vol_indx(self, url, book_title):
         # cette fonction reçoit l'url du livre qui contient plusieur volumes du meme auteur,
         # dont certains ont le meme ISBN et generalement le meme titres.
@@ -247,6 +247,7 @@ class Worker(Thread):
                 top_vol_index=ts_vol_index[key][1]
 
         return top_vol_index
+"""
 
     def get_decoupage_annexe(self, dec_anx_url):
         # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
