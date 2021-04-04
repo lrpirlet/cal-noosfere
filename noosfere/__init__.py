@@ -43,7 +43,7 @@ from bs4 import BeautifulSoup as BS             # to dismantle and manipulate HT
 import time                                     # guess that formats data and time in a common understanding
 from queue import Empty, Queue                  # to submit jobs to another process (worker use it to pass results to calibre
 from difflib import SequenceMatcher as SM
-'''
+''' difflib has SequenceMatcher to compare 2 sentences
 s1 = ' It was a dark and stormy night. I was all alone sitting on a red chair. I was not completely alone as I had three cats.'
 s2 = ' It was a murky and stormy night. I was all alone sitting on a crimson chair. I was not completely alone as I had three felines.'
 result = SM(None, s1, s2).ratio()
@@ -96,17 +96,20 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
         log.info(who, "br  : ", br)
         log.info(who, "url : ", url)
         log.info(who, "rkt : ", rkt)
-
-    # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
+    # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
+    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage 
+    # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
+    # J'ai du isoler le creatioon de la soup et du decodage dans la fonction ret_soup().
+    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine... 
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
     #
     # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
-    # requests was able to decode correctly, I knew that my setup was wrong but it took me a while...
+    # Even auto decode did not always work... I knew that my setup was wrong but it took me a while...
     # Maybe I should have tried earlier the working solution as the emitting node is MS
     # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
     # It decode correctly to utf_8 with windows-1252 forced as from_encoding
     # watch-out noosfere is talking about making the site better... ;-}
-    #'
+    #
     from_encoding="windows-1252"
 
 
@@ -261,7 +264,8 @@ class noosfere(Source):
                    'bool',
                    False,
                    _("Ajoute collection et son numéro d'ordre au champ èditeur"),       # add the editor's collection and the associated order number to the publisher field
-                   _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur.")  # check this box to enable...
+                   _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur."
+                     "Voir LIS-MOI editeur_collection_seriel-code.txt")                 # check this box to enable... see README publisher_collection_seriel-code.txt
                    ),
             Option(
                    'debug_level',
