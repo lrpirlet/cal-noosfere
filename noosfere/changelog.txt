@@ -98,3 +98,6 @@ vl$<number>) and restart the metadata download.
 
 Pushed to version 0,7,0 after refactoring some code to become function instead
 of method...
+
+Corrected instructions cause some volume have no value for coll_rsl, yet they 
+have a value for collection...

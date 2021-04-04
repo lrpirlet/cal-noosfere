@@ -32,10 +32,17 @@ HERE WE SAVE and we give a name easy to find such as: "from publisher to #coll_s
 
 'Find and replace' tab
 search field: publisher
-Search for: .*§(.*)€(.*)
+Search for: (.*)§(.*)
+Replace with: \ 1
+Destination field: Publisher
+HERE WE SAVE and we give a name easy to find such as: "from publisher to publisher (we erase everything from €)"
+
+'Find and replace' tab
+search field: publisher
+Search for: .*§(.*)
 Replace with: \1
 Destination field: #collection
-HERE WE SAVE and we give a name easy to find such as: "from publisher to #collection (separator § €)"
+HERE WE SAVE and we give a name easy to find such as: "from publisher to #collection (separator § )"
 
 'Find and replace' tab
 search field: publisher
@@ -45,14 +52,23 @@ Destination field: Publisher
 HERE WE SAVE and we give a name easy to find such as: "from publisher to publisher (we erase everything from §)"
 
 We can now take action. Did you make a backup? no? do it...
-in Calibre search for the § sign (paragraph sign) followed by enough letters to verify that is selected
-what we want to rectify and nothing else
+
+in Calibre search do search  § and €  then verify that what we want to rectify is selected and nothing else
+
 edit metadata in bulk
 'Find and replace' tab
 copy a line from a "Book" box to the "Your test" box
 from Load search/replace: choose "from publisher to #coll_srl (separator § €)"
 check that the expected result is indeed the one obtained under testing the result ... Apply
-ditto with "from publisher to #collection (separator § €)"
-and with "from publisher to publisher (we erase everything from §)"
+ditto with "from publisher to publisher (we erase everything from €)"
+
+in Calibre search do search  §  then verify that what we want to rectify is selected and nothing else
+
+edit metadata in bulk
+'Find and replace' tab
+copy a line from a "Book" box to the "Your test" box
+from Load search/replace: choose "from publisher to #collection (separator §)"
+check that the expected result is indeed the one obtained under testing the result ... Apply
+ditto with "from publisher to publisher (we erase everything from §)"
 
 we restore the backup if we screwed up (but we didn't screw up... yeahhh...)

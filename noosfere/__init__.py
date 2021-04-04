@@ -62,21 +62,30 @@ def urlopen_with_retry(log, dbg_lvl, br, url, rkt, who):
     debug=dbg_lvl & 4
     if debug:
         log.info(who, "In urlopen_with_retry(log, dbg_lvl, br, url, rkt, who)")
-        log.info(who, "(urlopen_with_retry) br  : ", br)
-        log.info(who, "(urlopen_with_retry) url : ", url)
-        log.info(who, "(urlopen_with_retry) rkt : ", rkt)
-        log.info(who, "(urlopen_with_retry) who : ", who)
 
-    tries, delay, backoff=3, 3, 2
+    tries, delay, backoff=4, 3, 2
     while tries > 1:
         try:
-            return br.open(url,data=rkt,timeout=30)
+            sr = br.open(url,data=rkt,timeout=30)
+            log.info(who,"(ret_soup) sr.getcode()  : ", sr.getcode())
+            if debug:
+                log.info(who,"url_vrai      : ", sr.geturl())
+                log.info(who,"sr.info()     : ", sr.info())
+                log.info(who,"ha ouais, vraiment? charset=iso-8859-1... ca va mieux avec from_encoding...")
+            return (sr, sr.geturl())
         except urllib.error.URLError as e:
-            log.info(who,"(urlopen_with_retry)", str(e),", will retry in", delay, "seconds...")
-            time.sleep(delay)
-            tries -= 1
-            delay *= backoff
-            return br.open(url,data=rkt,timeout=30)
+            if "500" in str(e):
+                log.info("\n\n\n"+who,"HTTP Error 500 is Internal Server Error, sorry\n\n\n")
+                raise Exception('(ret_soup) Failed while acessing url : ',url)
+            else:
+                log.info(who,"(urlopen_with_retry)", str(e),", will retry in", delay, "seconds...")
+                time.sleep(delay)
+                delay *= backoff
+                tries -= 1
+                if tries == 1 :
+                    log.info(who, "exception occured...")
+                    log.info(who, "code : ",e.code,"reason : ",e.reason)
+                    raise Exception('(ret_soup) Failed while acessing url : ',url)
 
 def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     # Function to return the soup for beautifullsoup to work on.
@@ -84,10 +93,9 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     debug=dbg_lvl & 4
     if debug:
         log.info(who, "In ret_soup(log, dbg_lvl, br, url, rkt=none, who='[__init__]')")
-        log.info(who, "(ret_soup) br  : ", br)
-        log.info(who, "(ret_soup) url : ", url)
-        log.info(who, "(ret_soup) rkt : ", rkt)
-        log.info(who, "(ret_soup) who : ", who)
+        log.info(who, "br  : ", br)
+        log.info(who, "url : ", url)
+        log.info(who, "rkt : ", rkt)
 
     # isolé pour trouver quel est l'encodage d'origine... ça marchait à peu pres sans forcer encodage d'entrée mais pas tout a fait
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
@@ -102,39 +110,22 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     from_encoding="windows-1252"
 
 
-    log.info(who, "(ret_soup) Accessing url : ", url)
+    log.info(who, "Accessing url : ", url)
     if rkt :
-        log.info(who, "(ret_soup) search parameters : ",rkt)
+        log.info(who, "search parameters : ",rkt)
         rkt=urllib.parse.urlencode(rkt).encode('ascii')
         if debug: log.info(who, "formated parameters : ", rkt)
-    try:
-        sr = urlopen_with_retry(log, dbg_lvl, br, url, rkt, who)
-    except TimeoutError:
-        log.info(who, "The network timed out")
-        raise Exception('(ret_soup) Failed while acessing url : ',url)
-    except urllib.error.HTTPError as e:
-        log.info(who, "urllib.error.HTTPError received.")
-        log.info(who, "code : ",e.code,"reason : ",e.reason)
-        raise Exception('(ret_soup) Failed while acessing url : ',url)
-    except urllib.error.URLError as e:
-        log.info(who, "urllib.error.URLError received")
-        log.info(who, "reason : ",e.reason)
-        raise Exception('(ret_soup) Failed while acessing url : ',url)
-    except Exception as e:
-        log.exception(e)
-        raise Exception('(ret_soup) Failed while acessing url : ',url ,'-', e)
 
-    log.info(who,"(ret_soup) sr.getcode()  : ",sr.getcode())
-    if debug:
-        log.info(who,"(ret_soup) sr.info()     : ", sr.info())
-        log.info(who,"(ret_soup) ha ouais, vraiment? charset=iso-8859-1... c'est pas vrai, c'est du", from_encoding,"...")
-        log.info(who,"(ret_soup) url_vrai      : ",sr.geturl())
+    resp = urlopen_with_retry(log, dbg_lvl, br, url, rkt, who)
+    if debug: log.info(who,"...et from_encoding, c'est : ", from_encoding)
+
+    sr, url_ret = resp[0], resp[1]
 
     soup = BS(sr, "html5lib", from_encoding="windows-1252")
     if debug:
 #        log.info(who,"soup.prettify() :\n",soup.prettify())               # très utile parfois, mais que c'est long...
         log.info(who,"(ret_soup) return (soup,sr.geturl()) from ret_soup\n")
-    return (soup,sr.geturl())
+    return (soup, url_ret)
 
 def verify_isbn(log, dbg_lvl, isbn_str, who=''):
     # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
@@ -724,9 +715,9 @@ if __name__ == '__main__':
                 [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
             ),
 
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': ''}, 'title':"", 'authors':['']},
-##                [title_test("", exact=True), authors_test(['']), series_test('', 0)]
+##            ( # A book with a HTTP Error 500
+##                {'identifiers':{'isbn': '2-290-04457-1'}, 'title':"Le Monde de l'exil", 'authors':['David BRIN']},
+##                [title_test("Le Monde de l'exil", exact=True), authors_test(['David Brin']), series_test('', 0)]
 ##            ),
 
         ])

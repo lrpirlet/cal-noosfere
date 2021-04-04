@@ -341,10 +341,10 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol reference processed")
 
         if soup.select("span[class='TitreNiourf']"): vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
-        if debug: self.log.info(self.who,"vol_title processed")
+        if debug: self.log.info(self.who,"vol_title processed : ",vol_title)
 
         if soup.select("span[class='AuteurNiourf']"): vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
-        if debug: self.log.info(self.who,"vol_auteur processed")
+        if debug: self.log.info(self.who,"vol_auteur processed : ",vol_auteur)
         for i in range(len(vol_auteur.split())):
             if not vol_auteur.split()[i].isupper():
                 vol_auteur_prenom += " "+vol_auteur.split()[i]
@@ -352,9 +352,9 @@ class Worker(Thread):
                 vol_auteur_nom += " "+vol_auteur.split()[i].title()
         vol_auteur = vol_auteur.title()
         vol_auteur_prenom = vol_auteur_prenom.strip()
-        if debug: self.log.info(self.who,"vol_auteur_prenom processed")
+        if debug: self.log.info(self.who,"vol_auteur_prenom processed : ",vol_auteur_prenom)
         vol_auteur_nom = vol_auteur_nom.strip()
-        if debug: self.log.info(self.who,"vol_auteur_nom processed")
+        if debug: self.log.info(self.who,"vol_auteur_nom processed : ",vol_auteur_nom)
 
         if soup.select("a[href*='serie.asp']"):
             if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
@@ -364,11 +364,11 @@ class Worker(Thread):
                     if "vol." in tmp_vss[i]:
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+                    if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,vol_serie_seq)
                     if "découpage" in tmp_vss[i]:
                         dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
                         comment_pre_decoupage_annexe = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px"> (découpage annexe) </p></div>',"lxml")
                         comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
-                if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed")
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
         new_div=soup.new_tag('div')
@@ -376,10 +376,10 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"comment_generic processed")
 
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
-        if debug: self.log.info(self.who,"vol_editor processed")
+        if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
 
         if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
-        if debug: self.log.info(self.who,"vol_coll")
+        if debug: self.log.info(self.who,"vol_coll : ", vol_coll)
 
         for i in comment_generic.stripped_strings:
             tmp_lst.append(str(i))
@@ -393,7 +393,7 @@ class Worker(Thread):
             if vol_coll_srl[0].isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
         else:
             vol_coll_srl = ""
-        if debug: self.log.info(self.who,"vol_coll_srl processed")
+        if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
 
         # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
         # note that I 'calculate' the missing day of the month and even sometimes the missing month
@@ -413,16 +413,16 @@ class Worker(Thread):
             if "ISBN" in elemnt:
                 vol_isbn = elemnt.lower().replace(" ","").replace('isbn:','')
                 if "néant" in vol_isbn: vol_isbn=""
-                if debug: self.log.info(self.who,"vol_isbn processed")
+                if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
             if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
-        if debug: self.log.info(self.who,"vol_dp_lgl, vol_isbn, vol_genre processed")
+        if debug: self.log.info(self.who,"vol_dp_lgl, vol_isbn, vol_genre processed : ", vol_dp_lgl, vol_isbn, vol_genre)
 
         if soup.select("img[name='couverture']"):
             for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
                 if "http" in elemnt:
                     if not vol_cover_index:
                         vol_cover_index = elemnt
-                        if debug: self.log.info(self.who,"vol_cover_index processed")
+                        if debug: self.log.info(self.who,"vol_cover_index processed : ", vol_cover_index)
 
         # add cover image address as a reference in the comment
         if vol_cover_index:
