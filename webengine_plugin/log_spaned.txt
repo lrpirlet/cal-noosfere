@@ -1,0 +1,3 @@
+logfile is open now
+logfile is open now
+11:59:50logfile is open now

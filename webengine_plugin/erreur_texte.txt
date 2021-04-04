@@ -1,0 +1,21 @@
+calibre, version 5.14.0
+ERROR: Unhandled exception: <b>RuntimeError</b>:Queue objects should only be shared between processes through inheritance
+
+calibre 5.14 [64bit]  embedded-python: True is64bit: True
+Windows-10-10.0.19041 Windows ('64bit', 'WindowsPE')
+('Windows', '10', '10.0.19041')
+Python 3.8.5
+Windows: ('10', '10.0.19041', '', 'Multiprocessor Free')
+Interface language: en_GB
+Successfully initialized third party plugins: Gather KFX-ZIP (from KFX Input) (1, 37, 0) && Package KFX (from KFX Input) (1, 37, 0) && Babelio (0, 4, 2) && Find Duplicates (1, 8, 5) && KFX metadata reader (from KFX Input) (1, 37, 0) && KFX Input (1, 37, 0) && Set KFX metadata (from KFX Output) (1, 50, 0) && KFX Output (1, 50, 0) && KePub Input (3, 4, 3) && KePub Metadata Reader (3, 4, 3) && KePub Metadata Writer (3, 4, 3) && KePub Output (3, 4, 4) && Kindle Collections (1, 7, 29) && Kindle hi-res covers (0, 5, 0) && Kobo Books (1, 8, 2) && Kobo Utilities (2, 13, 0) && KoboTouchExtended (3, 4, 4) && Manage Series (1, 2, 11) && View Manager (1, 6, 0) && WebEngine Plugin Demo (1, 0, 0) && Wiki Reader (2, 2, 1) && noosfere DB (0, 7, 0)
+Traceback (most recent call last):
+  File "calibre_plugins.webengine_demo.ui", line 58, in show_dialog
+  File "calibre\gui2\jobs.py", line 287, in launch_gui_app
+  File "calibre\utils\ipc\server.py", line 162, in run_job
+  File "calibre\utils\ipc\server.py", line 52, in start_job
+  File "calibre\utils\ipc\__init__.py", line 25, in eintr_retry_call
+  File "multiprocessing\connection.py", line 206, in send
+  File "multiprocessing\reduction.py", line 51, in dumps
+  File "multiprocessing\queues.py", line 58, in __getstate__
+  File "multiprocessing\context.py", line 359, in assert_spawning
+RuntimeError: Queue objects should only be shared between processes through inheritance
