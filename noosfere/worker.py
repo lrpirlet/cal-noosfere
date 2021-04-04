@@ -199,10 +199,10 @@ class Worker(Thread):
                     elif "CS" in tmp_presence[i].text: point+=1
                     elif "S" in tmp_presence[i].text: point+=1
 
-            ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
+            ts_vol_index[int(count/2)]=(point,vol_index,vol_editor)
 
             self.log.info(self.who,"found",int(count/2+1),"volumes différents")
-            self.log.info(self.who,"key                   : ",str(int(count/2)))
+            self.log.info(self.who,"key                   : ",int(count/2))
             self.log.info(self.who,"vol_index             : ",vol_index)
             self.log.info(self.who,"vol_title             : ",vol_title)
             self.log.info(self.who,"vol_cover_index       : ",vol_cover_index)
