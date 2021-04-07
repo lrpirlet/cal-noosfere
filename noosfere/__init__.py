@@ -39,7 +39,7 @@ __docformat__ = 'restructuredtext en'           # whatever that means???
 # those are python code that are directly available in calibre closed environment (test import... using calibre-debug)
 import urllib                                   # to access the web
 from bs4 import BeautifulSoup as BS             # to dismantle and manipulate HTTP (HyperText Markup Language)
-#import sys                                      # so I can access sys (mainly during development, probably useless now)
+import sys                                      # so I can access sys (mainly during development, probably useless now)
 import time                                     # guess that formats data and time in a common understanding
 from queue import Empty, Queue                  # to submit jobs to another process (worker use it to pass results to calibre
 from difflib import SequenceMatcher as SM
@@ -244,7 +244,7 @@ class noosfere(Source):
     # note that the selected volume will have the most represented editor
     # (if editor x reedited 4 time the book, and editor Y only once,
     # editor x will certainly be selected)
-    # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
+    # see algorithm explanation in 'ret_top_vol_indx(self, log, url, book_title)'
 
     PRIORITY_HANDLING={
                        '0_oldest_with_isbn':_("le plus ancien pondéré, préfère un isbn"),
@@ -388,7 +388,7 @@ class noosfere(Source):
               # ca marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
               # this is NOT a function but a class method
               # it is possible to move the common part of this code below, but my mind refuses to understand the change
-              # when debugging... 
+              # when debugging...
               # so duplicate the code (maybe an optimiseur later will make it... m'en fout, enfin je m'en persuade :-] )
                 for j in range(len(authors)):
                     rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"LITTERAL","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
@@ -409,7 +409,6 @@ class noosfere(Source):
                                 all_author_index[url_author]=[ratio, author]
 
         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
-
         if debug: log.info("sorted_author_index :\n",sorted_author_index)
 
         # With python 3.6 onward, the standard dict type maintains insertion order by default.
@@ -526,8 +525,7 @@ class noosfere(Source):
             log.info("return book_index from ISBN_ret_book_index\n")
         return book_index
 
-#############################################################################################################################
-    def ret_top_vol_indx(self, url, book_title):
+    def ret_top_vol_indx(self, log, br, url, book_title, isbn):
         # cette fonction reçoit l'url du livre qui contient plusieur volumes du meme auteur,
         # dont certains ont le meme ISBN et generalement le meme titres.
         #
@@ -562,14 +560,18 @@ class noosfere(Source):
         # the score will be increased so that the volume will be choosen to the most present publisher ... MON choix
         # in case of equality the oldest win
         #
-        debug=self.dbg_lvl & 2
-        log.info("\nIn ret_top_vol_indx(self, url, title)")
+        debug=self.dbg_lvl & 1
+        log.info("\nIn ret_top_vol_indx(self, log, br, url, title)")
         if debug:
             log.info("url : ",url,", book_title : ",book_title)
 
+        nsfr_id = ""
+        vol_info = []
+        tmp_vol_info = []
+
         log.info("calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
         if debug:
-            log.info("url : ", url, "who : ", self.who)
+            log.info("url : ", url)
         rsp = ret_soup(log, self.dbg_lvl, br, url)
         soup = rsp[0]
         url_vrai = rsp[1]
@@ -579,7 +581,7 @@ class noosfere(Source):
 
         if "niourf.asp" in url_vrai:
             log.info("Bypassing to extract_vol_details, we have only one volume")
-            return url_vrai.replace("https://www.noosfere.org","")                     #volume found return and set wrk_url to volume
+            return [(url_vrai.replace("https://www.noosfere.org",""), nsfr_id)]                    #volume found return list of tuple [(vol_url, nsfr_id)]
 
         nsfr_id+= "bk$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
         if debug:
@@ -590,7 +592,7 @@ class noosfere(Source):
         push_isbn = True if "isbn" in self.priority_handling else False
         if debug:
             log.info("priority pushes isbn  : ", push_isbn)
-            log.info(self.who,"priority balanced : ", bool( not "very" in self.priority_handling))
+            log.info("priority balanced : ", bool( not "very" in self.priority_handling))
 
         nbr_of_vol=soup.select("td[class='item_bib']")
         for count in range(0,len(nbr_of_vol),2):
@@ -612,12 +614,12 @@ class noosfere(Source):
 
             if subsoup.select("span[class='SousFicheNiourf']"):
                 vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn, who=self.who)
+                vol_isbn = verify_isbn(log, self.dbg_lvl, vol_isbn)
                 if vol_isbn:
                     if push_isbn:
                         point+=100
-                        if self.isbn:
-                            if verify_isbn(self.log, self.dbg_lvl, self.isbn, who=self.who)== vol_isbn: point+=100
+                        if isbn:
+                            if verify_isbn(log, self.dbg_lvl, isbn)== vol_isbn: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -648,7 +650,7 @@ class noosfere(Source):
         top_vol_index = ""
         serie_editeur = []
         reverse_it = True if "latest" in self.priority_handling else False
-        if debug: log.info("priority pushes latest : ", reverse_it)
+        if debug: log.info("\npriority pushes latest : ", reverse_it)
 
         # in python 3 a dict keeps the order of introduction... In this case, as noosfere present it chronologic oreder,
         # let's invert the dict by sorting reverse if the latest volume is asked
@@ -672,24 +674,16 @@ class noosfere(Source):
                 top_vol_editor[editr]+=1
 
         # compute all that and sorted over the points values, highest value first lowest value last.
-        #         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
-        # ts_vol_index[str(int(count/2))]=(point,vol_index,vol_editor)
-        ts_vol_index = dict(sorted((ts_vol_index.items(), key= lamda x: x[1][0],reverse=True))
-        
+        for key,ref in ts_vol_index.items():
+            tmp_vol_info.append((key, ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]], ts_vol_index[key][1], ts_vol_index[key][2], nsfr_id))
 
-        if debug:
-            for key,ref in ts_vol_index.items():            
-                log.info("pour la clé", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"l'URL est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
+        tmp_vol_info.sort(key=lambda x:x[1], reverse=True)
+        for i in range(len(tmp_vol_info)):
+            if debug:
+                log.info("pour la clé", tmp_vol_info[i][0],"la valeur des points est", tmp_vol_info[i][1],"l'URL est",tmp_vol_info[i][2],"l'éditeur est",tmp_vol_info[i][3])
+            vol_info.append((tmp_vol_info[i][2], nsfr_id))
 
-#        for key,ref in ts_vol_index.items():
-#            if debug:
-#                log.info("pour la clé", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"l'URL est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
-#            if ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]>top_vol_point:
-#                top_vol_point=ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]
-#                top_vol_index=ts_vol_index[key][1]
-#
-#        return top_vol_index
-#############################################################################################################################
+        return vol_info # list of tuple [(vol_url, nsfr_id)]
 
     def identify(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
         # this is the entry point...
@@ -732,7 +726,9 @@ class noosfere(Source):
         title = ret_clean_text(log, self.dbg_lvl, title)
 
         log.info('getting one or more book url')
-        book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
+        book_index={}         # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
+        tmp_list=[]
+
         if nsfr_id:
             log.info('trying noosfere id, ', nsfr_id )
             nsfr = nsfr_id.split("$")
@@ -763,56 +759,45 @@ class noosfere(Source):
                     log.info("Désolé, aucun auteur trouvé avec : ",authors)
                     return
         # here maybe try with title alone... a dessiner lrp todo... ouais peut-etre pour le cas ou l'auteur serait trop noyé dans une masse de noms similaires
-        # ca marche pas... au mieux on pourrait inverser:  recheche titre, ensuite auteur... 
+        # ca marche pas... au mieux on pourrait inverser:  recheche titre, ensuite auteur...
         # mais le gain est faible: la meme precision sur le titre et l'auteur est exigée...
 
         if not book_index:
             log.error("No book found in noosfere... ")
             return
-            
-#############################################################################################################################
+
         # access each book in book_index and determine if several volume exists funtion of returned url address (url_vrai)
         # if several volume, get each and every url_adrres and pass it to extract_vol_detail for each ref found...
         # we may get lucky and NOT combine those even if title, author and isbn are identical... nsfr_id will be different
         # hopefully this is enough ( I could not find the associated code in the sources)
         # Besides this could help insert a "manual choice via  Qwebengine"... of course using a file as feedback and sync
         # since spawed process and queue do not work in calibre (I cannot make it work, I mean)
-        
-        
+        #
         # for each entry in book_index , if it is a book, find all volumes, if a volume, build a series of volumes to prepare for choice
-        # this is NOT modified yet and commes directly from the run() of worker 
-        wrk_url = self.book_url
-        if "ditionsLivre" in wrk_url:
-            self.log.info("several volumes exist for this book")
-            book_url="https://www.noosfere.org"+self.book_url+"&Tri=3"
-            if debug: self.log.info(self.who,"book_url : ",book_url)
-            try:
-                wrk_url = self.ret_top_vol_indx(book_url, self.book_title)
-                if debug: self.log.info(self.who,"wrk_url               : ", wrk_url)
-            except:
-                self.log.exception("ret_top_vol_indx failed for url: ",book_url)
+        # this is NOT modified yet and commes directly from the run() of worker
+        #
 
-        if "niourf" in wrk_url:
-            self.log.info("getting to THE volume for this book")
-            vol_url="https://www.noosfere.org"+wrk_url.replace("./niourf","/livres/niourf")+"&Tri=3"
-            if debug: self.log.info(self.who,"vol_url  : ",vol_url)
-            try:
-                self.extract_vol_details(vol_url)
-            except:
-                self.log.exception("extract_vol_details failed for url: ",vol_url)
-
-#############################################################################################################################
-
-        if abort.is_set():
-            log.info('abort was set... aborting... ')
-            return
-
-        tmp_list=[]
         for key,ref in book_index.items():
             book_url, book_title = key, ref
-            if debug:log.info("\nbook_url, book_title : ", book_url,", ", book_title)
-            tmp_list.append((book_url, book_title))
+            if "ditionsLivre" in book_url:
+                log.info("several volumes may exist for this book")
+                book_url="https://www.noosfere.org"+book_url+"&Tri=3"
+                if debug: log.info("book_url : ", book_url)
+                try:
+                    vol_info = self.ret_top_vol_indx(log, br, book_url, book_title, isbn)               #this return a list of tuple [(vol_url, nsfr_id)]
+                except:
+                    log.exception("ret_top_vol_indx failed for url: ",book_url)
+            elif "niourf" in book_url:
+                log.info("getting THE volume for this book")
+                vol_info = [(book_url,"")]
 
+            if abort.is_set():
+                log.info('abort was set... aborting... ')
+                return
+ 
+            tmp_list.extend(vol_info)
+            if debug: log.info("\nnombre de volume : ", len(tmp_list))
+            
         from calibre_plugins.noosfere.worker import Worker
         workers = [Worker(log, data[0], data[1], isbn, result_queue, br, i, self, self.dbg_lvl) for i, data in enumerate(tmp_list)]
 
@@ -906,15 +891,15 @@ if __name__ == '__main__':
 ##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
 ##            ),
 
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},
-##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
-##            ),
-
-            ( # A book with no ISBN
-                {'identifiers':{}, 'title':"La Septième saison", 'authors':['Pierre Suragne']},
-                [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
+            ( # A book with an ISBN
+                {'identifiers':{'isbn': ''}, 'title':"Le Monde du Fleuve", 'authors':['Philip José Farmer']},
+                [title_test("Le Monde du Fleuve", exact=True), authors_test(['Philip José Farmer']), series_test("Le Fleuve de l'Éternité", 1.0)]
             ),
+
+##            ( # A book with no ISBN
+##                {'identifiers':{}, 'title':"La Septième saison", 'authors':['Pierre Suragne']},
+##                [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
+##            ),
 
 ##            ( # A book with a HTTP Error 500
 ##                {'identifiers':{'isbn': '2-290-04457-1'}, 'title':"Le Monde de l'exil", 'authors':['David BRIN']},
