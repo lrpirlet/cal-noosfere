@@ -333,8 +333,26 @@ class Worker(Thread):
 
         tmp_lst=[]
         vol_info={}
-        vol_title=vol_auteur=vol_auteur_prenom=vol_auteur_nom=vol_serie=vol_serie_seq=vol_editor=vol_coll=vol_coll_srl=vol_dp_lgl=vol_isbn=vol_genre=vol_cover_index=""
-        comment_generic=comment_resume=comment_Critique=comment_Sommaire=comment_AutresCritique=comment_cover=comment_decoupage_annexe=None
+        vol_title=""
+        vol_auteur=""
+        vol_auteur_prenom=""
+        vol_auteur_nom=""
+        vol_serie=""
+        vol_serie_seq=""
+        vol_editor=""
+        vol_coll=""
+        vol_coll_srl=""
+        vol_dp_lgl=""
+        vol_isbn=""
+        vol_genre=""
+        vol_cover_index=""
+        comment_generic=None
+        comment_resume=None
+        comment_Critique=None
+        comment_Sommaire=None
+        comment_AutresCritique=None
+        comment_cover=None
+        comment_decoupage_annexe=None
 
         # add volume address as a reference in the comment
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")

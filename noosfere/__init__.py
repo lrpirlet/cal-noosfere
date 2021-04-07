@@ -254,8 +254,8 @@ class noosfere(Source):
                        '1_latest_with_isbn':_("le plus récent pondéré, préfère un isbn"),
                        '2_oldest':_("un plus ancien pondéré"),
                        '3_latest':_("un plus recent pondéré"),
-                       '4_very_oldest':_("vraiment plus ancien"),
-                       '5_very_latest':_("vraiment plus recent")
+                       '4_very_oldest':_("vraiment le plus ancien"),
+                       '5_very_latest':_("vraiment le plus recent")
                         }
 
     options = (
@@ -698,22 +698,22 @@ if __name__ == '__main__':
 ##                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
 ##                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
 ##            ),
-
+##
 ##            ( # A book with no ISBN specified
 ##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
 ##                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
 ##            ),
-
+##
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
 ##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
 ##            ),
-
+##
 ##            ( # A book with an ISBN
 ##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},
 ##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
 ##            ),
-
+##
             ( # A book with no ISBN
                 {'identifiers':{}, 'title':"La Septième saison", 'authors':['Pierre Suragne']},
                 [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
