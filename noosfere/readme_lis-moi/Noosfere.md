@@ -11,7 +11,7 @@ l’encyclopédie : [Ce que contiennent les bases de données
 (noosfere.org)](file:///C:\Users\Papa\AppData\Roaming\Microsoft\Word\Ce%20que%20contiennent%20les%20bases%20de%20données%20(noosfere.org))…
 
 nooSFere héberge des sites amateurs : [nooSFere - Sites
-d'adherents](https://www.noosfere.org/noosfere/heberges.asp)
+d'adhérents](https://www.noosfere.org/noosfere/heberges.asp)
 
 nooSFere héberge des sites d’auteurs et d’illustrateurs : [nooSFere -
 Sites d'auteurs](https://www.noosfere.org/noosfere/sites_auteurs.asp)
@@ -23,7 +23,7 @@ Voir :
 [nooSFere :
 Qu'est-ce](https://www.noosfere.org/noosfere/assoc/qu_estce.asp) en bref
 
-[nooSFere - Presentation de
+[nooSFere - Présentation de
 l'association](https://www.noosfere.org/noosfere/assoc/statuts.asp) en
 détail
 
@@ -33,7 +33,7 @@ nooSFere](https://www.noosfere.org/icarus/articles/article.asp?numarticle=463)
 [nooSFere - Plan du site](https://www.noosfere.org/actu/news.asp)
 
 Le site nooSFere ne vend ni n’édite des livres. L’association propose à
-ses membres (cout de 30€/an voire 10€/an en tarif réduit… on peut donner
+ses membres (coût de 30€/an voire 10€/an en tarif réduit… on peut donner
 plus 😊) des services vraiment superbes. Voir [Pourquoi
 adhérer](https://www.noosfere.org/noosfere/assoc/pourquoi.asp).
 
@@ -57,7 +57,7 @@ La beauté de calibre est que l'on a pas besoin d'avoir le livre. Ainsi, j'ai de
 ### Une recherche simple par [nooSFere - Recherche](https://www.noosfere.org/noosearch_simple.asp)…
 
 Il suffit de remplir la case recherche et envoyer par « enter » ou par
-&lt;CR&gt;. Le site répond tout ce qui correspond aux ‘Mots’ écrits dans
+<CR>. Le site répond tout ce qui correspond aux ‘Mots’ écrits dans
 la case avec interprétation libre (essayez « riCH » pour voir).
 
 Bien sûr c’est magnifique, mais pour filtrer ce que tu veux, il faut un
@@ -75,8 +75,8 @@ mots plutôt que des phrases et des mots approchants…
 
 On envoie une requête, méthode « post »
 vers :<https://www.noosfere.org/noosearch_simple.asp> avec pour
-arguments : "Mots" : "&lt;entrée dans la boite&gt;"
-Notez que cette methode de recherche est limitée et retoourne le plus souvent trop d'informations
+arguments : "Mots" : "<entrée dans la boite>"
+Notez que cette méthode de recherche est limitée et retourne le plus souvent trop d'informations
 
 ## Recherche avancée par programme
 
@@ -85,7 +85,7 @@ vers :<https://www.noosfere.org/noosearch_simple.asp> avec
 
 - Arguments obligatoires sous la forme :"key":"value"
 
-  - "Mots":"&lt;entrée dans la boite&gt;"
+  - "Mots":"<entrée dans la boite>"
 
   - "ModeMoteur":"LITTERAL" (phrase et mots approchants) 
         "ModeMoteur":"MOTSCLEFS" (correspondance exacte des mots) (beaucoup trop restrictif, rate une fois sur deux, se plante de temps en temps sur les titres)
@@ -140,7 +140,7 @@ En principe un ISBN est attribué par livre. C'est vrai la plupart du temps mais
 Le premier essais sera d'interroger le site avec un ISBN que l'on vérifie correct.
 Le retour du site est une SERIE de références que je qualifie de volumes.
 
-A chacun de volumes, triés par ordre de parution, j'associe une série de paramètres qui me permettront de choisir ce que je considère le meilleur candidat.
+A chacun des volumes, triés par ordre de parution, j'associe une série de paramètres qui me permettront de choisir ce que je considère le meilleur candidat.
 
 Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
 
@@ -151,10 +151,12 @@ Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'i
 - sommaire des nouvelles présentes:     s   1pt
 - information vérifiée                  v   1pt
 - titre identique                       t   1pt
-- image presente                        p   1pt
-- isbn present                          i   2pt
+- image présente                        p   1pt
+- isbn présent                          i  50pt         sauf préférence     
+- isbn présent et identique a calibre     100pt         sauf préférence          
 - le nombre de point sera  augmenté de telle manière a choisir le livre chez l'éditeur le plus représenté... MON choix
-- en cas d'egalité, le plus ancien reçoit la préférence
+- en cas d'égalité, le plus ancien reçoit la préférence
+
 
 ## Recherche par titre
 
@@ -164,7 +166,7 @@ Comme pour l'ISBN, noosfere renvoie pour chaque ouvrage (livre) une série de vo
 
 A éviter
 
-## Recherche par auteur
+## Recherche par auteur puis par titre sur les livres associés a l'auteur
 
 Qu'on ne s'y trompe pas, l'auteur doit être suffisamment bien défini pour que noosfere retourne UNE seule référence... pour le fun, entre un prénom 
 
@@ -174,4 +176,4 @@ Au pointeur de l'auteur, le site noosfere retourne par defaut la bibliographie d
 
 ## couvertures
 
-Noosfere ne donne pas toujours de grandes et belles couverture, mais, sauf quand elle manque (rare), elle retourne la couverture associée avec le volume. Je récupère cette couverture, SANS laisser le choix d'une autre. Libre à l'utilisateur de rechercher une meilleure image ou même une autre (si la cohérence du volume n'importe pas).
+Noosfere ne donne pas toujours de grandes et belles couverture, mais, sauf quand elle manque (rare), elle retourne la couverture associée avec le volume. Je récupère cette couverture, SANS laisser le choix d'une couverture associée avec un autre volume. Libre à l'utilisateur de rechercher une meilleure image ou même une autre (si la cohérence du volume n'importe pas).
