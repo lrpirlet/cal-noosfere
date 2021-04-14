@@ -348,7 +348,7 @@ class Worker(Thread):
         vol_cover_index=""
         comment_generic=None
         comment_resume=None
-        comment_Critique=None
+        comment_Critiques=None
         comment_Sommaire=None
         comment_AutresCritique=None
         comment_cover=None
@@ -382,11 +382,11 @@ class Worker(Thread):
                     if "vol." in tmp_vss[i]:
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
-                    if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,vol_serie_seq)
                     if "découpage" in tmp_vss[i]:
                         dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
-                        comment_pre_decoupage_annexe = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px"> (découpage annexe) </p></div>',"lxml")
+                        comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
                         comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
+                if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
         new_div=soup.new_tag('div')
@@ -415,25 +415,36 @@ class Worker(Thread):
 
         # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
         # note that I 'calculate' the missing day of the month and even sometimes the missing month
-        # I did not care to isolate a date when only the year is presented in noosfere...
-        for elemnt in soup.select("span[class='sousFicheNiourf']")[0].stripped_strings:
-            if "Dépôt légal" in elemnt:
-                elemnt = elemnt.replace("Dépôt légal :","").strip()
-            if len(str(vol_dp_lgl))<3:
-                if "trimestre" in elemnt:
-                    ele=(elemnt.replace(","," ")).split()
-                    vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
-                for i in ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"):
-                    if i in elemnt:
-                        vol_dp_lgl=elemnt
-                        vol_dp_lgl=datetime.datetime.strptime(vol_dp_lgl,"%B %Y")
-                        break
+        ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
+        for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
+            if debug: self.log.info(self.who,"elemnt : ", elemnt)
+            if not vol_dp_lgl:
+                elemn = (elemnt.replace("Dépôt légal :","").split(','))[0].strip()
+                if elemn:
+                    if elemn.isnumeric() and len(elemn) == 4:
+                        vol_dp_lgl=datetime.datetime.strptime("175 "+elemn,"%j %Y")
+                    elif "semestre" in elemn:
+                        ele=elemn.split()
+                        vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*175+97))[-3:]+" "+ele[2],"%j %Y")
+                    elif "trimestre" in elemn:
+                        ele=elemn.split()
+                        vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
+                    else:
+                        for i in range(len(ms)):
+                            if ms[i] in elemn:
+                                ele=elemn.split()
+                                vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
+                                break
+                    if debug: self.log.info(self.who,"vol_dp_lgl : ", vol_dp_lgl)
+
             if "ISBN" in elemnt:
                 vol_isbn = elemnt.lower().replace(" ","").replace('isbn:','')
                 if "néant" in vol_isbn: vol_isbn=""
                 if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
-            if "Genre" in elemnt: vol_genre = elemnt.lstrip("Genre : ")
-        if debug: self.log.info(self.who,"vol_dp_lgl, vol_isbn, vol_genre processed : ", vol_dp_lgl, vol_isbn, vol_genre)
+
+            if "Genre" in elemnt:
+                vol_genre = elemnt.lstrip("Genre : ")
+                if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
 
         if soup.select("img[name='couverture']"):
             for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
@@ -450,36 +461,34 @@ class Worker(Thread):
     # but that is not quite consistant around all the books (noosfere is a common database from many people)
     # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
-        tmp_comm_lst=soup.select("td[class='onglet_biblio1']")
-#        if debug: self.log.info(self.who,tmp_comm_lst)             #usefull but too long
+        tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
+        if debug: self.log.info(self.who,tmp_comm_lst)             #usefull but too long
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
-                comment_pre_resume = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Quatrième de couverture</p></div>',"lxml")
-                comment_resume = soup.select("div[id='Résumes']")[0]
+                comment_resume = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_resume processed")
 
-            if "Critique" in str(tmp_comm_lst[i]):
+            if "Critiques" in str(tmp_comm_lst[i]):
                 if not "autres" in str(tmp_comm_lst[i]):
-                    comment_pre_Critique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques</p></div>',"lxml")
-                    comment_Critique = soup.select("div[id='Critique']")[0]
-                    if debug: self.log.info(self.who,"comment_Critique processed")
+                    comment_Critiques = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                    if debug: self.log.info(self.who,"comment_Critiques processed")
 
             if "Sommaire" in str(tmp_comm_lst[i]):
-                comment_pre_Sommaire = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Sommaire</p></div>',"lxml")
-                comment_Sommaire = soup.select("div[id='Sommaire']")[0]
+                comment_Sommaire = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Sommaire processed")
 
             if "Critiques des autres" in str(tmp_comm_lst[i]):
-                comment_pre_AutresCritique = BS('<div><p> </p><p align="center" style="font-weight: 600; font-size: 18px">Critiques des autres éditions ou de la série</p></div>',"lxml")
-                comment_AutresCritique = soup.select("div[id='AutresCritique']")[0]
+                comment_AutresCritique = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+
+                if comment_AutresCritique.select('a[href*="serie.asp"]') and ("Critique de la série" in comment_AutresCritique.select('a[href*="serie.asp"]')[0].text):
+                    critic_url = "https://www.noosfere.org/livres/"+comment_AutresCritique.select('a[href*="serie.asp"]')[0]['href']
+                    try:
+                        more_comment_AutresCritique=self.get_Critique_de_la_serie(critic_url)
+                        comment_AutresCritique.append(more_comment_AutresCritique)
+                    except:
+                        self.log.exception("get_Critique_de_la_serie failed for url: ",critic_url)
+
                 if debug: self.log.info(self.who,"comment_AutresCritique processed")
-                if comment_AutresCritique.select('a[href*="serie.asp"]'):
-                    if not comment_AutresCritique.select('a[href*="serie.asp"]')[0].find_parents("div", {'id':'critique'}):
-                        critic_url = "https://www.noosfere.org/livres/"+comment_AutresCritique.select('a[href*="serie.asp"]')[0]['href']
-                        try:
-                            comment_AutresCritique=self.get_Critique_de_la_serie(critic_url)
-                        except:
-                            self.log.exception("get_Critique_de_la_serie failed for url: ",critic_url)
 
 
     # group in a big bundle all the fields I think I want... (It is difficult not to include more... :-))
@@ -489,16 +498,12 @@ class Worker(Thread):
         if comment_generic:
             vol_comment_soup.append(comment_generic)
         if comment_resume:
-            vol_comment_soup.append(comment_pre_resume)               # this is the title
             vol_comment_soup.append(comment_resume)
-        if comment_Critique:
-            vol_comment_soup.append(comment_pre_Critique)             # this is the title
-            vol_comment_soup.append(comment_Critique)
+        if comment_Critiques:
+            vol_comment_soup.append(comment_Critiques)
         if comment_Sommaire:
-            vol_comment_soup.append(comment_pre_Sommaire)             # this is the title
             vol_comment_soup.append(comment_Sommaire)
         if comment_AutresCritique:
-            vol_comment_soup.append(comment_pre_AutresCritique)       # this is the title
             vol_comment_soup.append(comment_AutresCritique)
         if comment_decoupage_annexe:
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
@@ -521,27 +526,61 @@ class Worker(Thread):
     #
 
         tmp1=tmp2="lrp_the_unique"
-        for elemnt in comment_generic.findAll():
+        for elemnt in vol_comment_soup.findAll():
             tmp1,tmp2=tmp2,elemnt
             if tmp1==tmp2:
                 elemnt.extract()
 
-        for elemnt in vol_comment_soup.select("a[href*='auteur.asp']"):
-            elemnt["href"]=elemnt["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
-        for elemnt in vol_comment_soup.select("a[href*='serie.asp']"):
-            elemnt["href"]=elemnt["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
-        for elemnt in vol_comment_soup.select("a[href*='EditionsLivre.asp']"):
-            elemnt["href"]=elemnt["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
-        for elemnt in vol_comment_soup.select("a[href*='editionslivre.asp']"):
-            elemnt["href"]=elemnt["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
-        for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
-            elemnt["href"]=elemnt["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
-        for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
-            elemnt["href"]=elemnt["href"].replace("collection.asp","https://www.noosfere.org/livres/collection.asp")
+        br = soup.new_tag('br')
+        for elemnt in vol_comment_soup.select('.AuteurNiourf'):
+            elemnt.insert(0,br)
+            elemnt["style"]="font-weight: 600; font-size: 18px"
 
-        fg,fd="<<<=","=>>>" #chr(0x21D0),chr(0x21D2)   #chr(0x27f8),chr(0x27f9)
-        if vol_comment_soup.select_one("img[src*='arrow_left']"): vol_comment_soup.select_one("img[src*='arrow_left']").replace_with(fg)
-        if vol_comment_soup.select_one("img[src*='arrow_right']"): vol_comment_soup.select_one("img[src*='arrow_right']").replace_with(fd)
+
+        if debug:
+            for elemnt in vol_comment_soup.select("a[href*='.asp']"):
+                if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet avant correction: ", elemnt)
+
+        for elemnt in vol_comment_soup.select("a[href*='/livres/auteur.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
+        for elemnt in vol_comment_soup.select("a[href*='/livres/niourf.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/livres/niourf.asp","https://www.noosfere.org/livres/niourf.asp")
+        for elemnt in vol_comment_soup.select("a[href*='/heberg/']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/heberg/","https://www.noosfere.org/heberg/")
+
+        for elemnt in vol_comment_soup.select("a[href*='./EditionsLivre.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
+        for elemnt in vol_comment_soup.select("a[href*='./niourf.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("./niourf.asp","https://www.noosfere.org/livres/niourf.asp")
+        for elemnt in vol_comment_soup.select("a[href*='heberg']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("../../heberg","https://www.noosfere.org/heberg")
+        for elemnt in vol_comment_soup.select("a[href*='../bd']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("../bd","https://www.noosfere.org/bd")
+
+        for elemnt in vol_comment_soup.select("a[href*='auteur.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("auteur.asp","https://www.noosfere.org/livres/auteur.asp")
+        for elemnt in vol_comment_soup.select("a[href*='collection.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("collection.asp","https://www.noosfere.org/livres/collection.asp")
+        for elemnt in vol_comment_soup.select("a[href*='critsign.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("critsign.asp","https://www.noosfere.org/livres/critsign.asp")
+        for elemnt in vol_comment_soup.select("a[href*='EditionsLivre.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
+        for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
+        for elemnt in vol_comment_soup.select("a[href*='editionslivre.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
+        for elemnt in vol_comment_soup.select("a[href*='niourf.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("niourf.asp","https://www.noosfere.org/livres/niourf.asp")
+        for elemnt in vol_comment_soup.select("a[href*='serie.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
+
+        if debug:
+            for elemnt in vol_comment_soup.select("a[href*='.asp']"):
+                if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet apres correction: ", elemnt)
+
+        fg,fd="<<==","==>>" #chr(0x21D0),chr(0x21D2)   #chr(0x27f8),chr(0x27f9)
+        for elemnt in vol_comment_soup.select("img[src*='arrow_left']"): elemnt.replace_with(fg)
+        for elemnt in vol_comment_soup.select("img[src*='arrow_right']"): elemnt.replace_with(fd)
 
         # depending on the tick box, make a fat publisher using seperators that have a very low probability to pop up (§ and €)
         # only set vol_coll_srl if vol_coll exists

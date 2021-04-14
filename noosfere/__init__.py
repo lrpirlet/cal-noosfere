@@ -194,7 +194,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 8, 0)
+    version                 = (0, 9, 0)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
@@ -383,7 +383,7 @@ class noosfere(Source):
                         log.info("url_author : ", url_author, end=" ; ")
                         log.info("authors[j] : ", authors[j], end=" ; ")
                         log.info("author : ", ret_clean_text(log, self.dbg_lvl, author))
-                    if ratio > .6 :
+                    if ratio >= .6 :
                         all_author_index[url_author]=[ratio, author]
 
             if not len(all_author_index):                          # failed the short list, let's go for the long list using "LITTERAL" match
@@ -408,7 +408,7 @@ class noosfere(Source):
                                 log.info("url_author : ", url_author, end=" ; ")
                                 log.info("authors[j] : ", authors[j], end=" ; ")
                                 log.info("author : ", ret_clean_text(log, self.dbg_lvl, author))
-                            if ratio > .6 :
+                            if ratio >= .6 :
                                 all_author_index[url_author]=[ratio, author]
 
         sorted_author_index=dict(sorted(all_author_index.items(), key=lambda x: x[1][0],reverse=True))
@@ -485,10 +485,14 @@ class noosfere(Source):
                                                  # and I know it could cause problem iff several authors produce an identical title
 
             sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
+            if debug: log.info("sorted bySM.ratio")
             for key,ref in sorted_book_index.items():
-                book_url = ref[0]
-                book_index[book_url] = book_title
-                log.info('book_index[book_url] = book_title : ',book_index)
+                if debug:
+                    log.info("SM.ratio : {:.3f}".format(key),end=" ; ")
+                    log.info("book_url : ",ref[0],end=" ; ")
+                    log.info("book_title : ",ref[2])
+                book_index[ref[0]] = ref[2]
+            log.info('book_index[book_url] = book_title : ',book_index)
 
             if ratio == 1:
                 log.info("Perfect match, we got it and we can stop looking further")
@@ -565,9 +569,10 @@ class noosfere(Source):
         log.info('nsfr_id value is : ', nsfr_id)
 
         log.info('"Clean" both the authors list and the title... ')
-        for i in range(len(authors)):
-            authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
-        title = ret_clean_text(log, self.dbg_lvl, title)
+        if authors:
+            for i in range(len(authors)):
+                authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
+            title = ret_clean_text(log, self.dbg_lvl, title)
 
         log.info('getting one or more book url')
         book_index={}        # book_index={} is a dict: {key:ref} with: book_url, book_title = key, ref
@@ -610,12 +615,14 @@ class noosfere(Source):
             log.info('abort was set... aborting... ')
             return
 
-        tmp_list=[]
+        tmp_list,i=[],0
         for key,ref in book_index.items():
             book_url, book_title = key, ref
-            if debug:log.info("\nbook_url, book_title : ", book_url,", ", book_title)
+            if debug:log.info("sending to worker", i,"book_url, book_title : ", book_url,", ", book_title)
+            i+=1
             tmp_list.append((book_url, book_title))
 
+        log.info('\nCreating each worker... ')
         from calibre_plugins.noosfere.worker import Worker
         workers = [Worker(log, data[0], data[1], isbn, result_queue, br, i, self, self.dbg_lvl) for i, data in enumerate(tmp_list)]
 
@@ -694,30 +701,35 @@ if __name__ == '__main__':
     test_identify_plugin(noosfere.name,
         [
 
-##            ( # A book with ISBN specified not in noosfere
-##                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
-##                [title_test("	Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
-##            ),
-##
-##            ( # A book with no ISBN specified
-##                {'identifiers':{}, 'title':"L'Heure de 80 minutes", 'authors':['b ALDISS']},
-##                [title_test("L'Heure de 80 minutes", exact=True), authors_test(['Brian ALDISS']), series_test('',0)]
-##            ),
-##
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '978-2-84344-061-0'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
-##                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
-##            ),
-##
-##            ( # A book with an ISBN
-##                {'identifiers':{'isbn': '2277214094'}, 'title':"La Patrouille du temps", 'authors':['Poul Anderson']},
-##                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
-##            ),
-##
-            ( # A book with no ISBN
-                {'identifiers':{}, 'title':"La Septième saison", 'authors':['Pierre Suragne']},
-                [title_test("La Septième saison", exact=True), authors_test(['Pierre Suragne']), series_test('', 0)]
+            ( # A book with ISBN specified not in noosfere
+                {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
+                [title_test("Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
             ),
+            
+            ( # A book with ISBN specified 
+                {'identifiers':{'isbn': '2-266-03441-3'}, 'title':'Futurs sans escale', 'authors':['ANTHOLOGIE']},
+                [title_test("Futurs sans escale", exact=True), authors_test(['ANTHOLOGIE']), series_test('Isaac Asimov présente',1)]
+            ),
+
+            ( # A book with ISBN specified
+                {'identifiers':{'isbn': '2-265-04038-X'}, 'title':'Onze bonzes de bronze', 'authors':['Max ANTHONY']},
+                [title_test("Onze bonzes de bronze", exact=True), authors_test(['Max ANTHONY']), series_test('Ned Lucas',1)]
+            ),
+
+            ( # A book with nsfr_id:bk$5308$vl$-323559
+                {'identifiers':{'nsfr_id':'bk$5308$vl$-323559'}, 'title':"Le Printemps d'Helliconia", 'authors':['B.W. Aldiss']},
+                [title_test("Le Printemps d'Helliconia", exact=True), authors_test(['Brian Aldiss']), series_test('Helliconia', 1.0)]
+            ),
+
+            ( # A book with a wrong ISBN and title not quite right, will find one correct and 3 incorrect, correct is hightest priority...
+                {'identifiers':{'isbn': '227721409x'}, 'title':"La Patrouille des temps", 'authors':['Poul Anderson']},
+                [title_test("La Patrouille du temps", exact=True), authors_test(['Poul Anderson']), series_test('La Patrouille du Temps', 1.0)]
+            ),
+
+##            ( # A book with no ISBN specified ... will fail over serie (serie is missing...)
+##                {'identifiers':{}, 'title':"La Guerre contre le Rull", 'authors':['A.E. van Vogt']},
+##                [title_test("La Guerre contre le Rull", exact=True), authors_test(['Alfred Elton VAN VOGT']), series_test('',0)]
+##            ),
 
 ##            ( # A book with a HTTP Error 500
 ##                {'identifiers':{'isbn': '2-290-04457-1'}, 'title':"Le Monde de l'exil", 'authors':['David BRIN']},

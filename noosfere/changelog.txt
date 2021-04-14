@@ -101,3 +101,6 @@ of method...
 
 Corrected instructions cause some volume have no value for coll_rsl, yet they 
 have a value for collection...
+
+noosfere site changed.. so I had to adapt the plugin.. and correct some minors
+bugs.. this mark version 0.9.0
