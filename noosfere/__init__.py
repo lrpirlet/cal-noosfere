@@ -572,6 +572,7 @@ class noosfere(Source):
         if authors:
             for i in range(len(authors)):
                 authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
+        if title:
             title = ret_clean_text(log, self.dbg_lvl, title)
 
         log.info('getting one or more book url')

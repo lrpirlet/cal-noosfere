@@ -104,3 +104,6 @@ have a value for collection...
 
 noosfere site changed.. so I had to adapt the plugin.. and correct some minors
 bugs.. this mark version 0.9.0
+
+add a conditional on title and authors... If a book has an nsfr_id or an isbn, 
+then author and/or title may be None...
