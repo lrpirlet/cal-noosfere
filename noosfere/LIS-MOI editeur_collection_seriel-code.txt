@@ -13,7 +13,7 @@
 Il n'est pas prévu de pouvoir remplir les colonnes ajoutées par l'utilisateur depuis une extention Metadata source.
 Pour rester dans les clous, j'ai décidé de donner la possibilité d'étendre le champ editeur (publisher en anglais).
 
-Si on choisit cette option on aura editeur§collection€ code seriel dans la colonne editeur.
+Si on choisit cette option on aura 'editeur§collection€code seriel' dans la colonne editeur.
 
 Pour utiliser cette option, je me suis créer une colonne
 "collection" (nom recherché: #collection, type: Texte, colonne affichée dans le Navigateur d'étiquette)
