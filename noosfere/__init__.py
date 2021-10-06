@@ -4,25 +4,25 @@
 # Note: If this work (done to learn both python and the Hyper Text Markup Language) finds its way to the public domain, so be it.
 # I have no problem with, and reserve the right to ignore, any error, choice and poor optimization.
 # I use it, it is MY problem... You use it, it is YOUR problem.
-# For example, my mother language is French and my variable's names are MY choise for MY easy use...
-# Anyway, I'll comment (or not) in english or in french or in both depending when I write it (no comment please :-) )
+# For example, my mother language is French and my variable's names are MY choice for MY easy use...
+# Anyway, I'll comment (or not) in English or in French or in both depending when I write it (no comment please :-) )
 #
 # noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
 # noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
-# last but not least noosfere is in french ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
+# last but not least noosfere is in French ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
 #
 # A volume has in common with a book the author and the title but not the cover, not the editor, not the isbn, not.."
 # I want the information about a volume... I want a coherent information.
 #
 # In order to collect the information about a volume one must use either the ISBN, the author and the title or at least the title
 #
-# If the ISBN exists a search in noosfere points to a serie of volumes (yet only one book :-) )
+# If the ISBN exists a search in noosfere points to a series of volumes (yet only one book :-) )
 #
 # if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authorss :-( )
 # out of this list, a match to the title will point to a serie of volumes
 #
 # if the title is the only reference, a search in noosfere will output a list of books sorted by best mactch along with a score
-# again a book will point to a serie of volume
+# again a book will point to a series of volume
 #
 # out of the volume list one must choose the best candidate to get a coherent set of volumes attributes (cover, isbn, editor, critics, serie, serie #, etc...
 #
@@ -204,8 +204,8 @@ class noosfere(Source):
     has_html_comments = True
     supports_gzip_transfer_encoding = True
 
-    # Since the noosfere is written in french for french talking poeple, I
-    # took the liberty to write the following information in french. I will
+    # Since the noosfere is written in French for French talking poeple, I
+    # took the liberty to write the following information in French. I will
     # comment with a translation in the english language.
 
                                     #config help message: noosfere is a database that presents information
@@ -217,7 +217,7 @@ class noosfere(Source):
                                     #cover, the editor, the editor's collection and the associated order
                                     #number, the resume, the critics,etc.... The choice of the volume is done
                                     #by the program. One may somewhat influence the choice through the dialog
-                                    #box `priorité de tri´. On the other hand, there is no offical way to
+                                    #box `priorité de tri´. On the other hand, there is no official way to
                                     #programmaticaly update a custom column. So There is a tick box that will
                                     #push the information along with the publisher. Please read the doc to
                                     #understand how to put it back later in the right place with a right format.
@@ -335,7 +335,7 @@ class noosfere(Source):
     # copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
     def get_cached_cover_url(self, identifiers):
         # I guess this routine returns an url that was discovered somewhere else and put into cache
-        # probably using cache_identifier_to_cover_url in the worket.py
+        # probably using cache_identifier_to_cover_url in the worker.py
         # as ISBN is missing sometime in noosfere
         # as noosfere does not provide any proprietary id
         # I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
@@ -417,7 +417,7 @@ class noosfere(Source):
 
         # With python 3.6 onward, the standard dict type maintains insertion order by default.
         # Python 3.7 elevates this implementation detail to a language specification,
-        # noosfere sort the hightest pertinence first (the most probable author comes out first)
+        # noosfere sort the highest pertinence first (the most probable author comes out first)
         # so, I have no need to sort on pertinence field (would be different for calibre below Version 5)
         #
         # we only consider those with the highest pertinence, we limit to when the pertinence drops to less than half of the maximum
@@ -502,17 +502,17 @@ class noosfere(Source):
         return book_index
 
     def ISBN_ret_book_index(self, log, br, isbn, book_index):
-        # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
+        # Trouver la référence d'un livre (titre ou ISBN) dans la soupe produite par noosfere
         # retourne book_index{}, un dictionnaire avec key=book_url, val=title
-        # L'idée est de trouver UNE seule reference...
-        # Attention: on retourne une reference qui peut contenir PLUSIEURs volumes
-        # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
+        # L'idée est de trouver UNE seule référence...
+        # Attention: on retourne une référence qui peut contenir PLUSIEURs volumes
+        # C'est a dire: différents éditeurs, différentes re-éditions et/ou, même, un titre différent... YESss)
         #
         # Find the book's reference (either title or ISBN) in the returned soup from noosfere
-        # returns book_index{}, a dictionnary with key=book_url, val=title
+        # returns book_index{}, a dictionary with key=book_url, val=title
         # The idea is to find ONE unique reference...
         # Caution: the reference may contains several volumes,
-        # each with potentialy a different editor, a different edition date,... and even a different title
+        # each with potentially a different editor, a different edition date,... and even a different title
         #
         debug=self.dbg_lvl & 1
         log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
@@ -561,10 +561,13 @@ class noosfere(Source):
         if isbn: isbn = verify_isbn(log, self.dbg_lvl, isbn)
         log.info('ISBN value is : ', isbn)
 
-        # the nsfr_id is designed to be the significant part of the url:
-        # that is the number after the "=" in the url containing "niourf.asp?numlivre"
-        # on can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
+        # the nsfr_id is designed to be the significant part of the URL:
+        # that is the number after the "=" in the URL containing "niourf.asp?numlivre"
+        # one can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
         # could be an entry point if I can make sure that noosfere DB is alone and in interactive mode...
+        # example: for "Boule de foudre", author LIU Cixin...
+        # URL is: https://www.noosfere.org/livres/niou...vre=2146606157 and
+        # set nsfr_id to vl$2146606157 to directly access this volume, bypassing search of "best volume".
         nsfr_id = identifiers.get('nsfr_id', None)
         log.info('nsfr_id value is : ', nsfr_id)
 
@@ -649,8 +652,8 @@ class noosfere(Source):
 
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        # willl download cover from Noosfere provided it was found (and then cached)... If not, it will
-        # run the metadata download and try to cache the cover url...
+        # will download cover from Noosfere provided it was found (and then cached)... If not, it will
+        # run the metadata download and try to cache the cover URL...
 
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
@@ -689,13 +692,13 @@ class noosfere(Source):
 
 if __name__ == '__main__':
 
-    # Run these tests from the directory contatining all files needed for the plugin (the files that go into the zip file)
+    # Run these tests from the directory containing all files needed for the plugin (the files that go into the zip file)
     # that is: __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
     # issue in sequence:
     # calibre-customize -b .
     # calibre-debug -e __init__.py
-    # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log...
-    # Careful, a message may pop up about an error... however this message pops up function of the lengh of the log...
+    # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log... (parfois fort grand)
+    # Careful, a message may pop up about an error... however this message pops up function of the length of the log... (sometime quite big)
     # anyway, verify... I have been caught at least once
 
     from calibre.ebooks.metadata.sources.test import (test_identify_plugin, title_test, authors_test, series_test)

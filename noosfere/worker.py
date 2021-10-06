@@ -66,10 +66,10 @@ class Worker(Thread):
             self.log.info(self.who,"must_be_editor        : ", self.must_be_editor)
 
     def run(self):
-        # wrk from __init__ could be a url to the book (several volumes) or to the unique volume.
-        # Sometimes we get a 'book' url that is redirected to a 'volume' url...
+        # wrk from __init__ could be a URL to the book (several volumes) or to the unique volume.
+        # Sometimes we get a 'book' URL that is redirected to a 'volume' URL...
         # OK, il faut se connecter sur wrk_url et remonter url_vrai...
-        # On decide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
+        # On décide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
         #
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"Entering run(self)")
@@ -83,7 +83,7 @@ class Worker(Thread):
                 wrk_url = self.ret_top_vol_indx(book_url, self.book_title)
                 if debug: self.log.info(self.who,"wrk_url               : ", wrk_url)
             except:
-                self.log.exception("ret_top_vol_indx failed for url: ",book_url)
+                self.log.exception("ret_top_vol_indx failed for URL: ",book_url)
 
         if "niourf" in wrk_url:
             self.log.info("getting to THE volume for this book")
@@ -92,41 +92,41 @@ class Worker(Thread):
             try:
                 self.extract_vol_details(vol_url)
             except:
-                self.log.exception("extract_vol_details failed for url: ",vol_url)
+                self.log.exception("extract_vol_details failed for URL: ",vol_url)
 
     def ret_top_vol_indx(self, url, book_title):
-        # cette fonction reçoit l'url du livre qui contient plusieur volumes du meme auteur,
-        # dont certains ont le meme ISBN et generalement le meme titres.
+        # cette fonction reçoit l'URL du livre qui contient plusieurs volumes du même auteur,
+        # dont certains ont le même ISBN et généralement le même titres.
         #
-        # Ces volumes diffèrent par l'editeur, la date d'edition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
-        # MON choix se base sur un systeme de points sur les indications du site
+        # Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
+        # MON choix se base sur un système de points sur les indications du site
         # résumé présent:                       r   1pt
-        # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas meme si, quand
-        # critique de la serie                  cs  1pt         # une critique existe, elle est reprise pour tous les volumes
-        # sommaire des nouvelles presentes:     s   1pt
-        # information verifiée                  v   1pt
+        # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
+        # critique de la série                  cs  1pt         # une critique existe, elle est reprise pour tous les volumes
+        # sommaire des nouvelles présentes:     s   1pt
+        # information vérifiée                  v   1pt
         # titre identique                       t   1pt
-        # image presente                        p   1pt
-        # isbn present                          i  50pt         sauf preference
-        # isbn present et identique a calibre     100pt         sauf preference
-        # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus representé... MON choix
-        # en cas d'egalité, le plus ancien reçoit la préférence
+        # image présente                        p   1pt
+        # isbn présent                          i  50pt         sauf préférence
+        # isbn présent et identique a calibre     100pt         sauf préférence
+        # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
+        # en cas d'égalité, le plus ancien reçoit la préférence
         #
-        # This gets the book's url, there many volume may be present with (or not) same ISBN, same title.
+        # This gets the book's URL, there many volume may be present with (or not) same ISBN, same title.
         # if the book only has one volume, then we bypass ret_top_vol_indx
         #
-        # the volumes are different by the publisher, edition's or reedition's date, cover, resume, critic...
+        # the volumes are different by the publisher, edition's or re-edition's date, cover, resume, critic...
         # MY choice is based on a point system based on the site's flag
         # resume available:                     r   1pt
         # critic available:                     c   1pt         # maybe incorrect as sometimes, when a critic exists
-        # serie's critic:                       cs  1pt         # it is distributed to all volume without indication
+        # series critic:                        cs  1pt         # it is distributed to all volume without indication
         # summary of novel in the book:         s   1pt
         # verified information                  v   1pt
         # same title as requested               t   1pt
         # cover available                       p   1pt
         # isbn available                        i  50pt         unless overwritten by the priority choice
         # isbn available et same as requested     100pt         unless overwritten by the priority choice
-        # the score will be increased so that the volume will be choosen to the most present publisher ... MON choix
+        # the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
         # in case of equality the oldest win
         #
         debug=self.dbg_lvl & 2
@@ -217,7 +217,7 @@ class Worker(Thread):
         reverse_it = True if "latest" in self.priority_handling else False
         if debug: self.log.info(self.who,"priority pushes latest : ", reverse_it)
 
-        # in python 3 a dict keeps the order of introduction... In this case, as noosfere present it chronologic oreder,
+        # in python 3 a dict keeps the order of introduction... In this case, as noosfere presents it in chronological order,
         # let's invert the dict by sorting reverse if the latest volume is asked
         ts_vol_index = dict(sorted(ts_vol_index.items(),reverse=reverse_it))
 
@@ -249,7 +249,7 @@ class Worker(Thread):
         return top_vol_index
 
     def get_decoupage_annexe(self, dec_anx_url):
-        # looks like we have some external ref to another series (different cut or even expantion) of book for the same saga
+        # looks like we have some external ref to another series  of books for the same saga (different cut or even expansion to the series)
         # I want to catch it so I can get the info for the numbering
         #
         debug=self.dbg_lvl & 2
@@ -266,10 +266,10 @@ class Worker(Thread):
         return soup.select_one("div#Série").select_one("div").select_one("tbody")
 
     def get_Critique_de_la_serie(self, critic_url):
-        # La critique de la serie peut etre developpée dans une autre page dont seul l'url est d'interet
-        # cette fondtion remplace le pointeur par le contenu.
+        # La critique de la série peut être développée dans une autre page dont seul l'URL est d'intérêt
+        # cette fonction remplace le pointeur par le contenu.
         #
-        # The critic for a serie may be set appart in another page. The vol url refers to that other loacation.
+        # The critic for a series may be set apart in another page. The vol URL refers to that other location.
         # I want to have it.
         #
         debug=self.dbg_lvl & 2
@@ -281,7 +281,7 @@ class Worker(Thread):
 
         if debug:
 #            self.log.info(self.who,"""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # trop grand, mais peut servir
-            self.log.info(self.who,"critique de la serie processed")
+            self.log.info(self.who,"critique de la série processed")
 
         return soup.select_one('div[id="SerieCritique"]')
 
@@ -289,25 +289,25 @@ class Worker(Thread):
         # Here we extract and format the information from the choosen volume.
         # - The first name and last name to populate author and author sort : vol_auteur_prenom  and vol_auteur_nom
         # - The title of the volume                                         : vol_title
-        # - The serie name the volume is part of                            : vol_serie
+        # - The series name the volume is part of                           : vol_serie
         # - The sequence number in the serie                                : vol_serie_seq                         # missing
         # - The editor of this volume                                       : vol_editor
         # - The editor's collection of this volume                          : vol_coll
         # - The collection serial code of this volume                       : vol_coll_srl
         # - The "dépot légal" date (the publication date is vastly unknown) : vol_dp_lgl                            # date format to be computed
-        # - The ISBN number assoi-ciated with the volume                    : vol_isbn
+        # - The ISBN number associated with the volume                      : vol_isbn
         # - The volume tags                                                 : vol_genre
-        # - The url pointer to the volume cover image                       : vol_cover_index
+        # - The URL pointer to the volume cover image                       : vol_cover_index
         # - The comments includes various info about the book               : vol_comment_soup
-        #   . reference, an url pointer to noosfere
-        #   . couverture, an url pointer to noosfere, cover may be real smal, but is accurate to the volume
+        #   . reference, an URL pointer to noosfere
+        #   . couverture, an URL pointer to noosfere, cover may be real small, but is accurate to the volume
         #   . first edition information
-        #   . serie (cycle) name and number
+        #   . series (cycle) name and number
         #   . this volume editor info
         #   . Resume (quatrième de couverture)
         #   . Critiques
         #   . Sommaire detailing what novels are in the volume when it is an anthology
-        #   . Critiques about the serie and/or about another volume of the book
+        #   . Critiques about the series and/or about another volume of the book
         #
 
         debug=self.dbg_lvl & 2
@@ -458,11 +458,11 @@ class Worker(Thread):
             comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
 
     # select the fields I want... More exist such as film adaptations or references to advises to read
-    # but that is not quite consistant around all the books (noosfere is a common database from many people)
+    # but that is not quite consistent around all the books (noosfere is a common database from many people)
     # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
-        if debug: self.log.info(self.who,tmp_comm_lst)             #usefull but too long
+        if debug: self.log.info(self.who,tmp_comm_lst)             #useful but too long
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
                 comment_resume = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
@@ -513,15 +513,15 @@ class Worker(Thread):
     # Make a minimum of "repair" over vol_comment_soup so that it displays correctly (how I like it) in the comments and in my catalogs
     # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
     # - I like to have functional url when they exist
-    # - I like to find out the next and/or previous books in a serie (simulated arrows are link :-) )
+    # - I like to find out the next and/or previous books in a series (simulated arrows are link :-) )
 
         for elemnt in vol_comment_soup.select('[align="justify"]'):
             del elemnt['align']
 
     # remove all double or triple 'br' to improve presentation.
-    # Note: tmp1 and tmp2 must contain a different value from any possible first elemnt. (yes, I am lrp and I am unique :-) )
+    # Note: tmp1 and tmp2 must contain a different value from any possible first element. (yes, I am lrp and I am unique :-) )
     #
-    # ouais, et alors, si je modifie comment_generic APRES l'avoir integré à vol_comment_soup, il n'y a qu'une seule version en mémoire...
+    # ouais, et alors, si je modifie comment_generic APRES l'avoir intégré à vol_comment_soup, il n'y a qu'une seule version en mémoire...
     # donc vol_comment_soup est modifié...
     #
 
@@ -582,7 +582,7 @@ class Worker(Thread):
         for elemnt in vol_comment_soup.select("img[src*='arrow_left']"): elemnt.replace_with(fg)
         for elemnt in vol_comment_soup.select("img[src*='arrow_right']"): elemnt.replace_with(fd)
 
-        # depending on the tick box, make a fat publisher using seperators that have a very low probability to pop up (§ and €)
+        # depending on the tick box, make a fat publisher using separators that have a very low probability to pop up (§ and €)
         # only set vol_coll_srl if vol_coll exists
         # the idea is to use search and replace in the edit Metadata in bulk window.
 
@@ -603,10 +603,10 @@ class Worker(Thread):
         # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
         # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
         # Side note:
-        # I have no real good url structure(i once got html 3 times, div a sibling of html...), but calibre does not seems to care (nice :-) )
+        # I have no real good URL structure(i once got html 3 times, div a sibling of html...), but calibre does not seems to care (nice :-) )
         #
-        # Ca m'a pris un temps fou pour trouver, par hazard, que encode('ascii','xmlcharrefreplace') aidait bien...
-        # (enfin, quasi par hazard, j' ai essayé tout ce qui pouvait ameliorer la compatibilité avec xml... mais je
+        # Ça m'a pris un temps fou pour trouver, par hasard, que encode('ascii','xmlcharrefreplace') aidait bien...
+        # (enfin, quasi par hasard, j' ai essayé tout ce qui pouvait améliorer la compatibilité avec xml... mais je
         # lisais mal et je pensais à une incompatibilité avec la structure xml),
         #
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
