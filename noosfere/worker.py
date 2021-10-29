@@ -141,7 +141,7 @@ class Worker(Thread):
         soup = rsp[0]
         url_vrai = rsp[1]
         if debug:
-#            self.log.info(self.who,"soup :\n",soup)        a bit long I guess
+#            self.log.info(self.who,"top_vol_index soup :\n",soup)        # a bit long I guess
             self.log.info(self.who,"url_vrai  : ",url_vrai)
 
         if "niourf.asp" in url_vrai:
@@ -260,7 +260,7 @@ class Worker(Thread):
         soup = ret_soup(self.log, self.dbg_lvl, self.br, dec_anx_url, who=self.who)[0]
 
         if debug:
-#            self.log.info(self.who,soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  #long
+#            self.log.info(self.who,"découpage annexe extract:\n",soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  # a bit long I guess
             self.log.info(self.who,"découpage annexe processed")
 
         return soup.select_one("div#Série").select_one("div").select_one("tbody")
@@ -280,7 +280,7 @@ class Worker(Thread):
         soup = ret_soup(self.log, self.dbg_lvl, self.br, critic_url, who=self.who)[0]
 
         if debug:
-#            self.log.info(self.who,"""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # trop grand, mais peut servir
+#            self.log.info(self.who,"critique de la série extract:\n","""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # a bit long I guess
             self.log.info(self.who,"critique de la série processed")
 
         return soup.select_one('div[id="SerieCritique"]')
@@ -321,7 +321,7 @@ class Worker(Thread):
         rsp = ret_soup(self.log, self.dbg_lvl, self.br, vol_url, who=self.who)
         soup = rsp[0]
         url_vrai = rsp[1].replace("&Tri=3","")
-#        if debug: self.log.info(self.who,soup.prettify())              # useful but too big...
+#        if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
 
         self.nsfr_id = self.nsfr_id+"$vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
       # self.nsfr_id = (self.nfsr_id).strip("$")                        # If I use this form, it gives this error: 'Worker' object has no attribute 'nfsr_id' ???
