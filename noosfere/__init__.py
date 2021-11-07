@@ -16,13 +16,13 @@
 #
 # In order to collect the information about a volume one must use either the ISBN, the author and the title or at least the title
 #
-# If the ISBN exists a search in noosfere points to a series of volumes (yet only one book :-) )
+# If the ISBN exists a search in noosfere may point (or not) to a series of volumes (yet only one book :-) )
 #
-# if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authorss :-( )
-# out of this list, a match to the title will point to a serie of volumes
+# if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authors :-( )
+# out of this list, a match to the title will point to a series of volumes
 #
-# if the title is the only reference, a search in noosfere will output a list of books sorted by best mactch along with a score
-# again a book will point to a series of volume
+# if the title is the only reference, a search in noosfere will output a list of books sorted by best match along with a score
+# again a book will point to a series of volume... NOT IMPLEMENTED, except for a few book this ends up with too much irrelevant data
 #
 # out of the volume list one must choose the best candidate to get a coherent set of volumes attributes (cover, isbn, editor, critics, serie, serie #, etc...
 #
@@ -97,10 +97,10 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
         log.info(who, "url : ", url)
         log.info(who, "rkt : ", rkt)
     # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
-    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage 
+    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage
     # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
     # J'ai du isoler le creatioon de la soup et du decodage dans la fonction ret_soup().
-    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine... 
+    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine...
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
     #
     # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
@@ -709,8 +709,8 @@ if __name__ == '__main__':
                 {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
                 [title_test("Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
             ),
-            
-            ( # A book with ISBN specified 
+
+            ( # A book with ISBN specified
                 {'identifiers':{'isbn': '2-266-03441-3'}, 'title':'Futurs sans escale', 'authors':['ANTHOLOGIE']},
                 [title_test("Futurs sans escale", exact=True), authors_test(['ANTHOLOGIE']), series_test('Isaac Asimov présente',1)]
             ),

@@ -352,6 +352,7 @@ class Worker(Thread):
         comment_Sommaire=None
         comment_AutresCritique=None
         comment_cover=None
+        comment_AutresEdition=None
         comment_decoupage_annexe=None
 
         # add volume address as a reference in the comment
@@ -392,6 +393,7 @@ class Worker(Thread):
         new_div=soup.new_tag('div')
         comment_generic = comment_generic.wrap(new_div)
         if debug: self.log.info(self.who,"comment_generic processed")
+        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic)
 
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
         if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
@@ -445,7 +447,6 @@ class Worker(Thread):
             if "Genre" in elemnt:
                 vol_genre = elemnt.lstrip("Genre : ")
                 if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
-
         if soup.select("img[name='couverture']"):
             for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
                 if "http" in elemnt:
@@ -453,7 +454,14 @@ class Worker(Thread):
                         vol_cover_index = elemnt
                         if debug: self.log.info(self.who,"vol_cover_index processed : ", vol_cover_index)
 
-        # add cover image address as a reference in the comment
+ # ici faut introduire AutresEdition...
+ # semble que le résultat ne soit pas vraiment comme je veux... faudrais <div> plutot que <div id="AutresEdition">
+        if soup.select_one("#AutresEdition"): comment_AutresEdition = soup.select_one("#AutresEdition")
+        if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
+        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", comment_AutresEdition)              # a bit long I guess
+# ici faut introduire AutresEdition...
+
+       # add cover image address as a reference in the comment
         if vol_cover_index:
             comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
 
@@ -497,6 +505,8 @@ class Worker(Thread):
             vol_comment_soup.append(comment_cover)
         if comment_generic:
             vol_comment_soup.append(comment_generic)
+        if comment_AutresEdition:                                       # lrp make it optional
+            vol_comment_soup.append(comment_AutresEdition)
         if comment_resume:
             vol_comment_soup.append(comment_resume)
         if comment_Critiques:
