@@ -393,7 +393,7 @@ class Worker(Thread):
         new_div=soup.new_tag('div')
         comment_generic = comment_generic.wrap(new_div)
         if debug: self.log.info(self.who,"comment_generic processed")
-        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic)
+#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic)                          # a bit long I guess
 
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
         if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
@@ -452,14 +452,15 @@ class Worker(Thread):
                 if "http" in elemnt:
                     if not vol_cover_index:
                         vol_cover_index = elemnt
-                        if debug: self.log.info(self.who,"vol_cover_index processed : ", vol_cover_index)
+                        if debug: self.log.info(self.who,"vol_cover_index processed : ")
+#                        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
- # ici faut introduire AutresEdition...
- # semble que le résultat ne soit pas vraiment comme je veux... faudrais <div> plutot que <div id="AutresEdition">
-        if soup.select_one("#AutresEdition"): comment_AutresEdition = soup.select_one("#AutresEdition")
+
+ # il semble que le résultat ne soit pas vraiment comme je veux... faudrais <div> plutot que <div id="AutresEdition">
+        if soup.select_one("#AutresEdition"):
+            comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
-        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", comment_AutresEdition)              # a bit long I guess
-# ici faut introduire AutresEdition...
+#        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
 
        # add cover image address as a reference in the comment
         if vol_cover_index:
@@ -470,7 +471,7 @@ class Worker(Thread):
     # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
-        if debug: self.log.info(self.who,tmp_comm_lst)             #useful but too long
+#        if debug: self.log.info(self.who,tmp_comm_lst)                                                        # a bit long I guess
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
                 comment_resume = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
@@ -505,8 +506,8 @@ class Worker(Thread):
             vol_comment_soup.append(comment_cover)
         if comment_generic:
             vol_comment_soup.append(comment_generic)
-        if comment_AutresEdition:                                       # lrp make it optional
-            vol_comment_soup.append(comment_AutresEdition)
+        if comment_AutresEdition:                                       # NOT optional... seems that this is important info about the book as it gives all the volumes
+             vol_comment_soup.append(comment_AutresEdition)
         if comment_resume:
             vol_comment_soup.append(comment_resume)
         if comment_Critiques:
@@ -519,6 +520,9 @@ class Worker(Thread):
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
             vol_comment_soup.append(comment_decoupage_annexe)
 
+    # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
+    # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
+    # donc vol_comment_soup est modifié... APRES integration de toutes les parties
     #
     # Make a minimum of "repair" over vol_comment_soup so that it displays correctly (how I like it) in the comments and in my catalogs
     # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
@@ -530,9 +534,6 @@ class Worker(Thread):
 
     # remove all double or triple 'br' to improve presentation.
     # Note: tmp1 and tmp2 must contain a different value from any possible first element. (yes, I am lrp and I am unique :-) )
-    #
-    # ouais, et alors, si je modifie comment_generic APRES l'avoir intégré à vol_comment_soup, il n'y a qu'une seule version en mémoire...
-    # donc vol_comment_soup est modifié...
     #
 
         tmp1=tmp2="lrp_the_unique"
@@ -546,6 +547,14 @@ class Worker(Thread):
             elemnt.insert(0,br)
             elemnt["style"]="font-weight: 600; font-size: 18px"
 
+    # repair comment_AutresEdition in vol_comment_soup by removing id=AutresEdition if it exists....
+    # this should make the whole word "AutresEdition" click-able instead of only the first letter 'A'
+
+        if vol_comment_soup.select("div[id='AutresEdition']"):
+            tmptag=vol_comment_soup.select_one("div[id='AutresEdition']")
+            del tmptag['id']
+
+    # repair url's so it does NOT depend on being in noosfere space
 
         if debug:
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
@@ -587,6 +596,8 @@ class Worker(Thread):
         if debug:
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
                 if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet apres correction: ", elemnt)
+
+    # design from UFT_8 character set a set of right and left arrows
 
         fg,fd="<<==","==>>" #chr(0x21D0),chr(0x21D2)   #chr(0x27f8),chr(0x27f9)
         for elemnt in vol_comment_soup.select("img[src*='arrow_left']"): elemnt.replace_with(fg)
