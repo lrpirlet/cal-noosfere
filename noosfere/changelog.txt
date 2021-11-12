@@ -99,11 +99,22 @@ vl$<number>) and restart the metadata download.
 Pushed to version 0,7,0 after refactoring some code to become function instead
 of method...
 
-Corrected instructions cause some volume have no value for coll_rsl, yet they 
+Corrected instructions cause some volume have no value for coll_rsl, yet they
 have a value for collection...
 
 noosfere site changed.. so I had to adapt the plugin.. and correct some minors
 bugs.. this mark version 0.9.0
 
-add a conditional on title and authors... If a book has an nsfr_id or an isbn, 
+add a conditional on title and authors... If a book has an nsfr_id or an isbn,
 then author and/or title may be None...
+
+Corrected a few (read quite a few... understand a lot) of comments. They are
+more correct, more coherent... well, better...
+
+It, from now on, extract the information about other editions... The first line
+(a link) points to the pages of all the various volumes. The rest of the
+information is a series of links to the volumes sorted by date and by editor.
+
+Implemented the collect of "conseil de lecture" and Adaptation (of the book to
+other media: tv, film...)
+This still needs to be made optional before version 1

@@ -347,13 +347,15 @@ class Worker(Thread):
         vol_genre=""
         vol_cover_index=""
         comment_generic=None
+        comment_AutresEdition=None
         comment_resume=None
         comment_Critiques=None
         comment_Sommaire=None
         comment_AutresCritique=None
-        comment_cover=None
-        comment_AutresEdition=None
         comment_decoupage_annexe=None
+        comment_CitédanslesConseilsdelecture=None
+        comment_Adaptations=None
+        comment_cover=None
 
         # add volume address as a reference in the comment
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
@@ -455,8 +457,6 @@ class Worker(Thread):
                         if debug: self.log.info(self.who,"vol_cover_index processed : ")
 #                        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
-
- # il semble que le résultat ne soit pas vraiment comme je veux... faudrais <div> plutot que <div id="AutresEdition">
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
@@ -471,24 +471,26 @@ class Worker(Thread):
     # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
-#        if debug: self.log.info(self.who,tmp_comm_lst)                                                        # a bit long I guess
+#        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
                 comment_resume = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_resume processed")
+#                if debug: self.log.info(self.who,"comment_resume\n",comment_resume)                         # a bit long I guess
 
             if "Critiques" in str(tmp_comm_lst[i]):
                 if not "autres" in str(tmp_comm_lst[i]):
                     comment_Critiques = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                     if debug: self.log.info(self.who,"comment_Critiques processed")
+#                    if debug: self.log.info(self.who,"comment_Critiques\n",comment_Critiques)               # a bit long I guess
 
             if "Sommaire" in str(tmp_comm_lst[i]):
                 comment_Sommaire = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Sommaire processed")
+#                if debug: self.log.info(self.who,"comment_Sommaire\n",comment_Sommaire)                     # a bit long I guess
 
             if "Critiques des autres" in str(tmp_comm_lst[i]):
                 comment_AutresCritique = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
-
                 if comment_AutresCritique.select('a[href*="serie.asp"]') and ("Critique de la série" in comment_AutresCritique.select('a[href*="serie.asp"]')[0].text):
                     critic_url = "https://www.noosfere.org/livres/"+comment_AutresCritique.select('a[href*="serie.asp"]')[0]['href']
                     try:
@@ -496,9 +498,18 @@ class Worker(Thread):
                         comment_AutresCritique.append(more_comment_AutresCritique)
                     except:
                         self.log.exception("get_Critique_de_la_serie failed for url: ",critic_url)
-
                 if debug: self.log.info(self.who,"comment_AutresCritique processed")
+#                if debug: self.log.info(self.who,"comment_AutresCritique\n",comment_AutresCritique)         # a bit long I guess
 
+            if "Cité dans les Conseils de lecture" in str(tmp_comm_lst[i]):
+                comment_CitédanslesConseilsdelecture = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture processed")
+#                if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture\n",comment_CitédanslesConseilsdelecture)              # a bit long I guess
+
+            if "Adaptations" in str(tmp_comm_lst[i]):
+                comment_Adaptations = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_Adaptations processed")
+#                if debug: self.log.info(self.who,"comment_Adaptations\n",comment_Adaptations)               # a bit long I guess
 
     # group in a big bundle all the fields I think I want... (It is difficult not to include more... :-))
 
@@ -519,6 +530,19 @@ class Worker(Thread):
         if comment_decoupage_annexe:
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
             vol_comment_soup.append(comment_decoupage_annexe)
+        if comment_CitédanslesConseilsdelecture:                                  # make it optionnal
+            vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
+        if comment_Adaptations:                                                   # make it optionnal
+            vol_comment_soup.append(comment_Adaptations)
+
+#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup)                             # a bit long I guess
+
+
+    # ici, rajouter
+    # Prix obtenus
+    # Prix obtenus par des textes au sommaire
+    # Cité dans les pages thématiques suivantes
+    # Cité dans les listes thématiques des oeuvres suivantes
 
     # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
     # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
@@ -534,7 +558,6 @@ class Worker(Thread):
 
     # remove all double or triple 'br' to improve presentation.
     # Note: tmp1 and tmp2 must contain a different value from any possible first element. (yes, I am lrp and I am unique :-) )
-    #
 
         tmp1=tmp2="lrp_the_unique"
         for elemnt in vol_comment_soup.findAll():
@@ -542,10 +565,19 @@ class Worker(Thread):
             if tmp1==tmp2:
                 elemnt.extract()
 
-        br = soup.new_tag('br')
-        for elemnt in vol_comment_soup.select('.AuteurNiourf'):
-            elemnt.insert(0,br)
-            elemnt["style"]="font-weight: 600; font-size: 18px"
+    # insert style for title
+    # then wrap div around span and next span if its exist
+    # (Ca s'évanouit tout seul dans calibre du probablement à une construction non acceptée par calibre)
+        br = vol_comment_soup.new_tag('br')
+        for elemnt in vol_comment_soup.select('span'):
+            if ('AuteurNiourf' in elemnt.attrs['class'][0]):         #elemnt.select('.AuteurNiourf'):
+                elemnt.insert(0,br)
+                elemnt["style"]="font-weight: 600; font-size: 18px"
+                new_div=vol_comment_soup.new_tag('div')
+                elemnt.wrap(new_div)
+                if (elemnt.find_next("span")) and (not ('AuteurNiourf' in elemnt.find_next("span").attrs['class'][0])):
+                    new_div=vol_comment_soup.new_tag('div')
+                    elemnt.find_next("span").wrap(new_div)
 
     # repair comment_AutresEdition in vol_comment_soup by removing id=AutresEdition if it exists....
     # this should make the whole word "AutresEdition" click-able instead of only the first letter 'A'
@@ -556,8 +588,9 @@ class Worker(Thread):
 
     # repair url's so it does NOT depend on being in noosfere space
 
+        self.log.info(self.who,"\nCorrecting vol_comment_soup to calibre")
         if debug:
-            for elemnt in vol_comment_soup.select("a[href*='.asp']"):
+            for elemnt in vol_comment_soup.select("a[href]"):
                 if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet avant correction: ", elemnt)
 
         for elemnt in vol_comment_soup.select("a[href*='/livres/auteur.asp']"):
@@ -592,6 +625,12 @@ class Worker(Thread):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("niourf.asp","https://www.noosfere.org/livres/niourf.asp")
         for elemnt in vol_comment_soup.select("a[href*='serie.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
+        for elemnt in vol_comment_soup.select("a[href*='/articles/listeoeuvres.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/articles/listeoeuvres.asp","https://www.noosfere.org/articles/listeoeuvres.asp")
+        for elemnt in vol_comment_soup.select("a[href*='FicheFilm.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("FicheFilm.asp","https://www.noosfere.org/livres/FicheFilm.asp")
+        for elemnt in vol_comment_soup.select("a[href*='?numlivre']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("?numlivre","https://www.noosfere.org/livres/niourf.asp?numlivre")
 
         if debug:
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
@@ -650,7 +689,7 @@ class Worker(Thread):
         self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
         self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
         self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
-#        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                                # Maybe a bit long sometimes
+#        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
                                                                                                                # language must be <class 'str'>
 
         if vol_cover_index:
