@@ -354,6 +354,7 @@ class Worker(Thread):
         comment_AutresCritique=None
         comment_decoupage_annexe=None
         comment_CitédanslesConseilsdelecture=None
+        comment_Prixobtenuspardestextesausommaire=None
         comment_Adaptations=None
         comment_cover=None
 
@@ -506,6 +507,11 @@ class Worker(Thread):
                 if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture processed")
 #                if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture\n",comment_CitédanslesConseilsdelecture)              # a bit long I guess
 
+            if "Prix obtenus par des textes au sommaire" in str(tmp_comm_lst[i]):
+                comment_Prixobtenuspardestextesausommaire = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_Prixobtenuspardestextesausommaire processed")
+#                if debug: self.log.info(self.who,"comment_Prixobtenuspardestextesausommaire\n",comment_Prixobtenuspardestextesausommaire)              # a bit long I guess
+
             if "Adaptations" in str(tmp_comm_lst[i]):
                 comment_Adaptations = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Adaptations processed")
@@ -530,12 +536,14 @@ class Worker(Thread):
         if comment_decoupage_annexe:
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
             vol_comment_soup.append(comment_decoupage_annexe)
+        if comment_Prixobtenuspardestextesausommaire:                             # make it optionnal
+            vol_comment_soup.append(comment_Prixobtenuspardestextesausommaire)
         if comment_CitédanslesConseilsdelecture:                                  # make it optionnal
             vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
         if comment_Adaptations:                                                   # make it optionnal
             vol_comment_soup.append(comment_Adaptations)
 
-#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup)                             # a bit long I guess
+#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
 
 
     # ici, rajouter
@@ -570,14 +578,15 @@ class Worker(Thread):
     # (Ca s'évanouit tout seul dans calibre du probablement à une construction non acceptée par calibre)
         br = vol_comment_soup.new_tag('br')
         for elemnt in vol_comment_soup.select('span'):
-            if ('AuteurNiourf' in elemnt.attrs['class'][0]):         #elemnt.select('.AuteurNiourf'):
+            if ("class" in elemnt.attrs) and ('AuteurNiourf' in elemnt.attrs['class'][0]):         #elemnt.select('.AuteurNiourf'):
                 elemnt.insert(0,br)
                 elemnt["style"]="font-weight: 600; font-size: 18px"
                 new_div=vol_comment_soup.new_tag('div')
                 elemnt.wrap(new_div)
-                if (elemnt.find_next("span")) and (not ('AuteurNiourf' in elemnt.find_next("span").attrs['class'][0])):
-                    new_div=vol_comment_soup.new_tag('div')
-                    elemnt.find_next("span").wrap(new_div)
+                if (elemnt.find_next("span")) and ("class" in elemnt.find_next("span").attrs):
+                    if (not ('AuteurNiourf' in elemnt.find_next("span").attrs['class'][0])):
+                        new_div=vol_comment_soup.new_tag('div')
+                        elemnt.find_next("span").wrap(new_div)
 
     # repair comment_AutresEdition in vol_comment_soup by removing id=AutresEdition if it exists....
     # this should make the whole word "AutresEdition" click-able instead of only the first letter 'A'

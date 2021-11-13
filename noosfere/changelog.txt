@@ -118,3 +118,12 @@ information is a series of links to the volumes sorted by date and by editor.
 Implemented the collect of "conseil de lecture" and Adaptation (of the book to
 other media: tv, film...)
 This still needs to be made optional before version 1
+
+Sometimes, somme word sees the first letter separated from the rest of the word
+(Espace vital,nsfr=vl$547 under Quatrième de couverture I saac Avsimov) This is
+because html codes it as <b>I</b><b>saac Asimov</b>. I could try to write someting
+IF and only IF there are a LIMITED number of such separator AND if coherent: for 
+noosfere pages it seems that: b stand for bold, <i>/<i> with i stands for italic...
+needs verification.
+
+https://www.noosfere.org/icarus/livres/EditionsLivre.asp?numitemsommaire=20538 reports erreur '80020009' /modules/arrangetitre.inc, ligne 27
