@@ -99,7 +99,7 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
     # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage
     # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
-    # J'ai du isoler le creatioon de la soup et du decodage dans la fonction ret_soup().
+    # J'ai du isoler la création de la soup du decodage dans la fonction ret_soup().
     # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine...
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
     #
@@ -225,15 +225,15 @@ class noosfere(Source):
     config_help_message = '<p>'+_(" noosfere est une base de donnée qui propose des informations"
                                   " à propos des ouvrages, de genre science fiction, disponibles en langue française."
                                   " Ces informations vont de l'auteur aux films produits sur base de l'ouvrage en"
-                                  " passant par les auteurs, les traducteurs, les illustrateurs, les critiquess..."
-                                  " et bien sur, leurs oeuvres. Les livres qui ont été publiés plusieurs fois"
-                                  " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépot legal"
+                                  " passant par les auteurs, les traducteurs, les illustrateurs, les critiques..."
+                                  " et bien sur, leurs œuvres. Les livres qui ont été publiés plusieurs fois"
+                                  " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépôt légal"
                                   " (repris sous la date de publication, souvent méconnue), la couverture, l'éditeur,"
-                                  " la collection de l'editeur et son numèro d'ordre. Le choix, programmé, du volume"
+                                  " la collection de l'éditeur et son numéro d'ordre. Le choix, programmé, du volume"
                                   " est quelque peu paramétrable par la boite de dialogue `priorité de tri´. "
                                   " D'autre part, il n'existe pas de moyens officiels de remplir une colonne définie"
                                   " par l'utilisateur. Pour rester dans les clous, je propose de remplir le champs"
-                                  " de l'editeur avec, conjointement à celui-ci, la collection et son numero d'ordre."
+                                  " de l'éditeur avec, conjointement à celui-ci, la collection et son numéro d'ordre."
                                   " Une petite procédure, décrite dans la doc devrait remettre tout en ordre."
                                   )
 
@@ -253,9 +253,9 @@ class noosfere(Source):
                        '0_oldest_with_isbn':_("le plus ancien pondéré, préfère un isbn"),
                        '1_latest_with_isbn':_("le plus récent pondéré, préfère un isbn"),
                        '2_oldest':_("un plus ancien pondéré"),
-                       '3_latest':_("un plus recent pondéré"),
+                       '3_latest':_("un plus récent pondéré"),
                        '4_very_oldest':_("vraiment le plus ancien"),
-                       '5_very_latest':_("vraiment le plus recent")
+                       '5_very_latest':_("vraiment le plus récent")
                         }
 
     options = (
@@ -263,7 +263,7 @@ class noosfere(Source):
                    'fat_publisher',
                    'bool',
                    False,
-                   _("Ajoute collection et son numéro d'ordre au champ èditeur"),       # add the editor's collection and the associated order number to the publisher field
+                   _("Ajoute collection et son numéro d'ordre au champ éditeur"),       # add the editor's collection and the associated order number to the publisher field
                    _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur."
                      "Voir LIS-MOI editeur_collection_seriel-code.txt")                 # check this box to enable... see README publisher_collection_seriel-code.txt
                    ),
@@ -272,11 +272,14 @@ class noosfere(Source):
                    'number',
                    0,
                    _('Loquacité du journal, de 0 à 7'),                                                     # verbosity of the log
-                   _('Le niveau de loquacité. O un minimum de rapport, 1 rapport etendu de __init__,'       # the level of verbosity. value 0 will output the minimum,
-                     ' 2 rapport étendu de worker, 4 rapport etendu des annexes... La somme 3, 5 ou 7'      # 1 debug messages of __init__, 2 debug messages of worker
-                     ' peut etre introduite. Ainsi 7 donne un maximun de rapport. Note: ce sont les 3'      # 4 debug level of accessory code... 3, 5 or 7 is the sum
-                     ' derniers bits de debug_level en notation binaire')                                   # of the value defined above. In fact it is a bitwise flag
-                   ),                                                                                       # spread over the last 3 bits of debug_level
+                   _('Le niveau de loquacité:'                                                              # the level of verbosity.
+                     ' O un minimum de rapport,'                                                            # value 0 will output the minimum,
+                     ' 1 rapport étendu de __init__,'                                                       # 1 debug messages of __init__
+                     ' 2 rapport étendu de worker,'                                                         # 2 debug messages of worker
+                     ' 4 rapport étendu des annexes...'                                                     # 4 debug level of accessory code...
+                     ' La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport.'       # 3, 5 or 7 is the sum of the value defined above.
+                     ' Note: ce sont les 3 derniers bits de debug_level en notation binaire')               # In fact it is a bitwise flag spread over the last 3 bits of debug_level
+                   ),
             Option(
                    'priority_handling',
                    'choices',
@@ -290,10 +293,45 @@ class noosfere(Source):
                    'string',
                    None,
                    _("impose un éditeur"),                                                                  # impose a publisher
-                   _("le volume sera choisi chez l'éditeur le plus representé... SAUF:"                     # the volume is picked-up from the most prevalent publisher
-                     " Remplir ce champ pour forcer un éditeur defini... DOIT"                              # EXCEPTED: fill this field to force the publisher wanted
+                   _("le volume sera choisi chez l'éditeur le plus représenté... SAUF:"                     # the volume is picked-up from the most prevalent publisher
+                     " Remplir ce champ pour forcer un éditeur défini... DOIT"                              # EXCEPTED: fill this field to force the publisher wanted
                      " ETRE UN MATCH PARFAIT sinon le volume sera choisi sans tenir compte"                 # MUST BE A PERFECT MATCH else the volume will ne picked-up
                      " de l'éditeur.")                                                                      # without consideration to the publisher
+                   ),
+            Option(
+                   'Prixobtenus',
+                   'bool',
+                   False,
+                   _("Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire'"),        # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Citédanslespagesthématiquessuivantes',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les pages thématiques suivantes"),                          # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Citédansleslistesthématiquesdesoeuvressuivantes',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les listes thématiques des oeuvres suivantes"),             # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'CitédanslesConseilsdelecture',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les Conseils de lecture"),                                  # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Adaptations',
+                   'bool',
+                   False,
+                   _("Ajoute Adaptations (cinéma, télévision, BD, théâtre, radio, jeu vidéo...)"), # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
                    ),
             )
 
@@ -332,6 +370,46 @@ class noosfere(Source):
         te = self.prefs.get('requested_editor', None)
         return te
 
+    @property
+    def get_Prixobtenus(self):
+        x = getattr(self, 'get_po', None)
+        if x is not None:
+            return x
+        get_po = self.prefs.get('Prixobtenus', False)
+        return get_po
+
+    @property
+    def get_Citédanslespagesthématiquessuivantes(self):
+        x = getattr(self, 'get_cdpt', None)
+        if x is not None:
+            return x
+        get_cdpt = self.prefs.get('Citédanslespagesthématiquessuivantes', False)
+        return get_cdpt
+
+    @property
+    def get_Citédansleslistesthématiquesdesoeuvressuivantes(self):
+        x = getattr(self, 'get_cdlt', None)
+        if x is not None:
+            return x
+        get_cdlt = self.prefs.get('Citédansleslistesthématiquesdesoeuvressuivantes', False)
+        return get_cdlt
+
+    @property
+    def get_CitédanslesConseilsdelecture(self):
+        x = getattr(self, 'get_cdcl', None)
+        if x is not None:
+            return x
+        get_cdcl = self.prefs.get('CitédanslesConseilsdelecture', False)
+        return get_cdcl
+
+    @property
+    def get_Adaptations(self):
+        x = getattr(self, 'get_a', None)
+        if x is not None:
+            return x
+        get_a = self.prefs.get('Adaptations', False)
+        return get_a
+
     # copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
     def get_cached_cover_url(self, identifiers):
         # I guess this routine returns an url that was discovered somewhere else and put into cache
@@ -352,9 +430,9 @@ class noosfere(Source):
         return url
 
     def ret_author_index(self, log, br, authors):
-        # Trouve la reference de l'auteur dans la soupe de noosfere
+        # Trouve la référence de l'auteur dans la soupe de noosfere
         # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
-        # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial si isbn is indisponible
+        # L'idée est de renvoyer UNE seule référence... trouver l'auteur est primordial si isbn is indisponible
         #
         # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
         # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
@@ -389,7 +467,7 @@ class noosfere(Source):
             if not len(all_author_index):                          # failed the short list, let's go for the long list using "LITTERAL" match
                 if debug: log.info("exact match failed, trying fuzzy match")
               # return self.ret_author_index(self, log, br, authors, ModeMoteur="LITTERAL")
-              # ca marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
+              # ça marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
               # this is NOT a function but a class method
               # it is possible to move the common part of this code below, but my mind refuses to understand the change
               # when debugging... so duplicate the code (maybe an optimiseur later will make it... m'en fout)
@@ -444,9 +522,9 @@ class noosfere(Source):
         # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
         # Idea is to send back a few references that hopefully contains the title expected
         #
-        # Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
+        # Trouver la référence des livres d'un auteur connu dans la soupe produite par noosfere
         # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
-        # L'idée est de renvoyer serie de reference, dont on extrait les livres proches du titre de calibre
+        # L'idée est de renvoyer une série de référencé, dont on extrait les livres proches du titre de calibre
         #
         # now that we have a list of authors, let's get all the books associated with them
         # The "book_per_author_index" dictionnary will contain all book's references...
@@ -539,10 +617,15 @@ class noosfere(Source):
         # if no match is found with identifiers.
         #
 
-        log.info('self.dgb_lvl            : ', self.dbg_lvl)
-        log.info('self.extended_publisher : ', self.extended_publisher)
-        log.info('self.priority_handling  : ', self.priority_handling)
-        log.info('self.must_be_editor     : ', self.must_be_editor)
+        log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
+        log.info('self.extended_publisher                                     : ', self.extended_publisher)
+        log.info('self.priority_handling                                      : ', self.priority_handling)
+        log.info('self.must_be_editor                                         : ', self.must_be_editor)
+        log.info('self.get_Prixobtenus                                        : ', self.get_Prixobtenus)
+        log.info('self.get_Citédanslespagesthématiquessuivantes               : ', self.get_Citédanslespagesthématiquessuivantes)
+        log.info('self.get_Citédansleslistesthématiquesdesoeuvressuivantes    : ', self.get_Citédansleslistesthématiquesdesoeuvressuivantes)
+        log.info('self.get_CitédanslesConseilsdelecture                       : ', self.get_CitédanslesConseilsdelecture)
+        log.info('self.get_Adaptations                                        : ', self.get_Adaptations)
 
         debug=self.dbg_lvl & 1
         log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
@@ -609,7 +692,7 @@ class noosfere(Source):
                 if not len(author_index):
                     log.info("Désolé, aucun auteur trouvé avec : ",authors)
                     return
-        # here maybe try with title alone... a dessiner lrp todo... ouais peut-etre pour le cas ou l'auteur serait trop noyé dans une masse de noms similaires
+        # here maybe try with title alone... a dessiner lrp todo... pas vraiment une option... noosfere est 'trop' riche :-)
 
         if not book_index:
             log.error("No book found in noosfere... ")

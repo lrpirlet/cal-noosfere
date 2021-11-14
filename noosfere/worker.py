@@ -46,24 +46,35 @@ class Worker(Thread):
         self.extended_publisher = self.plugin.extended_publisher
         self.priority_handling = self.plugin.priority_handling
         self.must_be_editor = self.plugin.must_be_editor
+        self.get_Prixobtenus = self.plugin.get_Prixobtenus
+        self.get_Citédanslespagesthématiquessuivantes = self.plugin.get_Citédanslespagesthématiquessuivantes
+        self.get_Citédansleslistesthématiquesdesoeuvressuivantes  = self.plugin.get_Citédansleslistesthématiquesdesoeuvressuivantes
+        self.get_CitédanslesConseilsdelecture = self.plugin.get_CitédanslesConseilsdelecture
+        self.get_Adaptations = self.plugin.get_Adaptations
 
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nEntering worker")
         if debug:
-            self.log.info(self.who,"self                  : ", self)
-            self.log.info(self.who,"log                   : ", log)
-            self.log.info(self.who,"book_url              : ", book_url)
-            self.log.info(self.who,"book_title            : ", book_title)
-            self.log.info(self.who,"isbn                  : ", isbn)
-            self.log.info(self.who,"result_queue          : ", result_queue)
-            self.log.info(self.who,"browser, self.browser : ", browser, self.br)
-            self.log.info(self.who,"relevance             : ", relevance)
-            self.log.info(self.who,"plugin                : ", plugin)
-            self.log.info(self.who,"dbg_lvl               : ", dbg_lvl)
-            self.log.info(self.who,"timeout               : ", timeout)
-            self.log.info(self.who,"extended_publisher    : ", self.extended_publisher)
-            self.log.info(self.who,"priority_handling     : ", self.priority_handling)
-            self.log.info(self.who,"must_be_editor        : ", self.must_be_editor)
+            self.log.info(self.who,"self                                                : ", self)
+            self.log.info(self.who,"log                                                 : ", log)
+            self.log.info(self.who,"book_url                                            : ", book_url)
+            self.log.info(self.who,"book_title                                          : ", book_title)
+            self.log.info(self.who,"isbn                                                : ", isbn)
+            self.log.info(self.who,"result_queue                                        : ", result_queue)
+            self.log.info(self.who,"browser, self.browser                               : ", browser, self.br)
+            self.log.info(self.who,"relevance                                           : ", relevance)
+            self.log.info(self.who,"plugin                                              : ", plugin)
+            self.log.info(self.who,"dbg_lvl                                             : ", dbg_lvl)
+            self.log.info(self.who,"timeout                                             : ", timeout)
+            self.log.info(self.who,"extended_publisher                                  : ", self.extended_publisher)
+            self.log.info(self.who,"priority_handling                                   : ", self.priority_handling)
+            self.log.info(self.who,"must_be_editor                                      : ", self.must_be_editor)
+            self.log.info(self.who,"get_Prixobtenus                                     : ", self.get_Prixobtenus)
+            self.log.info(self.who,"get_Citédanslespagesthématiquessuivantes            : ", self.get_Citédanslespagesthématiquessuivantes)
+            self.log.info(self.who,"get_Citédansleslistesthématiquesdesoeuvressuivantes : ", self.get_Citédansleslistesthématiquesdesoeuvressuivantes)
+            self.log.info(self.who,"get_CitédanslesConseilsdelecture                    : ", self.get_CitédanslesConseilsdelecture)
+            self.log.info(self.who,"get_Adaptations                                     : ", self.get_Adaptations)
+
 
     def run(self):
         # wrk from __init__ could be a URL to the book (several volumes) or to the unique volume.
@@ -511,27 +522,27 @@ class Worker(Thread):
 #                if debug: self.log.info(self.who,"comment_AutresCritique\n",comment_AutresCritique)         # a bit long I guess
 
     # Note: Both "Prix obtenus" and "Prix obtenus par des textes du sommaire" are covered by the following code...
-            if "Prix obtenus" in str(tmp_comm_lst[i]):
+            if self.get_Prixobtenus and ("Prix obtenus" in str(tmp_comm_lst[i])):
                 comment_Prixobtenus = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Prixobtenus processed")
 #                if debug: self.log.info(self.who,"comment_Prixobtenus\n",comment_Prixobtenus)              # a bit long I guess
 
-            if "Cité dans les pages thématiques suivantes" in str(tmp_comm_lst[i]):
+            if self.get_Citédanslespagesthématiquessuivantes and ("Cité dans les pages thématiques suivantes" in str(tmp_comm_lst[i])):
                 comment_Citédanslespagesthématiquessuivantes = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Citédanslespagesthématiquessuivantes processed")
 #                if debug: self.log.info(self.who,"comment_Citédanslespagesthématiquessuivantes\n",comment_Citédanslespagesthématiquessuivantes)              # a bit long I guess
 
-            if "Cité dans les listes thématiques des oeuvres suivantes" in str(tmp_comm_lst[i]):
+            if self.get_Citédansleslistesthématiquesdesoeuvressuivantes and ("Cité dans les listes thématiques des oeuvres suivantes" in str(tmp_comm_lst[i])):
                 comment_Citédansleslistesthématiquesdesoeuvressuivantes = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Citédansleslistesthématiquesdesoeuvressuivantes processed")
 #                if debug: self.log.info(self.who,"comment_Citédansleslistesthématiquesdesoeuvressuivantes\n",comment_Citédansleslistesthématiquesdesoeuvressuivantes)              # a bit long I guess
 
-            if "Cité dans les Conseils de lecture" in str(tmp_comm_lst[i]):
+            if self.get_CitédanslesConseilsdelecture and ("Cité dans les Conseils de lecture" in str(tmp_comm_lst[i])):
                 comment_CitédanslesConseilsdelecture = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture processed")
 #                if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture\n",comment_CitédanslesConseilsdelecture)              # a bit long I guess
 
-            if "Adaptations" in str(tmp_comm_lst[i]):
+            if self.get_Adaptations and ("Adaptations" in str(tmp_comm_lst[i])):
                 comment_Adaptations = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Adaptations processed")
 #                if debug: self.log.info(self.who,"comment_Adaptations\n",comment_Adaptations)               # a bit long I guess
@@ -555,22 +566,18 @@ class Worker(Thread):
         if comment_decoupage_annexe:
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
             vol_comment_soup.append(comment_decoupage_annexe)
-        if comment_Prixobtenus:                                                   # make it optionnal
+        if comment_Prixobtenus:                                                   # optionnal
             vol_comment_soup.append(comment_Prixobtenus)
-        if comment_Citédanslespagesthématiquessuivantes:                          # make it optionnal
+        if comment_Citédanslespagesthématiquessuivantes:                          # optionnal
             vol_comment_soup.append(comment_Citédanslespagesthématiquessuivantes)
-        if comment_Citédansleslistesthématiquesdesoeuvressuivantes:               # make it optionnal
+        if comment_Citédansleslistesthématiquesdesoeuvressuivantes:               # optionnal
             vol_comment_soup.append(comment_Citédansleslistesthématiquesdesoeuvressuivantes)
-        if comment_CitédanslesConseilsdelecture:                                  # make it optionnal
+        if comment_CitédanslesConseilsdelecture:                                  # optionnal
             vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
-        if comment_Adaptations:                                                   # make it optionnal
+        if comment_Adaptations:                                                   # optionnal
             vol_comment_soup.append(comment_Adaptations)
 
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
-
-
-    # ici, rajouter
-    # Cité dans les listes thématiques des oeuvres suivantes
 
     # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
     # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
