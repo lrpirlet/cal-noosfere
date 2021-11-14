@@ -278,12 +278,18 @@ class Worker(Thread):
             self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", critic_url, "who : ", self.who)
         soup = ret_soup(self.log, self.dbg_lvl, self.br, critic_url, who=self.who)[0]
+        if soup.select_one('div[id="SerieCritique"]'):
+            if debug:
+#                self.log.info(self.who,"critique de la série extract:\n","""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # a bit long I guess
+                self.log.info(self.who,"critique de la série processed")
+            return soup.select_one('div[id="SerieCritique"]')
+        else:
+            if debug:
+#                self.log.info(self.who,"critique de la série extract:\n","""soup.select_one('div[id="critique"]')""",soup.select_one('div[id="critique"]'))        # a bit long I guess
+                self.log.info(self.who,"critique de la série processed")
+            return soup.select_one('div[id="critique"]')
 
-        if debug:
-#            self.log.info(self.who,"critique de la série extract:\n","""soup.select_one('div[id="SerieCritique"]')""",soup.select_one('div[id="SerieCritique"]'))        # a bit long I guess
-            self.log.info(self.who,"critique de la série processed")
 
-        return soup.select_one('div[id="SerieCritique"]')
 
     def extract_vol_details(self, vol_url):
         # Here we extract and format the information from the choosen volume.
@@ -353,8 +359,10 @@ class Worker(Thread):
         comment_Sommaire=None
         comment_AutresCritique=None
         comment_decoupage_annexe=None
+        comment_Prixobtenus=None
+        comment_Citédanslespagesthématiquessuivantes=None
+        comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
         comment_CitédanslesConseilsdelecture=None
-        comment_Prixobtenuspardestextesausommaire=None
         comment_Adaptations=None
         comment_cover=None
 
@@ -502,15 +510,26 @@ class Worker(Thread):
                 if debug: self.log.info(self.who,"comment_AutresCritique processed")
 #                if debug: self.log.info(self.who,"comment_AutresCritique\n",comment_AutresCritique)         # a bit long I guess
 
+    # Note: Both "Prix obtenus" and "Prix obtenus par des textes du sommaire" are covered by the following code...
+            if "Prix obtenus" in str(tmp_comm_lst[i]):
+                comment_Prixobtenus = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_Prixobtenus processed")
+#                if debug: self.log.info(self.who,"comment_Prixobtenus\n",comment_Prixobtenus)              # a bit long I guess
+
+            if "Cité dans les pages thématiques suivantes" in str(tmp_comm_lst[i]):
+                comment_Citédanslespagesthématiquessuivantes = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_Citédanslespagesthématiquessuivantes processed")
+#                if debug: self.log.info(self.who,"comment_Citédanslespagesthématiquessuivantes\n",comment_Citédanslespagesthématiquessuivantes)              # a bit long I guess
+
+            if "Cité dans les listes thématiques des oeuvres suivantes" in str(tmp_comm_lst[i]):
+                comment_Citédansleslistesthématiquesdesoeuvressuivantes = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
+                if debug: self.log.info(self.who,"comment_Citédansleslistesthématiquesdesoeuvressuivantes processed")
+#                if debug: self.log.info(self.who,"comment_Citédansleslistesthématiquesdesoeuvressuivantes\n",comment_Citédansleslistesthématiquesdesoeuvressuivantes)              # a bit long I guess
+
             if "Cité dans les Conseils de lecture" in str(tmp_comm_lst[i]):
                 comment_CitédanslesConseilsdelecture = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture processed")
 #                if debug: self.log.info(self.who,"comment_CitédanslesConseilsdelecture\n",comment_CitédanslesConseilsdelecture)              # a bit long I guess
-
-            if "Prix obtenus par des textes au sommaire" in str(tmp_comm_lst[i]):
-                comment_Prixobtenuspardestextesausommaire = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
-                if debug: self.log.info(self.who,"comment_Prixobtenuspardestextesausommaire processed")
-#                if debug: self.log.info(self.who,"comment_Prixobtenuspardestextesausommaire\n",comment_Prixobtenuspardestextesausommaire)              # a bit long I guess
 
             if "Adaptations" in str(tmp_comm_lst[i]):
                 comment_Adaptations = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
@@ -536,8 +555,12 @@ class Worker(Thread):
         if comment_decoupage_annexe:
             vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
             vol_comment_soup.append(comment_decoupage_annexe)
-        if comment_Prixobtenuspardestextesausommaire:                             # make it optionnal
-            vol_comment_soup.append(comment_Prixobtenuspardestextesausommaire)
+        if comment_Prixobtenus:                                                   # make it optionnal
+            vol_comment_soup.append(comment_Prixobtenus)
+        if comment_Citédanslespagesthématiquessuivantes:                          # make it optionnal
+            vol_comment_soup.append(comment_Citédanslespagesthématiquessuivantes)
+        if comment_Citédansleslistesthématiquesdesoeuvressuivantes:               # make it optionnal
+            vol_comment_soup.append(comment_Citédansleslistesthématiquesdesoeuvressuivantes)
         if comment_CitédanslesConseilsdelecture:                                  # make it optionnal
             vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
         if comment_Adaptations:                                                   # make it optionnal
@@ -547,9 +570,6 @@ class Worker(Thread):
 
 
     # ici, rajouter
-    # Prix obtenus
-    # Prix obtenus par des textes au sommaire
-    # Cité dans les pages thématiques suivantes
     # Cité dans les listes thématiques des oeuvres suivantes
 
     # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
