@@ -554,7 +554,7 @@ class Worker(Thread):
         if comment_generic:
             vol_comment_soup.append(comment_generic)
         if comment_AutresEdition:                                       # NOT optional... seems that this is important info about the book as it gives all the volumes
-             vol_comment_soup.append(comment_AutresEdition)
+            vol_comment_soup.append(comment_AutresEdition)
         if comment_resume:
             vol_comment_soup.append(comment_resume)
         if comment_Critiques:
@@ -576,7 +576,6 @@ class Worker(Thread):
             vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
         if comment_Adaptations:                                                   # optionnal
             vol_comment_soup.append(comment_Adaptations)
-
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
 
     # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
@@ -600,13 +599,23 @@ class Worker(Thread):
             if tmp1==tmp2:
                 elemnt.extract()
 
+    # merge sequential bold text and sequential italic text
+    # so <b>I</b><b>saac<\b> displayed as "I saac" in calibre becomes
+    # <b>Isaac<\b> displayed as "Isaac" in calibre
+
+        x=[b"</b><b>",b"</i><i>",b"</em><em>",b"</strong><strong>"]
+        for i in range(len(x)):
+            vol_comment_soup=BS(vol_comment_soup.encode("utf-8").replace(x[i],b""),"html5lib")
+#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
+
     # insert style for title
     # then wrap div around span and next span if its exist
     # (Ca s'évanouit tout seul dans calibre du probablement à une construction non acceptée par calibre)
-        br = vol_comment_soup.new_tag('br')
         for elemnt in vol_comment_soup.select('span'):
             if ("class" in elemnt.attrs) and ('AuteurNiourf' in elemnt.attrs['class'][0]):         #elemnt.select('.AuteurNiourf'):
-                elemnt.insert(0,br)
+                hr = vol_comment_soup.new_tag('hr')
+                hr["style"]="color:CCC;"
+                elemnt.insert_before(hr)
                 elemnt["style"]="font-weight: 600; font-size: 18px"
                 new_div=vol_comment_soup.new_tag('div')
                 elemnt.wrap(new_div)
