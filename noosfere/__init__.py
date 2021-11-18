@@ -194,7 +194,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 9, 0)
+    version                 = (0, 9, 3)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
@@ -271,8 +271,8 @@ class noosfere(Source):
                    'debug_level',
                    'number',
                    0,
-                   _('Loquacité du journal, de 0 à 7'),                                                     # verbosity of the log
-                   _('Le niveau de loquacité:'                                                              # the level of verbosity.
+                   _('Verbosité du journal, de 0 à 7'),                                                     # verbosity of the log
+                   _('Le niveau de verbosité:'                                                              # the level of verbosity.
                      ' O un minimum de rapport,'                                                            # value 0 will output the minimum,
                      ' 1 rapport étendu de __init__,'                                                       # 1 debug messages of __init__
                      ' 2 rapport étendu de worker,'                                                         # 2 debug messages of worker
@@ -281,7 +281,7 @@ class noosfere(Source):
                      ' Note: ce sont les 3 derniers bits de debug_level en notation binaire')               # In fact it is a bitwise flag spread over the last 3 bits of debug_level
                    ),
             Option(
-                   'priority_handling',
+                   'Priority_handling',
                    'choices',
                    '0_oldest_with_isbn',
                    _('priorité de tri:'),
@@ -292,7 +292,7 @@ class noosfere(Source):
                    'requested_editor',
                    'string',
                    None,
-                   _("impose un éditeur"),                                                                  # impose a publisher
+                   _("Impose un éditeur"),                                                                  # impose a publisher
                    _("le volume sera choisi chez l'éditeur le plus représenté... SAUF:"                     # the volume is picked-up from the most prevalent publisher
                      " Remplir ce champ pour forcer un éditeur défini... DOIT"                              # EXCEPTED: fill this field to force the publisher wanted
                      " ETRE UN MATCH PARFAIT sinon le volume sera choisi sans tenir compte"                 # MUST BE A PERFECT MATCH else the volume will ne picked-up
@@ -302,7 +302,7 @@ class noosfere(Source):
                    'Prixobtenus',
                    'bool',
                    False,
-                   _("Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire'"),        # add some field to the comment field
+                   _("Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire"),        # add some field to the comment field
                    _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
                    ),
             Option(

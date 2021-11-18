@@ -126,19 +126,14 @@ IF and only IF there are a LIMITED number of such separator AND if coherent: for
 noosfere pages it seems that: b stand for bold, <i>/<i> with i stands for italic...
 needs verification.
 
-https://www.noosfere.org/icarus/livres/EditionsLivre.asp?numitemsommaire=20538 reports erreur '80020009' /modules/arrangetitre.inc, ligne 27
-
-les listes Thematiques semblent avoir toutes un problème... Erreur d'exécution Microsoft VBScript erreur '800a000d' exemple:
-https://www.noosfere.org/livres/contenu_oeuvre.asp?NumTheme=57&NumLivre=-320249&NumReferent=4&NomTheme=Drogues
-https://www.noosfere.org/livres/contenu_oeuvre.asp?NumLivre=-318188&NumTheme=37&NumReferent=3&NomTheme=Ecologie
-https://www.noosfere.org/livres/contenu_oeuvre.asp?NumLivre=-318188&NumTheme=36&NumReferent=3&NomTheme=Dystopie
-https://www.noosfere.org/livres/contenu_oeuvre.asp?NumLivre=1655&NumTheme=56&NumReferent=1&NomTheme=Andro%EFde
-on y accede par l'onglet "Infos & actus" puis par le menu a gauche "Plan du site" et dans le texte "fonds documentaire" "par thèmes"... dans
-certains thèmes, sous la phrase "Des ouvrages ont établi des listes sur ce thème :"
-
 rendu optionnel les informations présentées par noosfere sous les titres contenants:
  Prix obtenus,
  Cité dans les pages thématiques suivantes
  Cité dans les listes thématiques des oeuvres suivantes
  Cité dans les Conseils de lecture
  Adaptations
+
+ Corrected the HTML code to get "Isaac Asimov" rather than "I saac Asimov" and/or
+ "(italic)Né en Russie" rather than "(italic)N é en Russie"
+
+16-11-2021: pushed version to 0.9.3 untill confirmed ok, before going to V.1.0.0

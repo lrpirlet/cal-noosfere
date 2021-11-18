@@ -113,7 +113,7 @@ class Worker(Thread):
         # MON choix se base sur un système de points sur les indications du site
         # résumé présent:                       r   1pt
         # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
-        # critique de la série                  cs  1pt         # une critique existe, elle est reprise pour tous les volumes
+        # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
         # sommaire des nouvelles présentes:     s   1pt
         # information vérifiée                  v   1pt
         # titre identique                       t   1pt
@@ -121,7 +121,7 @@ class Worker(Thread):
         # isbn présent                          i  50pt         sauf préférence
         # isbn présent et identique a calibre     100pt         sauf préférence
         # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
-        # en cas d'égalité, le plus ancien reçoit la préférence
+        # en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
         #
         # This gets the book's URL, there many volume may be present with (or not) same ISBN, same title.
         # if the book only has one volume, then we bypass ret_top_vol_indx
@@ -259,7 +259,7 @@ class Worker(Thread):
 
         return top_vol_index
 
-    def get_decoupage_annexe(self, dec_anx_url):
+    def get_decoupage_annexe(self, dec_anx_url):    ### Will never be called, handling of this info is too difficult for a very small gain when it works
         # looks like we have some external ref to another series  of books for the same saga (different cut or even expansion to the series)
         # I want to catch it so I can get the info for the numbering
         #
@@ -406,6 +406,7 @@ class Worker(Thread):
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
+                        break                # lrp I do not want that code as it is far from coherent in noosfere db, beside decoupage is a url to noosfere...
                         dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
                         comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
                         comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
