@@ -44,7 +44,8 @@ class Worker(Thread):
         self.who="[worker "+str(relevance)+"]"
         self.from_encoding="windows-1252"
         self.extended_publisher = self.plugin.extended_publisher
-        self.priority_handling = self.plugin.priority_handling
+        self.with_isbn = self.plugin.with_isbn
+        self.set_priority_handling = self.plugin.set_priority_handling
         self.must_be_editor = self.plugin.must_be_editor
         self.get_Prixobtenus = self.plugin.get_Prixobtenus
         self.get_Citédanslespagesthématiquessuivantes = self.plugin.get_Citédanslespagesthématiquessuivantes
@@ -67,7 +68,8 @@ class Worker(Thread):
             self.log.info(self.who,"dbg_lvl                                             : ", dbg_lvl)
             self.log.info(self.who,"timeout                                             : ", timeout)
             self.log.info(self.who,"extended_publisher                                  : ", self.extended_publisher)
-            self.log.info(self.who,"priority_handling                                   : ", self.priority_handling)
+            self.log.info(self.who,"with_isbn                                           : ", self.with_isbn)
+            self.log.info(self.who,"set_priority_handling                               : ", self.set_priority_handling)
             self.log.info(self.who,"must_be_editor                                      : ", self.must_be_editor)
             self.log.info(self.who,"get_Prixobtenus                                     : ", self.get_Prixobtenus)
             self.log.info(self.who,"get_Citédanslespagesthématiquessuivantes            : ", self.get_Citédanslespagesthématiquessuivantes)
@@ -118,8 +120,7 @@ class Worker(Thread):
         # information vérifiée                  v   1pt
         # titre identique                       t   1pt
         # image présente                        p   1pt
-        # isbn présent                          i  50pt         sauf préférence
-        # isbn présent et identique a calibre     100pt         sauf préférence
+        # isbn présent                          i 100pt         fonction de with_isbn
         # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
         # en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
         #
@@ -135,8 +136,7 @@ class Worker(Thread):
         # verified information                  v   1pt
         # same title as requested               t   1pt
         # cover available                       p   1pt
-        # isbn available                        i  50pt         unless overwritten by the priority choice
-        # isbn available et same as requested     100pt         unless overwritten by the priority choice
+        # isbn available                        i 100pt         depending on with_isbn
         # the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
         # in case of equality the oldest win
         #
@@ -165,10 +165,10 @@ class Worker(Thread):
 
         ts_vol_index={}
         # we like better volumes with an identifier, but some are edited on a particular publisher without isbn
-        push_isbn = True if "isbn" in self.priority_handling else False
+        push_isbn = self.with_isbn
         if debug:
             self.log.info(self.who,"priority pushes isbn  : ", push_isbn)
-            self.log.info(self.who,"priority balanced : ", bool( not "very" in self.priority_handling))
+            self.log.info(self.who,"priority balanced : ", bool( not "very" in self.set_priority_handling))
 
         nbr_of_vol=soup.select("td[class='item_bib']")
         for count in range(0,len(nbr_of_vol),2):
@@ -194,8 +194,6 @@ class Worker(Thread):
                 if vol_isbn:
                     if push_isbn:
                         point+=100
-                        if self.isbn:
-                            if verify_isbn(self.log, self.dbg_lvl, self.isbn, who=self.who)== vol_isbn: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -203,7 +201,7 @@ class Worker(Thread):
                 point+=2
 
             tmp_presence=subsoup.select("span[title*='Présence']")
-            if not "very" in self.priority_handling:
+            if not "very" in self.set_priority_handling:
                 for i in range(len(tmp_presence)):
                     if "R" in tmp_presence[i].text: point+=1
                     elif "C" in tmp_presence[i].text: point+=1
@@ -225,7 +223,7 @@ class Worker(Thread):
         top_vol_point = 0
         top_vol_index = ""
         serie_editeur = []
-        reverse_it = True if "latest" in self.priority_handling else False
+        reverse_it = True if "latest" in self.set_priority_handling else False
         if debug: self.log.info(self.who,"priority pushes latest : ", reverse_it)
 
         # in python 3 a dict keeps the order of introduction... In this case, as noosfere presents it in chronological order,
@@ -240,14 +238,16 @@ class Worker(Thread):
         top_vol_editor={}.fromkeys(set(serie_editeur),0)
 
         # and set a value to each publisher function of the count and (the value of) self.must_be_editor
+        if debug:
+            self.log.info(self.who,"if self.must_be_editor  : ", bool(self.must_be_editor))
         for editr in serie_editeur:
             if self.must_be_editor:
                 if self.must_be_editor == editr:
                     top_vol_editor[editr]+=10
                 else:
-                    top_vol_editor[editr]=1
+                    top_vol_editor[editr]+=1
             else:
-                top_vol_editor[editr]+=1
+                top_vol_editor[editr]=1
 
         # compute all that and the final result is the first entry with the top number of point...
         for key,ref in ts_vol_index.items():

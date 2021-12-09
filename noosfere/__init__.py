@@ -250,12 +250,10 @@ class noosfere(Source):
     # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
 
     PRIORITY_HANDLING={
-                       '0_oldest_with_isbn':_("le plus ancien pondéré, préfère un isbn"),
-                       '1_latest_with_isbn':_("le plus récent pondéré, préfère un isbn"),
-                       '2_oldest':_("un plus ancien pondéré"),
-                       '3_latest':_("un plus récent pondéré"),
-                       '4_very_oldest':_("vraiment le plus ancien"),
-                       '5_very_latest':_("vraiment le plus récent")
+                       '0_oldest':_("un plus ancien pondéré"),
+                       '1_latest':_("un plus récent pondéré"),
+                       '2_very_oldest':_("vraiment le plus ancien"),
+                       '3_very_latest':_("vraiment le plus récent")
                         }
 
     options = (
@@ -281,12 +279,19 @@ class noosfere(Source):
                      ' Note: ce sont les 3 derniers bits de debug_level en notation binaire')               # In fact it is a bitwise flag spread over the last 3 bits of debug_level
                    ),
             Option(
-                   'Priority_handling',
+                   'Priority',
                    'choices',
-                   '0_oldest_with_isbn',
+                   '0_oldest',
                    _('priorité de tri:'),
                    _("Priorité de tri du volume."),    # how to push the priority over the choice of the volume
                    choices=PRIORITY_HANDLING
+                   ),
+            Option(
+                   'ISBN_wanted',
+                   'bool',
+                   False,
+                   _("Augmente la priorité si un ISBN est présent"),       # Boost the priority if ISB present for the volume
+                   _("Cochez cette case pour sélectionner un volume avec ISBN si il existe.")
                    ),
             Option(
                    'requested_editor',
@@ -337,16 +342,6 @@ class noosfere(Source):
 
     # this defines a method to access both the code and the data in the object
     @property
-    def priority_handling(self):
-        x = getattr(self, 'prio_handling', None)
-        if x is not None:
-            return x
-        prio_handling = self.prefs['priority_handling']
-        if prio_handling not in self.PRIORITY_HANDLING:
-            prio_handling = sorted(self.PRIORITY_HANDLING.items())[0]    # sort the dict to make a list and select first item (that should be the default)
-        return prio_handling
-
-    @property
     def extended_publisher(self):
         x = getattr(self, 'ext_pub', None)
         if x is not None:
@@ -361,6 +356,24 @@ class noosfere(Source):
             return x
         dl = self.prefs.get('debug_level', False)
         return dl
+
+    @property
+    def set_priority_handling(self):
+        x = getattr(self, 'prio_handling', None)
+        if x is not None:
+            return x
+        prio_handling = self.prefs['Priority']
+        if prio_handling not in self.PRIORITY_HANDLING:
+            prio_handling = sorted(self.PRIORITY_HANDLING.items())[0]    # sort the dict to make a list and select first item (that should be the default)
+        return prio_handling
+
+    @property
+    def with_isbn(self):
+        x = getattr(self, 'wisbn', None)
+        if x is not None:
+            return x
+        wisbn = self.prefs.get('ISBN_wanted', False)
+        return wisbn
 
     @property
     def must_be_editor(self):
@@ -617,9 +630,10 @@ class noosfere(Source):
         # if no match is found with identifiers.
         #
 
-        log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
         log.info('self.extended_publisher                                     : ', self.extended_publisher)
-        log.info('self.priority_handling                                      : ', self.priority_handling)
+        log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
+        log.info('self.set_priority_handling                                  : ', self.set_priority_handling)
+        log.info('self.with_isbn                                              : ', self.with_isbn)
         log.info('self.must_be_editor                                         : ', self.must_be_editor)
         log.info('self.get_Prixobtenus                                        : ', self.get_Prixobtenus)
         log.info('self.get_Citédanslespagesthématiquessuivantes               : ', self.get_Citédanslespagesthématiquessuivantes)
