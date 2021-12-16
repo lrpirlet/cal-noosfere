@@ -238,29 +238,23 @@ class noosfere(Source):
                                   )
 
     # priority handling, a choice box that propose to set the priority over
-    # the oldest published volume with a preference for an ISBN balanced for a maximum of comments
-    # the latest published volume with a preference for an ISBN balanced for a maximum of comments
-    # the oldest balanced for a maximum of comments
-    # the latest balanced for a maximum of comments
-    # the very oldest
-    # the very latest
+    # the oldest
+    # the latest
     # note that the selected volume will have the most represented editor
     # (if editor x reedited 4 time the book, and editor Y only once,
     # editor x will certainly be selected)
     # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
 
     PRIORITY_HANDLING={
-                       '0_oldest':_("un plus ancien pondéré"),
-                       '1_latest':_("un plus récent pondéré"),
-                       '2_very_oldest':_("vraiment le plus ancien"),
-                       '3_very_latest':_("vraiment le plus récent")
+                       'oldest':_("un plus ancien"),
+                       'latest':_("un plus récent")
                         }
 
     options = (
             Option(
                    'fat_publisher',
                    'bool',
-                   False,
+                   True,
                    _("Ajoute collection et son numéro d'ordre au champ éditeur"),       # add the editor's collection and the associated order number to the publisher field
                    _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur."
                      "Voir LIS-MOI editeur_collection_seriel-code.txt")                 # check this box to enable... see README publisher_collection_seriel-code.txt
@@ -268,40 +262,54 @@ class noosfere(Source):
             Option(
                    'debug_level',
                    'number',
-                   0,
-                   _('Verbosité du journal, de 0 à 7'),                                                     # verbosity of the log
-                   _('Le niveau de verbosité:'                                                              # the level of verbosity.
-                     ' O un minimum de rapport,'                                                            # value 0 will output the minimum,
-                     ' 1 rapport étendu de __init__,'                                                       # 1 debug messages of __init__
-                     ' 2 rapport étendu de worker,'                                                         # 2 debug messages of worker
-                     ' 4 rapport étendu des annexes...'                                                     # 4 debug level of accessory code...
-                     ' La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport.'       # 3, 5 or 7 is the sum of the value defined above.
-                     ' Note: ce sont les 3 derniers bits de debug_level en notation binaire')               # In fact it is a bitwise flag spread over the last 3 bits of debug_level
+                   7,
+                   _("Verbosité du journal, de 0 à 7"),                                                  # verbosity of the log
+                   _("Le niveau de verbosité: "                                                         # the level of verbosity.
+                     " O un minimum de rapport, "                                                       # value 0 will output the minimum,
+                     " 1 rapport étendu de __init__, "                                                  # 1 debug messages of __init__
+                     " 2 rapport étendu de worker, "                                                    # 2 debug messages of worker
+                     " 4 rapport étendu des annexes... "                                                # 4 debug level of accessory code...
+                     " La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport. "  # 3, 5 or 7 is the sum of the value defined above.
+                     " Note: mettre la verbosité = 7 pour rapport d'erreur")            # In fact it is a bitwise flag spread over the last 3 bits of debug_level
                    ),
             Option(
                    'Priority',
                    'choices',
-                   '0_oldest',
-                   _('priorité de tri:'),
-                   _("Priorité de tri du volume."),    # how to push the priority over the choice of the volume
+                   'oldest',
+                   _('priorité de choix:'),
+                   _("Priorité de choix du volume."),    # how to push the priority over the choice of the volume
                    choices=PRIORITY_HANDLING
                    ),
             Option(
                    'ISBN_wanted',
                    'bool',
-                   False,
-                   _("Augmente la priorité si un ISBN est présent"),       # Boost the priority if ISB present for the volume
+                   True,
+                   _("Privilégie un volume avec un ISBN présent"),       # Boost the priority if ISB present for the volume
                    _("Cochez cette case pour sélectionner un volume avec ISBN si il existe.")
+                   ),
+            Option(
+                   'Balanced_wanted',
+                   'bool',
+                   True,
+                   _("choix du volume pondéré"),          # 
+                   _("la priorite est donnée au volume avec: "
+                     "résumé présent, "                   # résumé présent:                       r   1pt
+                     "critique présente, "                # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
+                     "critique de la série, "             # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
+                     "sommaire des nouvelles présentes, " # sommaire des nouvelles présentes:     s   1pt
+                     "information vérifiée, "             # information vérifiée                  v   1pt
+                     "titre identique, "                  # titre identique                       t   1pt
+                     "et/ou couverture présente ")           # image présente                        p   1pt
+
                    ),
             Option(
                    'requested_editor',
                    'string',
-                   None,
-                   _("Impose un éditeur"),                                                                  # impose a publisher
-                   _("le volume sera choisi chez l'éditeur le plus représenté... SAUF:"                     # the volume is picked-up from the most prevalent publisher
-                     " Remplir ce champ pour forcer un éditeur défini... DOIT"                              # EXCEPTED: fill this field to force the publisher wanted
-                     " ETRE UN MATCH PARFAIT sinon le volume sera choisi sans tenir compte"                 # MUST BE A PERFECT MATCH else the volume will ne picked-up
-                     " de l'éditeur.")                                                                      # without consideration to the publisher
+                   "x",
+                   _("Impose un éditeur, 3 possibilités"),                                        # impose a publisher, 3 possibilities
+                   _("Non défini (boite vide): l'éditeur ne fait pas partie du choix."            # Undefined (empty box): publisher is not part of the choice
+                     " Défini inexistant: le volume aura l'éditeur le plus représenté."            # Defined (x) but inexistant): volume will have most present publisher
+                     " Défini avec un MATCH PARFAIT: le volume sera choisi avec cet éditeur.")     # Defined with a PERFECT MATCH volume will be choosen with that publisher.
                    ),
             Option(
                    'Prixobtenus',
@@ -364,7 +372,7 @@ class noosfere(Source):
             return x
         prio_handling = self.prefs['Priority']
         if prio_handling not in self.PRIORITY_HANDLING:
-            prio_handling = sorted(self.PRIORITY_HANDLING.items())[0]    # sort the dict to make a list and select first item (that should be the default)
+            prio_handling = sorted(self.PRIORITY_HANDLING.items(),reverse=True)[0]    # sort the dict to make a list and select first item (that should be the default)
         return prio_handling
 
     @property
@@ -374,6 +382,14 @@ class noosfere(Source):
             return x
         wisbn = self.prefs.get('ISBN_wanted', False)
         return wisbn
+
+    @property
+    def balanced(self):
+        x = getattr(self, 'wbal', None)
+        if x is not None:
+            return x
+        wbal = self.prefs.get('Balanced_wanted', False)
+        return wbal
 
     @property
     def must_be_editor(self):
@@ -634,6 +650,7 @@ class noosfere(Source):
         log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
         log.info('self.set_priority_handling                                  : ', self.set_priority_handling)
         log.info('self.with_isbn                                              : ', self.with_isbn)
+        log.info('self.balanced                                               : ', self.balanced)
         log.info('self.must_be_editor                                         : ', self.must_be_editor)
         log.info('self.get_Prixobtenus                                        : ', self.get_Prixobtenus)
         log.info('self.get_Citédanslespagesthématiquessuivantes               : ', self.get_Citédanslespagesthématiquessuivantes)

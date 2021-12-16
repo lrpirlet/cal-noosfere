@@ -41,11 +41,12 @@ class Worker(Thread):
         self.plugin = plugin
         self.dbg_lvl = dbg_lvl
         self.timeout = timeout
-        self.who="[worker "+str(relevance)+"]"
-        self.from_encoding="windows-1252"
+        self.who = "[worker "+str(relevance)+"]"
+        self.from_encoding = "windows-1252"
         self.extended_publisher = self.plugin.extended_publisher
-        self.with_isbn = self.plugin.with_isbn
         self.set_priority_handling = self.plugin.set_priority_handling
+        self.with_isbn = self.plugin.with_isbn
+        self.balanced = self.plugin.balanced
         self.must_be_editor = self.plugin.must_be_editor
         self.get_Prixobtenus = self.plugin.get_Prixobtenus
         self.get_Citédanslespagesthématiquessuivantes = self.plugin.get_Citédanslespagesthématiquessuivantes
@@ -69,6 +70,7 @@ class Worker(Thread):
             self.log.info(self.who,"timeout                                             : ", timeout)
             self.log.info(self.who,"extended_publisher                                  : ", self.extended_publisher)
             self.log.info(self.who,"with_isbn                                           : ", self.with_isbn)
+            self.log.info(self.who,"balanced                                            : ", self.balanced)
             self.log.info(self.who,"set_priority_handling                               : ", self.set_priority_handling)
             self.log.info(self.who,"must_be_editor                                      : ", self.must_be_editor)
             self.log.info(self.who,"get_Prixobtenus                                     : ", self.get_Prixobtenus)
@@ -159,32 +161,29 @@ class Worker(Thread):
             self.log.info(self.who,"Bypassing to extract_vol_details, we have only one volume")
             return url_vrai.replace("https://www.noosfere.org","")                     #volume found return and set wrk_url to volume
 
-        self.nsfr_id+= "bk$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
-        if debug:
-            self.log.info(self.who,"self.nsfr_id : ", self.nsfr_id)
-
         ts_vol_index={}
         # we like better volumes with an identifier, but some are edited on a particular publisher without isbn
         push_isbn = self.with_isbn
+        priority_balanced = self.balanced
         if debug:
             self.log.info(self.who,"priority pushes isbn  : ", push_isbn)
-            self.log.info(self.who,"priority balanced : ", bool( not "very" in self.set_priority_handling))
+            self.log.info(self.who,"priority balanced : ", priority_balanced)
 
         nbr_of_vol=soup.select("td[class='item_bib']")
         for count in range(0,len(nbr_of_vol),2):
             subsoup=nbr_of_vol[count]
-            point=0
+            point=1
             vol_index=vol_title=vol_cover_index=vol_editor=vol_isbn=vol_collection=""
 
             if subsoup.select("a[href*='numlivre']"): vol_index=subsoup.select("a[href*='numlivre']")[0]['href']
 
             if subsoup.select("a > img"): vol_title=subsoup.select("a > img")[0]['alt']
             if book_title.title()==vol_title.title():
-                point+=1
+                if priority_balanced: point+=1
 
             if subsoup.select("a > img"):
                 vol_cover_index=subsoup.select("a > img")[0]['src']
-                point+=1
+                if priority_balanced: point+=1
 
             if subsoup.select("a[href*='numediteur']"): vol_editor=subsoup.select("a[href*='numediteur']")[0].text
 
@@ -193,15 +192,15 @@ class Worker(Thread):
                 vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn, who=self.who)
                 if vol_isbn:
                     if push_isbn:
-                        point+=100
+                        if priority_balanced: point+=100
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
             if subsoup.select("img[src*='3dbullgreen']"):
-                point+=2
+                if priority_balanced: point+=2
 
             tmp_presence=subsoup.select("span[title*='Présence']")
-            if not "very" in self.set_priority_handling:
+            if priority_balanced:
                 for i in range(len(tmp_presence)):
                     if "R" in tmp_presence[i].text: point+=1
                     elif "C" in tmp_presence[i].text: point+=1
@@ -241,13 +240,12 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"if self.must_be_editor  : ", bool(self.must_be_editor))
         for editr in serie_editeur:
+            top_vol_editor[editr]=1
             if self.must_be_editor:
                 if self.must_be_editor == editr:
                     top_vol_editor[editr]+=10
                 else:
                     top_vol_editor[editr]+=1
-            else:
-                top_vol_editor[editr]=1
 
         # compute all that and the final result is the first entry with the top number of point...
         for key,ref in ts_vol_index.items():
@@ -340,11 +338,7 @@ class Worker(Thread):
         url_vrai = rsp[1].replace("&Tri=3","")
 #        if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
 
-        self.nsfr_id = self.nsfr_id+"$vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
-      # self.nsfr_id = (self.nfsr_id).strip("$")                        # If I use this form, it gives this error: 'Worker' object has no attribute 'nfsr_id' ???
-        tmp=self.nsfr_id
-        self.nsfr_id=tmp.strip('$')
-
+        self.nsfr_id = "vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
@@ -442,8 +436,8 @@ class Worker(Thread):
         # note that I 'calculate' the missing day of the month and even sometimes the missing month
         ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
         for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
-            if debug: self.log.info(self.who,"elemnt : ", elemnt)
-            if not vol_dp_lgl:
+            if not vol_dp_lgl and "Dépôt légal :" in elemnt:
+                self.log.info(self.who,"elemnt : ",elemnt)
                 elemn = (elemnt.replace("Dépôt légal :","").split(','))[0].strip()
                 if elemn:
                     if elemn.isnumeric() and len(elemn) == 4:
@@ -645,7 +639,10 @@ class Worker(Thread):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/livres/niourf.asp","https://www.noosfere.org/livres/niourf.asp")
         for elemnt in vol_comment_soup.select("a[href*='/heberg/']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/heberg/","https://www.noosfere.org/heberg/")
-
+        for elemnt in vol_comment_soup.select("a[href*='prix.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("prix.asp","https://www.noosfere.org/livres/prix.asp")
+        for elemnt in vol_comment_soup.select("a[href*='./prix.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("./prix.asp","https://www.noosfere.org/livres/prix.asp")
         for elemnt in vol_comment_soup.select("a[href*='./EditionsLivre.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("./EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
         for elemnt in vol_comment_soup.select("a[href*='./niourf.asp']"):
@@ -654,7 +651,6 @@ class Worker(Thread):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("../../heberg","https://www.noosfere.org/heberg")
         for elemnt in vol_comment_soup.select("a[href*='../bd']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("../bd","https://www.noosfere.org/bd")
-
         for elemnt in vol_comment_soup.select("a[href*='auteur.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("auteur.asp","https://www.noosfere.org/livres/auteur.asp")
         for elemnt in vol_comment_soup.select("a[href*='collection.asp']"):
@@ -663,14 +659,22 @@ class Worker(Thread):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("critsign.asp","https://www.noosfere.org/livres/critsign.asp")
         for elemnt in vol_comment_soup.select("a[href*='EditionsLivre.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("EditionsLivre.asp","https://www.noosfere.org/livres/EditionsLivre.asp")
+        for elemnt in vol_comment_soup.select("a[href*='nouvelle.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("nouvelle.asp","https://www.noosfere.org/livres/nouvelle.asp")
         for elemnt in vol_comment_soup.select("a[href*='editeur.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("editeur.asp","https://www.noosfere.org/livres/editeur.asp")
         for elemnt in vol_comment_soup.select("a[href*='editionslivre.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("editionslivre.asp","https://www.noosfere.org/livres/editionslivre.asp")
+        for elemnt in vol_comment_soup.select("a[href*='editionsLivre.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("editionsLivre.asp","https://www.noosfere.org/livres/editionsLivre.asp")
         for elemnt in vol_comment_soup.select("a[href*='niourf.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("niourf.asp","https://www.noosfere.org/livres/niourf.asp")
         for elemnt in vol_comment_soup.select("a[href*='serie.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("serie.asp","https://www.noosfere.org/livres/serie.asp")
+        for elemnt in vol_comment_soup.select("a[href*='/articles/article.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/articles/article.asp","https://www.noosfere.org/articles/article.asp")
+        for elemnt in vol_comment_soup.select("a[href*='/articles/theme.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/articles/theme.asp","https://www.noosfere.org/articles/theme.asp")
         for elemnt in vol_comment_soup.select("a[href*='/articles/listeoeuvres.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/articles/listeoeuvres.asp","https://www.noosfere.org/articles/listeoeuvres.asp")
         for elemnt in vol_comment_soup.select("a[href*='FicheFilm.asp']"):
@@ -718,14 +722,14 @@ class Worker(Thread):
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
         self.log.info(self.who,"+++"*25)
-        self.log.info(self.who,"nsfr_id, type()                : ",self.nsfr_id, type(self.nsfr_id))                    # must be <class 'str'>
+        self.log.info(self.who,"nsfr_id, type()                : ",self.nsfr_id, type(self.nsfr_id))                # must be <class 'str'>
         self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
         self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
         self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
         self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
         self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
+        self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
         if vol_serie:
-            self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                  # must be <class 'str'>
             self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
         self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
         self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be <class 'str'>
@@ -754,8 +758,8 @@ class Worker(Thread):
         mi.has_cover = bool(vol_cover_index)
         if vol_dp_lgl:
             mi.pubdate = vol_dp_lgl
+        mi.series = vol_serie
         if vol_serie:
-            mi.series = vol_serie
             mi.series_index = vol_serie_seq
         mi.language = "fra"
 
