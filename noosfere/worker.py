@@ -371,7 +371,7 @@ class Worker(Thread):
         comment_Adaptations=None
         comment_cover=None
 
-        # add volume address as a reference in the comment
+        # add volume address as a reference in the comment (noosfere URL)
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"vol reference processed")
 
@@ -400,10 +400,10 @@ class Worker(Thread):
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
-                        break                # lrp I do not want that code as it is far from coherent in noosfere db, beside decoupage is a url to noosfere...
-                        dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
-                        comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
-                        comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
+                        break                # lrp I do not want that code as it is far from coherent in noosfere; beside, decoupage is an url to noosfere => accessible after...
+  #                      dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
+  #                      comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
+  #                      comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
                 if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -426,8 +426,7 @@ class Worker(Thread):
                 if k in vol_coll_srl:
                     vol_coll_srl=vol_coll_srl.replace(k,"")
             vol_coll_srl = vol_coll_srl.strip()
-            vol_coll_srl = vol_coll_srl.split("/")[0]
-            if vol_coll_srl[0].isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
+            if vol_coll_srl.isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
         else:
             vol_coll_srl = ""
         if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
@@ -464,13 +463,18 @@ class Worker(Thread):
             if "Genre" in elemnt:
                 vol_genre = elemnt.lstrip("Genre : ")
                 if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
-        if soup.select("img[name='couverture']"):
-            for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
-                if "http" in elemnt:
-                    if not vol_cover_index:
-                        vol_cover_index = elemnt
-                        if debug: self.log.info(self.who,"vol_cover_index processed : ")
+        vol_cover_index = soup.find(property="og:image").get("content")
+#lrplrplrp
+#        if not vol_cover_index:
+#            if soup.select("img[name='couverture']"):
+#                for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
+#                    if "http" in elemnt:
+#                        vol_cover_index = elemnt
+#                        if debug: self.log.info(self.who,"vol_cover_index processed : ")
 #                        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
+#lrplrplrp
+        if debug: self.log.info(self.who,"vol_cover_index processed : ")
+#        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")

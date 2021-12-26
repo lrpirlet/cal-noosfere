@@ -1,3 +1,11 @@
+Important:
+  la présence d'un nsfr_id valide exclu tout autre choix et va directement a la page correspondante du volume.
+  la présence d'un isbn valide, en l'absence d'un nsfr_id, va directement a la page correspondante du livre, les choix posés seront pris en considération.
+  l'absence de nsfr_id valide ou d'un isbn valide implique que, et l'auteur et le titre sont correct.
+    L'auteur doit être de la forme: "prénom nom" ou bien "nom, prénom" (noter la virgule dans ce dernier cas)...
+    Un maximum est fait pour tenir compte d'une faute légère dans l'orthographe de l'auteur tant que celle du titre.
+      En particulier, la casse n'est pas prise en compte.
+
 pour utiliser ce plugin efficacement:
   sélectionner le ou les ouvrages
   éditer les métadonnées (clic droit)
@@ -19,13 +27,13 @@ pour utiliser ce plugin efficacement:
 
  Note
 "Restaurer les valeurs par défaut" est inactif et dépend de calibre plutôt que du plugin
-         
+
           Enregistrer ou Annuler pour revenir a la fenêtre précédente
         Annuler ou Appliquer pour sortir de la configuration et revenir à la fenêtre de téléchargement
       Télécharger les métadonnées
       cliquer "ok" (même si les données, ou la couverture, correspondent à un autre volume...)
       On sort du plugin...
-      
+
   vous êtes au premier niveau de calibre, les liens peuvent être suivis dans les "détails du livre" (a choisir par "mise en page")
   Si un autre volume est désiré, cliquer sur "Autre édition" pour voir tous les volumes, sur un lien sous "autres édition" pour une édition particulière
   suivre les liens de noosfere jusqu'à l'édition désirée, repérer dans l'adresse de la page et copier le nombre (positif ou négatif) associé avec numlivre.

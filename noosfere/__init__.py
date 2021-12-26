@@ -688,6 +688,9 @@ class noosfere(Source):
         log.info('"Clean" both the authors list and the title... ')
         if authors:
             for i in range(len(authors)):
+                if ',' in authors[i]:               # if comma, assume last-name, first-name... swap it
+                    spl_authors=authors[i].split(',')
+                    if len(spl_authors)==2: authors[i]=" ".join([spl_authors[1],spl_authors[0]])
                 authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
         if title:
             title = ret_clean_text(log, self.dbg_lvl, title)
