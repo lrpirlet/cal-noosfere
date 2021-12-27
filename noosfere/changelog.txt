@@ -137,3 +137,19 @@ rendu optionnel les informations présentées par noosfere sous les titres conte
  "(italic)Né en Russie" rather than "(italic)N é en Russie"
 
 16-11-2021: pushed version to 0.9.3 untill confirmed ok, before going to V.1.0.0
+
+Wrote some doc about how to use best this plugin... 
+
+Simplified the search and setting of the cover page (cover URL is in a meta field in head)
+
+improved (so I hope :) ) the auto-selection of volume and the comments inside the plugin
+auto-selection:
+  force editor field, empty,no match, exact match
+  ISBN yes/no
+  ponderation yes/no
+  priorite de choix: oldest or latest (nothing else any more)
+  
+Corrected a few bugs preventing some metadata collection to work
+
+added recognition "nom, prénom" beside "prénom nom" in the authors list...
+(will submit "prénom nom" to search engine of noosfere improving success rate)

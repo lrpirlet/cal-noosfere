@@ -1,10 +1,11 @@
 Important:
-  la présence d'un nsfr_id valide exclu tout autre choix et va directement a la page correspondante du volume.
+  la présence d'un nsfr_id valide exclu tout autre choix et va directement a la page correspondante du volume. C'est LE moyen de contourner tous les choix en indiquant
+    comme id : nsfr_id:vl$xxx où xxx est le numéro, positif ou négatif, de la page du volume désiré.
   la présence d'un isbn valide, en l'absence d'un nsfr_id, va directement a la page correspondante du livre, les choix posés seront pris en considération.
-  l'absence de nsfr_id valide ou d'un isbn valide implique que, et l'auteur et le titre sont correct.
+  l'absence de nsfr_id valide ou d'un isbn valide implique que, et l'auteur et le titre sont, quasi, correct.
     L'auteur doit être de la forme: "prénom nom" ou bien "nom, prénom" (noter la virgule dans ce dernier cas)...
     Un maximum est fait pour tenir compte d'une faute légère dans l'orthographe de l'auteur tant que celle du titre.
-      En particulier, la casse n'est pas prise en compte.
+      En particulier, la casse et/ou les accents ne sont pas pris en compte.
 
 pour utiliser ce plugin efficacement:
   sélectionner le ou les ouvrages
@@ -16,7 +17,7 @@ pour utiliser ce plugin efficacement:
         activer "configurer la source sélectionnée"
         champs de métadonnées à télécharger:  cocher tout
           Ajoute collection et son numéro d'ordre au champ éditeur:  (voir LIS-MOI editeur_collection_seriel-code)
-          verbosité du journal de 0 à 7 : 7 minimum pour creer un rapport en cas de mauvais fonctionnement
+          verbosité du journal de 0 à 7 : 7 minimum pour créer un rapport en cas de mauvais fonctionnement
           Priorité de tri: voir plus bas choix du volume.
           Impose un éditeur: l'algorithme de choix se fait uniquement avec cet éditeur (correspondance exacte)
           Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire: cocher pour ajouter cette information
