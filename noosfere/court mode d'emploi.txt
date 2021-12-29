@@ -18,8 +18,12 @@ pour utiliser ce plugin efficacement:
         champs de métadonnées à télécharger:  cocher tout
           Ajoute collection et son numéro d'ordre au champ éditeur:  (voir LIS-MOI editeur_collection_seriel-code)
           verbosité du journal de 0 à 7 : 7 minimum pour créer un rapport en cas de mauvais fonctionnement
-          Priorité de tri: voir plus bas choix du volume.
-          Impose un éditeur: l'algorithme de choix se fait uniquement avec cet éditeur (correspondance exacte)
+          Priorité de tri: le plus ancien ou le plus recent parmi les volumes selectionnés
+          ISBN present si possible: oui ou non
+          choix du volume pondéré: oui ou non
+          Impose un éditeur: l'algorithme de choix se fait uniquement avec cet éditeur (correspondance exacte),
+            avec l'editeur prépondérant (texte sans correspondance),
+            ou sans tenir compte de l'éditeur (pas de texte).
           Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire: cocher pour ajouter cette information
           Ajoute Cité dans les pages thématiques suivantes: cocher pour ajouter cette information
           Ajoute Cité dans les listes thématiques des oeuvres suivantes: cocher pour ajouter cette information

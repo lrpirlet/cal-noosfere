@@ -138,7 +138,7 @@ rendu optionnel les informations présentées par noosfere sous les titres conte
 
 16-11-2021: pushed version to 0.9.3 untill confirmed ok, before going to V.1.0.0
 
-Wrote some doc about how to use best this plugin... 
+Wrote some doc about how to use best this plugin...
 
 Simplified the search and setting of the cover page (cover URL is in a meta field in head)
 
@@ -148,8 +148,19 @@ auto-selection:
   ISBN yes/no
   ponderation yes/no
   priorite de choix: oldest or latest (nothing else any more)
-  
+
 Corrected a few bugs preventing some metadata collection to work
 
 added recognition "nom, prénom" beside "prénom nom" in the authors list...
 (will submit "prénom nom" to search engine of noosfere improving success rate)
+
+I am not sure how to wipe out the "series" field from within the plugin...
+The question asked on mobileread stays unanswered... I cannot change the initial value
+from workers as other spawned processes may be using it... (i guess there are some lock,
+I would not like fire up a lock condition without a throughout knowledge of the lock
+implementation). Should I wipe it up upfront, regardless of what is in the metadata?
+what if something happens between the delete and the update... db corruption??? I have
+too little understanding of calibre...
+workaround:
+wipe "series" field manually before running the metadata source gathering process...
+
