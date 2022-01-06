@@ -99,11 +99,74 @@ vl$<number>) and restart the metadata download.
 Pushed to version 0,7,0 after refactoring some code to become function instead
 of method...
 
-Corrected instructions cause some volume have no value for coll_rsl, yet they 
+Corrected instructions cause some volume have no value for coll_rsl, yet they
 have a value for collection...
 
 noosfere site changed.. so I had to adapt the plugin.. and correct some minors
 bugs.. this mark version 0.9.0
 
-add a conditional on title and authors... If a book has an nsfr_id or an isbn, 
+add a conditional on title and authors... If a book has an nsfr_id or an isbn,
 then author and/or title may be None...
+
+Corrected a few (read quite a few... understand a lot) of comments. They are
+more correct, more coherent... well, better...
+
+It, from now on, extract the information about other editions... The first line
+(a link) points to the pages of all the various volumes. The rest of the
+information is a series of links to the volumes sorted by date and by editor.
+
+Implemented the collect of "conseil de lecture" and Adaptation (of the book to
+other media: tv, film...)
+This still needs to be made optional before version 1
+
+Sometimes, somme word sees the first letter separated from the rest of the word
+(Espace vital,nsfr=vl$547 under Quatrième de couverture I saac Avsimov) This is
+because html codes it as <b>I</b><b>saac Asimov</b>. I could try to write someting
+IF and only IF there are a LIMITED number of such separator AND if coherent: for
+noosfere pages it seems that: b stand for bold, <i>/<i> with i stands for italic...
+needs verification.
+
+rendu optionnel les informations présentées par noosfere sous les titres contenants:
+ Prix obtenus,
+ Cité dans les pages thématiques suivantes
+ Cité dans les listes thématiques des oeuvres suivantes
+ Cité dans les Conseils de lecture
+ Adaptations
+
+ Corrected the HTML code to get "Isaac Asimov" rather than "I saac Asimov" and/or
+ "(italic)Né en Russie" rather than "(italic)N é en Russie"
+
+16-11-2021: pushed version to 0.9.3 untill confirmed ok, before going to V.1.0.0
+
+Wrote some doc about how to use best this plugin...
+
+Simplified the search and setting of the cover page (cover URL is in a meta field in head)
+
+improved (so I hope :) ) the auto-selection of volume and the comments inside the plugin
+auto-selection:
+  force editor field, empty,no match, exact match
+  ISBN yes/no
+  ponderation yes/no
+  priorite de choix: oldest or latest (nothing else any more)
+
+Corrected a few bugs preventing some metadata collection to work
+
+added recognition "nom, prénom" beside "prénom nom" in the authors list...
+(will submit "prénom nom" to search engine of noosfere improving success rate)
+
+I am not sure how to wipe out the "series" field from within the plugin...
+The question asked on mobileread stays unanswered... I cannot change the initial value
+from workers as other spawned processes may be using it... (i guess there are some lock,
+I would not like fire up a lock condition without a throughout knowledge of the lock
+implementation). Should I wipe it up upfront, regardless of what is in the metadata?
+what if something happens between the delete and the update... db corruption??? I have
+too little understanding of calibre...
+workaround:
+wipe "series" field manually before running the metadata source gathering process...
+
+Can't wipeout the series field... so need for noosfere DB utility for pre and postprocessing
+
+choice adjustment to code and doc to reconciliate both
+
+adaptation for changes in noosfere preventing correct detection of publish date
+(read depot legal date) 

@@ -4,25 +4,25 @@
 # Note: If this work (done to learn both python and the Hyper Text Markup Language) finds its way to the public domain, so be it.
 # I have no problem with, and reserve the right to ignore, any error, choice and poor optimization.
 # I use it, it is MY problem... You use it, it is YOUR problem.
-# For example, my mother language is French and my variable's names are MY choise for MY easy use...
-# Anyway, I'll comment (or not) in english or in french or in both depending when I write it (no comment please :-) )
+# For example, my mother language is French and my variable's names are MY choice for MY easy use...
+# Anyway, I'll comment (or not) in English or in French or in both depending when I write it (no comment please :-) )
 #
 # noosfere is a database of books, volumes, covers, authors, translators, cover designers, critics, critic's author, movies adaptation...
 # noosfere is NOT commercial, it is the DB of an association of authors, readers, editors... see about.txt
-# last but not least noosfere is in french ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
+# last but not least noosfere is in French ONLY: noosfere defines itself as "nooSFere : encyclopédie francophone de Science-Fiction."
 #
 # A volume has in common with a book the author and the title but not the cover, not the editor, not the isbn, not.."
 # I want the information about a volume... I want a coherent information.
 #
 # In order to collect the information about a volume one must use either the ISBN, the author and the title or at least the title
 #
-# If the ISBN exists a search in noosfere points to a serie of volumes (yet only one book :-) )
+# If the ISBN exists a search in noosfere may point (or not) to a series of volumes (yet only one book :-) )
 #
-# if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authorss :-( )
-# out of this list, a match to the title will point to a serie of volumes
+# if the author is the best known identifier a search in noosfere points to an author's list of books (or a list of authors :-( )
+# out of this list, a match to the title will point to a series of volumes
 #
-# if the title is the only reference, a search in noosfere will output a list of books sorted by best mactch along with a score
-# again a book will point to a serie of volume
+# if the title is the only reference, a search in noosfere will output a list of books sorted by best match along with a score
+# again a book will point to a series of volume... NOT IMPLEMENTED, except for a few book this ends up with too much irrelevant data
 #
 # out of the volume list one must choose the best candidate to get a coherent set of volumes attributes (cover, isbn, editor, critics, serie, serie #, etc...
 #
@@ -97,10 +97,10 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
         log.info(who, "url : ", url)
         log.info(who, "rkt : ", rkt)
     # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
-    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage 
+    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage
     # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
-    # J'ai du isoler le creatioon de la soup et du decodage dans la fonction ret_soup().
-    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine... 
+    # J'ai du isoler la création de la soup du decodage dans la fonction ret_soup().
+    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine...
     # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
     #
     # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
@@ -194,7 +194,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 9, 0)
+    version                 = (0, 9, 5)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
@@ -204,8 +204,8 @@ class noosfere(Source):
     has_html_comments = True
     supports_gzip_transfer_encoding = True
 
-    # Since the noosfere is written in french for french talking poeple, I
-    # took the liberty to write the following information in french. I will
+    # Since the noosfere is written in French for French talking poeple, I
+    # took the liberty to write the following information in French. I will
     # comment with a translation in the english language.
 
                                     #config help message: noosfere is a database that presents information
@@ -217,7 +217,7 @@ class noosfere(Source):
                                     #cover, the editor, the editor's collection and the associated order
                                     #number, the resume, the critics,etc.... The choice of the volume is done
                                     #by the program. One may somewhat influence the choice through the dialog
-                                    #box `priorité de tri´. On the other hand, there is no offical way to
+                                    #box `priorité de tri´. On the other hand, there is no official way to
                                     #programmaticaly update a custom column. So There is a tick box that will
                                     #push the information along with the publisher. Please read the doc to
                                     #understand how to put it back later in the right place with a right format.
@@ -225,89 +225,130 @@ class noosfere(Source):
     config_help_message = '<p>'+_(" noosfere est une base de donnée qui propose des informations"
                                   " à propos des ouvrages, de genre science fiction, disponibles en langue française."
                                   " Ces informations vont de l'auteur aux films produits sur base de l'ouvrage en"
-                                  " passant par les auteurs, les traducteurs, les illustrateurs, les critiquess..."
-                                  " et bien sur, leurs oeuvres. Les livres qui ont été publiés plusieurs fois"
-                                  " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépot legal"
+                                  " passant par les auteurs, les traducteurs, les illustrateurs, les critiques..."
+                                  " et bien sur, leurs œuvres. Les livres qui ont été publiés plusieurs fois"
+                                  " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépôt légal"
                                   " (repris sous la date de publication, souvent méconnue), la couverture, l'éditeur,"
-                                  " la collection de l'editeur et son numèro d'ordre. Le choix, programmé, du volume"
+                                  " la collection de l'éditeur et son numéro d'ordre. Le choix, programmé, du volume"
                                   " est quelque peu paramétrable par la boite de dialogue `priorité de tri´. "
                                   " D'autre part, il n'existe pas de moyens officiels de remplir une colonne définie"
                                   " par l'utilisateur. Pour rester dans les clous, je propose de remplir le champs"
-                                  " de l'editeur avec, conjointement à celui-ci, la collection et son numero d'ordre."
+                                  " de l'éditeur avec, conjointement à celui-ci, la collection et son numéro d'ordre."
                                   " Une petite procédure, décrite dans la doc devrait remettre tout en ordre."
                                   )
 
     # priority handling, a choice box that propose to set the priority over
-    # the oldest published volume with a preference for an ISBN balanced for a maximum of comments
-    # the latest published volume with a preference for an ISBN balanced for a maximum of comments
-    # the oldest balanced for a maximum of comments
-    # the latest balanced for a maximum of comments
-    # the very oldest
-    # the very latest
+    # the oldest
+    # the latest
     # note that the selected volume will have the most represented editor
     # (if editor x reedited 4 time the book, and editor Y only once,
     # editor x will certainly be selected)
     # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
 
     PRIORITY_HANDLING={
-                       '0_oldest_with_isbn':_("le plus ancien pondéré, préfère un isbn"),
-                       '1_latest_with_isbn':_("le plus récent pondéré, préfère un isbn"),
-                       '2_oldest':_("un plus ancien pondéré"),
-                       '3_latest':_("un plus recent pondéré"),
-                       '4_very_oldest':_("vraiment le plus ancien"),
-                       '5_very_latest':_("vraiment le plus recent")
+                       'oldest':_("un plus ancien"),
+                       'latest':_("un plus récent")
                         }
 
     options = (
             Option(
                    'fat_publisher',
                    'bool',
-                   False,
-                   _("Ajoute collection et son numéro d'ordre au champ èditeur"),       # add the editor's collection and the associated order number to the publisher field
+                   True,
+                   _("Ajoute collection et son numéro d'ordre au champ éditeur"),       # add the editor's collection and the associated order number to the publisher field
                    _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur."
                      "Voir LIS-MOI editeur_collection_seriel-code.txt")                 # check this box to enable... see README publisher_collection_seriel-code.txt
                    ),
             Option(
                    'debug_level',
                    'number',
-                   0,
-                   _('Loquacité du journal, de 0 à 7'),                                                     # verbosity of the log
-                   _('Le niveau de loquacité. O un minimum de rapport, 1 rapport etendu de __init__,'       # the level of verbosity. value 0 will output the minimum,
-                     ' 2 rapport étendu de worker, 4 rapport etendu des annexes... La somme 3, 5 ou 7'      # 1 debug messages of __init__, 2 debug messages of worker
-                     ' peut etre introduite. Ainsi 7 donne un maximun de rapport. Note: ce sont les 3'      # 4 debug level of accessory code... 3, 5 or 7 is the sum
-                     ' derniers bits de debug_level en notation binaire')                                   # of the value defined above. In fact it is a bitwise flag
-                   ),                                                                                       # spread over the last 3 bits of debug_level
+                   7,
+                   _("Verbosité du journal, de 0 à 7"),                                                  # verbosity of the log
+                   _("Le niveau de verbosité: "                                                         # the level of verbosity.
+                     " O un minimum de rapport, "                                                       # value 0 will output the minimum,
+                     " 1 rapport étendu de __init__, "                                                  # 1 debug messages of __init__
+                     " 2 rapport étendu de worker, "                                                    # 2 debug messages of worker
+                     " 4 rapport étendu des annexes... "                                                # 4 debug level of accessory code...
+                     " La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport. "  # 3, 5 or 7 is the sum of the value defined above.
+                     " Note: mettre la verbosité = 7 pour rapport d'erreur")            # In fact it is a bitwise flag spread over the last 3 bits of debug_level
+                   ),
             Option(
-                   'priority_handling',
+                   'Priority',
                    'choices',
-                   '0_oldest_with_isbn',
-                   _('priorité de tri:'),
-                   _("Priorité de tri du volume."),    # how to push the priority over the choice of the volume
+                   'oldest',
+                   _('priorité de choix:'),
+                   _("Priorité de choix du volume."),    # how to push the priority over the choice of the volume
                    choices=PRIORITY_HANDLING
+                   ),
+            Option(
+                   'ISBN_wanted',
+                   'bool',
+                   True,
+                   _("Privilégie un volume avec un ISBN présent"),       # Boost the priority if ISB present for the volume
+                   _("Cochez cette case pour sélectionner un volume avec ISBN si il existe.")
+                   ),
+            Option(
+                   'Balanced_wanted',
+                   'bool',
+                   True,
+                   _("choix du volume pondéré"),          # 
+                   _("la priorite est donnée au volume avec: "
+                     "résumé présent, "                   # résumé présent:                       r   1pt
+                     "critique présente, "                # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
+                     "critique de la série, "             # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
+                     "sommaire des nouvelles présentes, " # sommaire des nouvelles présentes:     s   1pt
+                     "information vérifiée, "             # information vérifiée                  v   1pt
+                     "titre identique, "                  # titre identique                       t   1pt
+                     "et/ou couverture présente ")           # image présente                        p   1pt
+
                    ),
             Option(
                    'requested_editor',
                    'string',
-                   None,
-                   _("impose un éditeur"),                                                                  # impose a publisher
-                   _("le volume sera choisi chez l'éditeur le plus representé... SAUF:"                     # the volume is picked-up from the most prevalent publisher
-                     " Remplir ce champ pour forcer un éditeur defini... DOIT"                              # EXCEPTED: fill this field to force the publisher wanted
-                     " ETRE UN MATCH PARFAIT sinon le volume sera choisi sans tenir compte"                 # MUST BE A PERFECT MATCH else the volume will ne picked-up
-                     " de l'éditeur.")                                                                      # without consideration to the publisher
+                   "x",
+                   _("Impose un éditeur, 3 possibilités"),                                        # impose a publisher, 3 possibilities
+                   _("Non défini (boite vide): l'éditeur ne fait pas partie du choix."            # Undefined (empty box): publisher is not part of the choice
+                     " Défini inexistant: le volume aura l'éditeur le plus représenté."            # Defined (x) but inexistant): volume will have most present publisher
+                     " Défini avec un MATCH PARFAIT: le volume sera choisi avec cet éditeur.")     # Defined with a PERFECT MATCH volume will be choosen with that publisher.
+                   ),
+            Option(
+                   'Prixobtenus',
+                   'bool',
+                   False,
+                   _("Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire"),        # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Citédanslespagesthématiquessuivantes',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les pages thématiques suivantes"),                          # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Citédansleslistesthématiquesdesoeuvressuivantes',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les listes thématiques des oeuvres suivantes"),             # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'CitédanslesConseilsdelecture',
+                   'bool',
+                   False,
+                   _("Ajoute Cité dans les Conseils de lecture"),                                  # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
+                   'Adaptations',
+                   'bool',
+                   False,
+                   _("Ajoute Adaptations (cinéma, télévision, BD, théâtre, radio, jeu vidéo...)"), # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
                    ),
             )
 
     # this defines a method to access both the code and the data in the object
-    @property
-    def priority_handling(self):
-        x = getattr(self, 'prio_handling', None)
-        if x is not None:
-            return x
-        prio_handling = self.prefs['priority_handling']
-        if prio_handling not in self.PRIORITY_HANDLING:
-            prio_handling = sorted(self.PRIORITY_HANDLING.items())[0]    # sort the dict to make a list and select first item (that should be the default)
-        return prio_handling
-
     @property
     def extended_publisher(self):
         x = getattr(self, 'ext_pub', None)
@@ -325,6 +366,32 @@ class noosfere(Source):
         return dl
 
     @property
+    def set_priority_handling(self):
+        x = getattr(self, 'prio_handling', None)
+        if x is not None:
+            return x
+        prio_handling = self.prefs['Priority']
+        if prio_handling not in self.PRIORITY_HANDLING:
+            prio_handling = sorted(self.PRIORITY_HANDLING.items(),reverse=True)[0]    # sort the dict to make a list and select first item (that should be the default)
+        return prio_handling
+
+    @property
+    def with_isbn(self):
+        x = getattr(self, 'wisbn', None)
+        if x is not None:
+            return x
+        wisbn = self.prefs.get('ISBN_wanted', False)
+        return wisbn
+
+    @property
+    def balanced(self):
+        x = getattr(self, 'wbal', None)
+        if x is not None:
+            return x
+        wbal = self.prefs.get('Balanced_wanted', False)
+        return wbal
+
+    @property
     def must_be_editor(self):
         x = getattr(self, 'te', None)
         if x is not None:
@@ -332,10 +399,50 @@ class noosfere(Source):
         te = self.prefs.get('requested_editor', None)
         return te
 
+    @property
+    def get_Prixobtenus(self):
+        x = getattr(self, 'get_po', None)
+        if x is not None:
+            return x
+        get_po = self.prefs.get('Prixobtenus', False)
+        return get_po
+
+    @property
+    def get_Citédanslespagesthématiquessuivantes(self):
+        x = getattr(self, 'get_cdpt', None)
+        if x is not None:
+            return x
+        get_cdpt = self.prefs.get('Citédanslespagesthématiquessuivantes', False)
+        return get_cdpt
+
+    @property
+    def get_Citédansleslistesthématiquesdesoeuvressuivantes(self):
+        x = getattr(self, 'get_cdlt', None)
+        if x is not None:
+            return x
+        get_cdlt = self.prefs.get('Citédansleslistesthématiquesdesoeuvressuivantes', False)
+        return get_cdlt
+
+    @property
+    def get_CitédanslesConseilsdelecture(self):
+        x = getattr(self, 'get_cdcl', None)
+        if x is not None:
+            return x
+        get_cdcl = self.prefs.get('CitédanslesConseilsdelecture', False)
+        return get_cdcl
+
+    @property
+    def get_Adaptations(self):
+        x = getattr(self, 'get_a', None)
+        if x is not None:
+            return x
+        get_a = self.prefs.get('Adaptations', False)
+        return get_a
+
     # copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
     def get_cached_cover_url(self, identifiers):
         # I guess this routine returns an url that was discovered somewhere else and put into cache
-        # probably using cache_identifier_to_cover_url in the worket.py
+        # probably using cache_identifier_to_cover_url in the worker.py
         # as ISBN is missing sometime in noosfere
         # as noosfere does not provide any proprietary id
         # I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
@@ -352,9 +459,9 @@ class noosfere(Source):
         return url
 
     def ret_author_index(self, log, br, authors):
-        # Trouve la reference de l'auteur dans la soupe de noosfere
+        # Trouve la référence de l'auteur dans la soupe de noosfere
         # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
-        # L'idée est de renvoyer UNE seule reference... trouver l'auteur est primordial si isbn is indisponible
+        # L'idée est de renvoyer UNE seule référence... trouver l'auteur est primordial si isbn is indisponible
         #
         # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
         # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
@@ -389,7 +496,7 @@ class noosfere(Source):
             if not len(all_author_index):                          # failed the short list, let's go for the long list using "LITTERAL" match
                 if debug: log.info("exact match failed, trying fuzzy match")
               # return self.ret_author_index(self, log, br, authors, ModeMoteur="LITTERAL")
-              # ca marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
+              # ça marche pas... ret_author_index() got multiple values for argument 'ModeMoteur'
               # this is NOT a function but a class method
               # it is possible to move the common part of this code below, but my mind refuses to understand the change
               # when debugging... so duplicate the code (maybe an optimiseur later will make it... m'en fout)
@@ -417,7 +524,7 @@ class noosfere(Source):
 
         # With python 3.6 onward, the standard dict type maintains insertion order by default.
         # Python 3.7 elevates this implementation detail to a language specification,
-        # noosfere sort the hightest pertinence first (the most probable author comes out first)
+        # noosfere sort the highest pertinence first (the most probable author comes out first)
         # so, I have no need to sort on pertinence field (would be different for calibre below Version 5)
         #
         # we only consider those with the highest pertinence, we limit to when the pertinence drops to less than half of the maximum
@@ -444,9 +551,9 @@ class noosfere(Source):
         # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
         # Idea is to send back a few references that hopefully contains the title expected
         #
-        # Trouver la reference des livres d'un auteur connu dans la soupe produite par noosfere
+        # Trouver la référence des livres d'un auteur connu dans la soupe produite par noosfere
         # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
-        # L'idée est de renvoyer serie de reference, dont on extrait les livres proches du titre de calibre
+        # L'idée est de renvoyer une série de référencé, dont on extrait les livres proches du titre de calibre
         #
         # now that we have a list of authors, let's get all the books associated with them
         # The "book_per_author_index" dictionnary will contain all book's references...
@@ -502,17 +609,17 @@ class noosfere(Source):
         return book_index
 
     def ISBN_ret_book_index(self, log, br, isbn, book_index):
-        # Trouver la reference d'un livre (titre ou ISBN) dans la soupe produite par noosfere
+        # Trouver la référence d'un livre (titre ou ISBN) dans la soupe produite par noosfere
         # retourne book_index{}, un dictionnaire avec key=book_url, val=title
-        # L'idée est de trouver UNE seule reference...
-        # Attention: on retourne une reference qui peut contenir PLUSIEURs volumes
-        # C'est a dire: différents editeurs, différentes re-éditions et/ou, meme, un titre different... YESss)
+        # L'idée est de trouver UNE seule référence...
+        # Attention: on retourne une référence qui peut contenir PLUSIEURs volumes
+        # C'est a dire: différents éditeurs, différentes re-éditions et/ou, même, un titre différent... YESss)
         #
         # Find the book's reference (either title or ISBN) in the returned soup from noosfere
-        # returns book_index{}, a dictionnary with key=book_url, val=title
+        # returns book_index{}, a dictionary with key=book_url, val=title
         # The idea is to find ONE unique reference...
         # Caution: the reference may contains several volumes,
-        # each with potentialy a different editor, a different edition date,... and even a different title
+        # each with potentially a different editor, a different edition date,... and even a different title
         #
         debug=self.dbg_lvl & 1
         log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
@@ -539,10 +646,17 @@ class noosfere(Source):
         # if no match is found with identifiers.
         #
 
-        log.info('self.dgb_lvl            : ', self.dbg_lvl)
-        log.info('self.extended_publisher : ', self.extended_publisher)
-        log.info('self.priority_handling  : ', self.priority_handling)
-        log.info('self.must_be_editor     : ', self.must_be_editor)
+        log.info('self.extended_publisher                                     : ', self.extended_publisher)
+        log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
+        log.info('self.set_priority_handling                                  : ', self.set_priority_handling)
+        log.info('self.with_isbn                                              : ', self.with_isbn)
+        log.info('self.balanced                                               : ', self.balanced)
+        log.info('self.must_be_editor                                         : ', self.must_be_editor)
+        log.info('self.get_Prixobtenus                                        : ', self.get_Prixobtenus)
+        log.info('self.get_Citédanslespagesthématiquessuivantes               : ', self.get_Citédanslespagesthématiquessuivantes)
+        log.info('self.get_Citédansleslistesthématiquesdesoeuvressuivantes    : ', self.get_Citédansleslistesthématiquesdesoeuvressuivantes)
+        log.info('self.get_CitédanslesConseilsdelecture                       : ', self.get_CitédanslesConseilsdelecture)
+        log.info('self.get_Adaptations                                        : ', self.get_Adaptations)
 
         debug=self.dbg_lvl & 1
         log.info('\nEntering identify(self, log, result_queue, abort, title=None, authors=None,identifiers={}, timeout=30)')
@@ -561,16 +675,22 @@ class noosfere(Source):
         if isbn: isbn = verify_isbn(log, self.dbg_lvl, isbn)
         log.info('ISBN value is : ', isbn)
 
-        # the nsfr_id is designed to be the significant part of the url:
-        # that is the number after the "=" in the url containing "niourf.asp?numlivre"
-        # on can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
+        # the nsfr_id is designed to be the significant part of the URL:
+        # that is the number after the "=" in the URL containing "niourf.asp?numlivre"
+        # one can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
         # could be an entry point if I can make sure that noosfere DB is alone and in interactive mode...
+        # example: for "Boule de foudre", author LIU Cixin...
+        # URL is: https://www.noosfere.org/livres/niou...vre=2146606157 and
+        # set nsfr_id to vl$2146606157 to directly access this volume, bypassing search of "best volume".
         nsfr_id = identifiers.get('nsfr_id', None)
         log.info('nsfr_id value is : ', nsfr_id)
 
         log.info('"Clean" both the authors list and the title... ')
         if authors:
             for i in range(len(authors)):
+                if ',' in authors[i]:               # if comma, assume last-name, first-name... swap it
+                    spl_authors=authors[i].split(',')
+                    if len(spl_authors)==2: authors[i]=" ".join([spl_authors[1],spl_authors[0]])
                 authors[i] = ret_clean_text(log, self.dbg_lvl, authors[i])
         if title:
             title = ret_clean_text(log, self.dbg_lvl, title)
@@ -606,7 +726,7 @@ class noosfere(Source):
                 if not len(author_index):
                     log.info("Désolé, aucun auteur trouvé avec : ",authors)
                     return
-        # here maybe try with title alone... a dessiner lrp todo... ouais peut-etre pour le cas ou l'auteur serait trop noyé dans une masse de noms similaires
+        # here maybe try with title alone... a dessiner lrp todo... pas vraiment une option... noosfere est 'trop' riche :-)
 
         if not book_index:
             log.error("No book found in noosfere... ")
@@ -649,8 +769,8 @@ class noosfere(Source):
 
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        # willl download cover from Noosfere provided it was found (and then cached)... If not, it will
-        # run the metadata download and try to cache the cover url...
+        # will download cover from Noosfere provided it was found (and then cached)... If not, it will
+        # run the metadata download and try to cache the cover URL...
 
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
@@ -689,13 +809,13 @@ class noosfere(Source):
 
 if __name__ == '__main__':
 
-    # Run these tests from the directory contatining all files needed for the plugin (the files that go into the zip file)
+    # Run these tests from the directory containing all files needed for the plugin (the files that go into the zip file)
     # that is: __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
     # issue in sequence:
     # calibre-customize -b .
     # calibre-debug -e __init__.py
-    # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log...
-    # Careful, a message may pop up about an error... however this message pops up function of the lengh of the log...
+    # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log... (parfois fort grand)
+    # Careful, a message may pop up about an error... however this message pops up function of the length of the log... (sometime quite big)
     # anyway, verify... I have been caught at least once
 
     from calibre.ebooks.metadata.sources.test import (test_identify_plugin, title_test, authors_test, series_test)
@@ -706,8 +826,8 @@ if __name__ == '__main__':
                 {'identifiers':{'isbn': '9782265070769'}, 'title':'Le chenal noir', 'authors':['G.-J. Arnaud']},
                 [title_test("Le Chenal noir", exact=True), authors_test(['G.-J. Arnaud']), series_test('La Compagnie des glaces - Nouvelle époque',2)]
             ),
-            
-            ( # A book with ISBN specified 
+
+            ( # A book with ISBN specified
                 {'identifiers':{'isbn': '2-266-03441-3'}, 'title':'Futurs sans escale', 'authors':['ANTHOLOGIE']},
                 [title_test("Futurs sans escale", exact=True), authors_test(['ANTHOLOGIE']), series_test('Isaac Asimov présente',1)]
             ),

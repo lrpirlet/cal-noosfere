@@ -28,28 +28,28 @@ search field: publisher
 Search for: .*§(.*)€(.*)
 Replace with: \2
 destination field: #Coll_srl
-HERE WE SAVE and we give a name easy to find such as: "from publisher to #coll_str (separator § €)"
+HERE WE SAVE and we give a name easy to find such as: "1 from publisher to #coll_str (separator § €)"
 
 'Find and replace' tab
 search field: publisher
 Search for: (.*)§(.*)
 Replace with: \ 1
 Destination field: Publisher
-HERE WE SAVE and we give a name easy to find such as: "from publisher to publisher (we erase everything from €)"
+HERE WE SAVE and we give a name easy to find such as: "2 from publisher to publisher (we erase everything from €)"
 
 'Find and replace' tab
 search field: publisher
 Search for: .*§(.*)
 Replace with: \1
 Destination field: #collection
-HERE WE SAVE and we give a name easy to find such as: "from publisher to #collection (separator § )"
+HERE WE SAVE and we give a name easy to find such as: "3 from publisher to #collection (separator § )"
 
 'Find and replace' tab
 search field: publisher
 Search for: (.*)§(.*)
 Replace with: \ 1
 Destination field: Publisher
-HERE WE SAVE and we give a name easy to find such as: "from publisher to publisher (we erase everything from §)"
+HERE WE SAVE and we give a name easy to find such as: "4 from publisher to publisher (we erase everything from §)"
 
 We can now take action. Did you make a backup? no? do it...
 
