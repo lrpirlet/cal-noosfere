@@ -59,10 +59,11 @@ From the sources, an explanation of the volume selection algorithm.
         # critic available:                     c   1pt         # maybe incorrect as sometimes, when a critic exists
         # series critic:                        cs  1pt         # it is distributed to all volume without indication
         # summary of novel in the book:         s   1pt
-        # verified information                  v   1pt
-        # same title as requested               t   1pt
+        # verified information                  v   2pt
+        # same title as requested               t   5pt
         # cover available                       p   1pt
-        # isbn available                        i 100pt         depending on with_isbn
+        # isbn available                        i  50pt         depending on with_isbn
+        # isbn available and same as calibre      100pt         depending on with_isbn
         # the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
         # in case of equality the oldest win
         #

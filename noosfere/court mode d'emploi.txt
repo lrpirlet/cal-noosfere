@@ -57,17 +57,17 @@ extrait des sources, une explication de l'algorithme de choix du volume.
         # cette fonction reçoit l'URL du livre qui contient plusieurs volumes du même auteur,
         # dont certains ont le même ISBN et généralement le même titres.
         #
-        # Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique...
+        # Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
         # MON choix se base sur un système de points sur les indications du site
         # résumé présent:                       r   1pt
         # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
         # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
         # sommaire des nouvelles présentes:     s   1pt
-        # information vérifiée                  v   1pt
-        # titre identique                       t   1pt
+        # information vérifiée                  v   2pt
+        # titre identique                       t   5pt
         # image présente                        p   1pt
-        # isbn présent                          i  50pt         sauf préférence
-        # isbn présent et identique a calibre     100pt         sauf préférence
+        # isbn présent                          i  50pt         fonction de with_isbn
+        # isbn présent et identique a calibre     100pt         fonction de with_isbn
         # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
         # en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
         #

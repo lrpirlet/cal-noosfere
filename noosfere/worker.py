@@ -95,7 +95,7 @@ class Worker(Thread):
             book_url="https://www.noosfere.org"+self.book_url+"&Tri=3"
             if debug: self.log.info(self.who,"book_url : ",book_url)
             try:
-                wrk_url = self.ret_top_vol_indx(book_url, self.book_title)
+                wrk_url = self.ret_top_vol_indx(book_url, self.book_title, self.isbn)
                 if debug: self.log.info(self.who,"wrk_url               : ", wrk_url)
             except:
                 self.log.exception("ret_top_vol_indx failed for URL: ",book_url)
@@ -109,7 +109,7 @@ class Worker(Thread):
             except:
                 self.log.exception("extract_vol_details failed for URL: ",vol_url)
 
-    def ret_top_vol_indx(self, url, book_title):
+    def ret_top_vol_indx(self, url, book_title, book_isbn):
         # cette fonction reçoit l'URL du livre qui contient plusieurs volumes du même auteur,
         # dont certains ont le même ISBN et généralement le même titres.
         #
@@ -119,10 +119,11 @@ class Worker(Thread):
         # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
         # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
         # sommaire des nouvelles présentes:     s   1pt
-        # information vérifiée                  v   1pt
-        # titre identique                       t   1pt
+        # information vérifiée                  v   2pt
+        # titre identique                       t   5pt
         # image présente                        p   1pt
-        # isbn présent                          i 100pt         fonction de with_isbn
+        # isbn présent                          i  50pt         fonction de with_isbn
+        # isbn présent et identique a calibre     100pt         fonction de with_isbn
         # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
         # en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
         #
@@ -135,17 +136,18 @@ class Worker(Thread):
         # critic available:                     c   1pt         # maybe incorrect as sometimes, when a critic exists
         # series critic:                        cs  1pt         # it is distributed to all volume without indication
         # summary of novel in the book:         s   1pt
-        # verified information                  v   1pt
-        # same title as requested               t   1pt
+        # verified information                  v   2pt
+        # same title as requested               t   5pt
         # cover available                       p   1pt
-        # isbn available                        i 100pt         depending on with_isbn
+        # isbn available                        i  50pt         depending on with_isbn
+        # isbn available and same as calibre      100pt         depending on with_isbn
         # the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
         # in case of equality the oldest win
         #
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title)")
+        self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title, isbn)")
         if debug:
-            self.log.info(self.who,"url : ",url,", book_title : ",book_title)
+            self.log.info(self.who, "url : ", url, ", book_title : ", book_title, "isbn : ", book_isbn)
 
         self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
         if debug:
@@ -179,7 +181,7 @@ class Worker(Thread):
 
             if subsoup.select("a > img"): vol_title=subsoup.select("a > img")[0]['alt']
             if book_title.title()==vol_title.title():
-                if priority_balanced: point+=1
+                if priority_balanced: point+=5
 
             if subsoup.select("a > img"):
                 vol_cover_index=subsoup.select("a > img")[0]['src']
@@ -192,7 +194,9 @@ class Worker(Thread):
                 vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn, who=self.who)
                 if vol_isbn:
                     if push_isbn:
-                        if priority_balanced: point+=100
+                        if priority_balanced:
+                            point+=50
+                            if vol_isbn==book_isbn: point+=50
 
             if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
 
@@ -410,7 +414,7 @@ class Worker(Thread):
         new_div=soup.new_tag('div')
         comment_generic = comment_generic.wrap(new_div)
         if debug: self.log.info(self.who,"comment_generic processed")
-#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic)                          # a bit long I guess
+#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
         if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
@@ -431,48 +435,50 @@ class Worker(Thread):
             vol_coll_srl = ""
         if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
 
+#        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
+        # sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
         # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
-        # note that I 'calculate' the missing day of the month and even sometimes the missing month
+        # note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
+        all_elemnt=[]
         ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
         for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
-            if not vol_dp_lgl and "Dépôt légal :" in elemnt:
-                self.log.info(self.who,"elemnt : ",elemnt)
-                elemn = (elemnt.replace("Dépôt légal :","").split(','))[0].strip()
-                if elemn:
-                    if elemn.isnumeric() and len(elemn) == 4:
-                        vol_dp_lgl=datetime.datetime.strptime("175 "+elemn,"%j %Y")
-                    elif "semestre" in elemn:
-                        ele=elemn.split()
-                        vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*175+97))[-3:]+" "+ele[2],"%j %Y")
-                    elif "trimestre" in elemn:
-                        ele=elemn.split()
-                        vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
-                    else:
-                        for i in range(len(ms)):
-                            if ms[i] in elemn:
-                                ele=elemn.split()
-                                vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
-                                break
-                    if debug: self.log.info(self.who,"vol_dp_lgl : ", vol_dp_lgl)
+            all_elemnt.append(elemnt)
+        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
 
-            if "ISBN" in elemnt:
-                vol_isbn = elemnt.lower().replace(" ","").replace('isbn:','')
+        for i in range(len(all_elemnt)):
+            if "Dépôt légal :" in all_elemnt[i]:
+                substr=all_elemnt[i].replace("Dépôt légal :","").strip()
+                if len(substr):
+                    period=substr.replace(","," ")
+                else:
+                    substr=all_elemnt[i+1]
+                    period=substr.replace(","," ")
+
+            elif "ISBN : " in all_elemnt[i]:
+                vol_isbn = all_elemnt[i].replace("ISBN : ","").strip()
                 if "néant" in vol_isbn: vol_isbn=""
                 if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
 
-            if "Genre" in elemnt:
-                vol_genre = elemnt.lstrip("Genre : ")
+            elif "Genre : " in all_elemnt[i]:
+                vol_genre = all_elemnt[i].replace("Genre : ","").strip()
                 if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
+
+        if period:
+            if period.isnumeric() and len(period) == 4:
+                vol_dp_lgl=datetime.datetime.strptime("175 "+period,"%j %Y")
+            elif "semestre" in period:
+                ele=period.split()
+                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*175+97))[-3:]+" "+ele[2],"%j %Y")
+            elif "trimestre" in period:
+                ele=period.split()
+                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
+            else:
+                for i in range(len(ms)):
+                    if ms[i] in period:
+                        ele=period.split()
+                        vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
+
         vol_cover_index = soup.find(property="og:image").get("content")
-#lrplrplrp
-#        if not vol_cover_index:
-#            if soup.select("img[name='couverture']"):
-#                for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
-#                    if "http" in elemnt:
-#                        vol_cover_index = elemnt
-#                        if debug: self.log.info(self.who,"vol_cover_index processed : ")
-#                        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
-#lrplrplrp
         if debug: self.log.info(self.who,"vol_cover_index processed : ")
 #        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
