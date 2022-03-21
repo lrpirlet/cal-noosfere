@@ -194,7 +194,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 9, 5)
+    version                 = (0, 9, 6)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'noosfere'
@@ -291,7 +291,7 @@ class noosfere(Source):
                    'Balanced_wanted',
                    'bool',
                    True,
-                   _("choix du volume pondéré"),          # 
+                   _("choix du volume pondéré"),          #
                    _("la priorite est donnée au volume avec: "
                      "résumé présent, "                   # résumé présent:                       r   1pt
                      "critique présente, "                # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand

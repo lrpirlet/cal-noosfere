@@ -445,23 +445,20 @@ class Worker(Thread):
             all_elemnt.append(elemnt)
         if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
 
+        period, vol_isbn = "",""
         for i in range(len(all_elemnt)):
-            if "Dépôt légal :" in all_elemnt[i]:
-                substr=all_elemnt[i].replace("Dépôt légal :","").strip()
-                if len(substr):
-                    period=substr.replace(","," ")
-                else:
-                    substr=all_elemnt[i+1]
-                    period=substr.replace(","," ")
-
-            elif "ISBN : " in all_elemnt[i]:
-                vol_isbn = all_elemnt[i].replace("ISBN : ","").strip()
-                if "néant" in vol_isbn: vol_isbn=""
-                if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
-
-            elif "Genre : " in all_elemnt[i]:
-                vol_genre = all_elemnt[i].replace("Genre : ","").strip()
-                if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
+            for dt in ("Dépôt légal :","Date de parution :"):                                  # if "Dépôt légal :" absent try "Date de parution :"
+                if not period and dt in all_elemnt[i]:
+                    substr=all_elemnt[i].replace(dt,"").strip()
+                    if len(substr):
+                        period=substr.replace(","," ")
+                        if substr.isnumeric():
+                            dom = substr
+                            substr = all_elemnt[i+1]
+                            period = dom + " " + substr
+                    else:
+                        substr=all_elemnt[i+1]
+                        period=substr.replace(","," ")
 
         if period:
             if period.isnumeric() and len(period) == 4:
@@ -476,7 +473,21 @@ class Worker(Thread):
                 for i in range(len(ms)):
                     if ms[i] in period:
                         ele=period.split()
-                        vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
+                        if len(ele)==3:
+                            vol_dp_lgl=datetime.datetime.strptime(("00"+ele[0])[-2:]+" "+("00"+str(i+1))[-2:]+" "+ele[2],"%d %m %Y")
+                        else:
+                            vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
+        if debug: self.log.info(self.who,"vol_dp_lgl processed : ", vol_dp_lgl)
+
+        for i in range(len(all_elemnt)):
+            if not vol_isbn and "ISBN : " in all_elemnt[i]:
+                vol_isbn = all_elemnt[i].replace("ISBN : ","").strip()
+                if not vol_isbn[0].isnumeric(): vol_isbn=""
+                if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
+
+            elif "Genre : " in all_elemnt[i]:
+                vol_genre = all_elemnt[i].replace("Genre : ","").strip()
+                if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
 
         vol_cover_index = soup.find(property="og:image").get("content")
         if debug: self.log.info(self.who,"vol_cover_index processed : ")
