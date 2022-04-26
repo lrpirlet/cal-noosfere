@@ -489,7 +489,16 @@ class Worker(Thread):
                 vol_genre = all_elemnt[i].replace("Genre : ","").strip()
                 if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
 
-        vol_cover_index = soup.find(property="og:image").get("content")
+        try:
+            vol_cover_index = soup.find(property="og:image").get("content")
+        except:
+          # og:image may be missing in the head ... revert searching cover in the body
+            if not vol_cover_index:
+                if soup.select("img[name='couverture']"):
+                    for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
+                        if "http" in elemnt:
+                            vol_cover_index = elemnt
+
         if debug: self.log.info(self.who,"vol_cover_index processed : ")
 #        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
