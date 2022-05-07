@@ -404,6 +404,7 @@ class Worker(Thread):
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
+                        vol_serie_seq="0.1"
                         break                # lrp I do not want that code as it is far from coherent in noosfere; beside, decoupage is an url to noosfere => accessible after...
   #                      dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
   #                      comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
@@ -736,8 +737,15 @@ class Worker(Thread):
                     vol_editor = vol_editor+('€')+vol_coll_srl
 
         if vol_serie:
-            if vol_serie_seq.isnumeric(): vol_serie_seq = float(vol_serie_seq)
-            else: vol_serie_seq = 1.0
+            if vol_serie_seq.isnumeric():
+                vol_serie_seq = float(vol_serie_seq)
+            else:
+                if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
+                    try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
+                    except: subseq=0.99
+                    vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
+                else:
+                    vol_serie_seq = 0.0
 
         # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
         # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
