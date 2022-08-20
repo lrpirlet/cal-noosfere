@@ -347,7 +347,7 @@ class Worker(Thread):
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
         tmp_lst=[]
-        vol_info={}
+        # vol_info={}       delme
         vol_title=""
         vol_auteur=""
         vol_auteur_prenom=""

@@ -169,4 +169,15 @@ Can't wipeout the series field... so need for noosfere DB utility for pre and po
 choice adjustment to code and doc to reconciliate both
 
 adaptation for changes in noosfere preventing correct detection of publish date
-(read depot legal date) 
+ (read depot legal date)
+
+Sometimes, the cover image cannot be located in the header, but it is still available
+ in the body... Modified cover discovery algorithm.
+
+Some series sequence order number do include a letter in noosfere...
+ example: 4a or 7c
+ Modified so that it reads 4.1 or 7.3 (letter position in french alphabet)
+
+It seems that I am missing some functionalities while not overwriting 2 methods:
+ get_book_url : used by calibre to convert the identifier to a URL...
+ id_from_url : takes a URL and extracts the identifier details...

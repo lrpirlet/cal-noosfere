@@ -197,7 +197,7 @@ class noosfere(Source):
     version                 = (0, 9, 6)
     minimum_calibre_version = (5, 11, 0)
 
-    ID_NAME = 'noosfere'
+    ID_NAME = 'nsfr_id'
     capabilities = frozenset(['identify', 'cover'])
     touched_fields = frozenset(['title', 'authors', 'identifier:isbn', 'identifier:nsfr_id', 'languages',
                                 'comments', 'publisher', 'pubdate', 'series', 'tags'])
@@ -439,15 +439,24 @@ class noosfere(Source):
         get_a = self.prefs.get('Adaptations', False)
         return get_a
 
+    # get_book_url : used by calibre to convert the identifier to a URL...
+    def get_book_url(self, identifiers):
+        nsfr = identifiers.get('nsfr_id', None)
+        if "vl$" in nsfr:
+            nsfr_id = nsfr.split("$")[-1]
+        if nsfr_id:
+            return (self.ID_NAME, nsfr_id, "https://www.noosfere.org/livres/niourf.asp?numlivre=" + nsfr_id)
+
     # copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
     def get_cached_cover_url(self, identifiers):
-        # I guess this routine returns an url that was discovered somewhere else and put into cache
-        # probably using cache_identifier_to_cover_url in the worker.py
-        # as ISBN is missing sometime in noosfere
-        # as noosfere does not provide any proprietary id
-        # I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
-        # this should allow to go directly to the book page (that could be the vol page if there is only one vol for the book)
-        #
+        '''
+        I guess this routine returns an url that was discovered somewhere else and put into cache
+        probably using cache_identifier_to_cover_url in the worker.py
+        as ISBN is missing sometime in noosfere
+        as noosfere does not provide any proprietary id
+        I will use nsfr_id, a combination of bk_<significant part of book_url>_vl_<significant part of vol_url>
+        this should allow to go directly to the book page (that could be the vol page if there is only one vol for the book)
+        '''
         url = None
         nsfr_id = identifiers.get('nsfr_id', None)
         if nsfr_id is None:
