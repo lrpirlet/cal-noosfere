@@ -88,28 +88,27 @@ def urlopen_with_retry(log, dbg_lvl, br, url, rkt, who):
                     raise Exception('(ret_soup) Failed while acessing url : ',url)
 
 def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
-    # Function to return the soup for beautifullsoup to work on.
-    #
+    '''
+    Function to return the soup for beautifullsoup to work on.
+    '''
     debug=dbg_lvl & 4
     if debug:
         log.info(who, "In ret_soup(log, dbg_lvl, br, url, rkt=none, who='[__init__]')")
         log.info(who, "br  : ", br)
         log.info(who, "url : ", url)
         log.info(who, "rkt : ", rkt)
-    # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
-    # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage
-    # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
-    # J'ai du isoler la création de la soup du decodage dans la fonction ret_soup().
-    # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine...
-    # il n'est pas improbable que ce soit ça que le site va modifier dans le futur...
-    #
-    # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
-    # Even auto decode did not always work... I knew that my setup was wrong but it took me a while...
-    # Maybe I should have tried earlier the working solution as the emitting node is MS
-    # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
-    # It decode correctly to utf_8 with windows-1252 forced as from_encoding
-    # watch-out noosfere is talking about making the site better... ;-}
-    #
+
+  # Note: le SEUL moment ou on doit passer d'un encodage des characteres a un autre est quand on reçoit des donneées
+  # d'un site web... tout, absolument tout, est encodé en uft_8 dans le plugin... J'ai vraiment peiné a trouver l'encodage
+  # des charracteres qui venaient de noosfere... Meme le decodage automatique se plantait...
+  # J'ai du isoler la création de la soup du decodage dans la fonction ret_soup().
+  # variable "from_encoding" isolée pour trouver quel est l'encodage d'origine...
+  #
+  # variable "from_encoding" isolated to find out what is the site character encoding... The announced charset is WRONG
+  # Even auto decode did not always work... I knew that my setup was wrong but it took me a while...
+  # Maybe I should have tried earlier the working solution as the emitting node is MS
+  # (Thanks MS!!! and I mean it as I am running W10.. :-) but hell, proprietary standard is not standard)...
+  # It decode correctly to utf_8 with windows-1252 forced as from_encoding
     from_encoding="windows-1252"
 
 
@@ -131,14 +130,15 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     return (soup, url_ret)
 
 def verify_isbn(log, dbg_lvl, isbn_str, who=''):
-    # isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
-    # Notez qu'on doit supprimr les characteres de separation et les characteres restants apres extraction
-    # et que l'on traite un mot de 10 ou 13 characteres.
-    #
-    # isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
-    # Characters irrelevant to ISBN and separators inside ISBN must be removed,
-    # the resulting word must be either 10 or 13 characters long.
-    #
+    '''
+    isbn_str est brute d'extraction... la fonction renvoie un isbn correct ou "invalide"
+    Notez qu'on doit supprimer les characteres de separation et les characteres restants apres extraction
+    et que l'on traite un mot de 10 ou 13 characteres.
+
+    isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
+    Characters irrelevant to ISBN and separators inside ISBN must be removed,
+    the resulting word must be either 10 or 13 characters long.
+    '''
     debug=dbg_lvl & 4
     if debug:
         log.info("\nIn verify_isbn(log, dbg_lvl, isbn_str)")
@@ -153,17 +153,17 @@ def verify_isbn(log, dbg_lvl, isbn_str, who=''):
     return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
 
 def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
-    # for noosfere search to work smoothly, authors and title needs to be cleaned
-    # we need to remove non significant characters and remove useless space character
-    #
+    '''
+    for noosfere search to work smoothly, authors and title needs to be cleaned
+    we need to remove non significant characters and remove useless space character
+    '''
     debug=dbg_lvl & 4
     if debug:
         log.info("\nIn ret_clean_txt(self, log, text, swap =",swap,")")
         log.info("text         : ", text)
 
-    # Calibre per default presents the author as "Firstname Lastname", cleaned to be become "firstname lastname"
-    # Noosfere present the author as "LASTNAME Firstname", let's get "Firstname LASTNAME" cleaned to "firstname lastname"
-    #
+  # Calibre per default presents the author as "Firstname Lastname", cleaned to be become "firstname lastname"
+  # Noosfere present the author as "LASTNAME Firstname", let's get "Firstname LASTNAME" cleaned to "firstname lastname"
     for k in [',','.','-',"'",'"','(',')']:             # yes I found a name with '(' and ')' in it...
         if k in text:
             text = text.replace(k," ")
@@ -188,8 +188,8 @@ def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
     return lower(get_udc().decode(text))
 
 class noosfere(Source):
-    # see https://manual.calibre-ebook.com/fr/plugins.html#calibre.ebooks.metadata.sources.base.Source
-    # and https://manual.calibre-ebook.com/fr/_modules/calibre/ebooks/metadata/sources/base.html#Source
+  # see https://manual.calibre-ebook.com/fr/plugins.html#calibre.ebooks.metadata.sources.base.Source
+  # and https://manual.calibre-ebook.com/fr/_modules/calibre/ebooks/metadata/sources/base.html#Source
 
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
@@ -204,9 +204,9 @@ class noosfere(Source):
     has_html_comments = True
     supports_gzip_transfer_encoding = True
 
-    # Since the noosfere is written in French for French talking poeple, I
-    # took the liberty to write the following information in French. I will
-    # comment with a translation in the english language.
+  # Since the noosfere is written in French for French talking poeple, I
+  # took the liberty to write the following information in French. I will
+  # comment with a translation in the english language.
 
                                   # config help message: noosfere is a database that presents information
                                   # about French books, tagged as science-fiction. Those informations span
@@ -237,13 +237,13 @@ class noosfere(Source):
                                   " Une petite procédure, décrite dans la doc devrait remettre tout en ordre."
                                   )
 
-    # priority handling, a choice box that propose to set the priority over
-    # the oldest
-    # the latest
-    # note that the selected volume will have the most represented editor
-    # (if editor x reedited 4 time the book, and editor Y only once,
-    # editor x will certainly be selected)
-    # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
+  # priority handling, a choice box that propose to set the priority over
+  # the oldest
+  # the latest
+  # note that the selected volume will have the most represented editor
+  # (if editor x reedited 4 time the book, and editor Y only once,
+  # editor x will certainly be selected)
+  # see algorithm explanation in worker.py 'ret_top_vol_indx(self, url, book_title)'
 
     PRIORITY_HANDLING={
                        'oldest':_("un plus ancien"),
@@ -348,7 +348,7 @@ class noosfere(Source):
                    ),
             )
 
-    # this defines a method to access both the code and the data in the object
+  # this defines a method to access both the code and the data in the object
     @property
     def extended_publisher(self):
         x = getattr(self, 'ext_pub', None)
@@ -439,17 +439,32 @@ class noosfere(Source):
         get_a = self.prefs.get('Adaptations', False)
         return get_a
 
-    # get_book_url : used by calibre to convert the identifier to a URL...
     def get_book_url(self, identifiers):
+        '''
+        get_book_url : used by calibre to convert the identifier to a URL...
+        '''
         nsfr = identifiers.get('nsfr_id', None)
         if "vl$" in nsfr:
             nsfr_id = nsfr.split("$")[-1]
         if nsfr_id:
             return (self.ID_NAME, nsfr_id, "https://www.noosfere.org/livres/niourf.asp?numlivre=" + nsfr_id)
 
-    # copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
+    def id_from_url(self, url):
+        '''
+        id_from_url : takes an URL and extracts the identifier details...
+        '''
+        idt=""
+        if "https://www.noosfere.org/livres/niourf.asp?numlivre=" in url:
+            idt = url.replace("https://www.noosfere.org/livres/niourf.asp?numlivre=","").strip()
+        if idt:
+            return (self.ID_NAME, "vl$" + idt)
+        else:
+            return None
+
     def get_cached_cover_url(self, identifiers):
         '''
+        Copied from other working metadata source (thanks to David Forrester and the Kobo Books Metadata source)
+
         I guess this routine returns an url that was discovered somewhere else and put into cache
         probably using cache_identifier_to_cover_url in the worker.py
         as ISBN is missing sometime in noosfere
@@ -483,8 +498,7 @@ class noosfere(Source):
         all_author_index={}
         author_index=[]
 
-        # try to get a short list of authors using "MOTS-CLEFS" match
-
+      # try to get a short list of authors using "MOTS-CLEFS" match
         for j in range(len(authors)):
             rkt = {"Mots":authors[j],"auteurs":"auteurs","ModeMoteur":"MOTS-CLEFS","ModeRecherche":"AND","recherche":"1","Envoyer":"Envoyer"}
             url = "https://www.noosfere.org/livres/noosearch.asp"
@@ -532,14 +546,12 @@ class noosfere(Source):
 
         if debug: log.info("sorted_author_index :\n",sorted_author_index)
 
-        # With python 3.6 onward, the standard dict type maintains insertion order by default.
-        # Python 3.7 elevates this implementation detail to a language specification,
-        # noosfere sort the highest pertinence first (the most probable author comes out first)
-        # so, I have no need to sort on pertinence field (would be different for calibre below Version 5)
-        #
-        # we only consider those with the highest pertinence, we limit to when the pertinence drops to less than half of the maximum
-        #
-
+      # With python 3.6 onward, the standard dict type maintains insertion order by default.
+      # Python 3.7 elevates this implementation detail to a language specification,
+      # noosfere sort the highest pertinence first (the most probable author comes out first)
+      # so, I have no need to sort on pertinence field (would be different for calibre below Version 5)
+      #
+      # we only consider those with the highest pertinence, we limit to when the pertinence drops to less than half of the maximum
         count=0
         for key,ref in sorted_author_index.items():
             count+=1
@@ -598,8 +610,9 @@ class noosfere(Source):
                 if ratio == 1:
                     book_per_author_index={}
                     book_per_author_index[ratio]=[book_url, "", book_title]
-                    break                        # we have a perfect match no need to go further in the author books
-                                                 # and I know it could cause problem iff several authors produce an identical title
+                    break
+                  # we have a perfect match no need to go further in the author books
+                  # and I know it could cause problem iff several authors produce an identical title
 
             sorted_book_index=dict(sorted(book_per_author_index.items(),reverse=True))
             if debug: log.info("sorted bySM.ratio")
@@ -613,7 +626,8 @@ class noosfere(Source):
 
             if ratio == 1:
                 log.info("Perfect match, we got it and we can stop looking further")
-                break                           # we have a perfect match no need to examine other authors
+                break
+              # we have a perfect match no need to examine other authors
 
         if debug: log.info('return book_index from ret_book_per_author_index\n')
         return book_index
@@ -652,10 +666,11 @@ class noosfere(Source):
         return book_index
 
     def identify(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        # this is the entry point...
-        # Note this method will retry without identifiers automatically... read can be resubmitted from inside it
-        # if no match is found with identifiers.
-        #
+        '''
+        this is the entry point...
+        Note this method will retry without identifiers automatically... read can be resubmitted from inside it
+        if no match is found with identifiers.
+        '''
 
         log.info('self.extended_publisher                                     : ', self.extended_publisher)
         log.info('self.dgb_lvl                                                : ', self.dbg_lvl)
@@ -686,13 +701,13 @@ class noosfere(Source):
         if isbn: isbn = verify_isbn(log, self.dbg_lvl, isbn)
         log.info('ISBN value is : ', isbn)
 
-        # the nsfr_id is designed to be the significant part of the URL:
-        # that is the number after the "=" in the URL containing "niourf.asp?numlivre"
-        # one can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
-        # could be an entry point if I can make sure that noosfere DB is alone and in interactive mode...
-        # example: for "Boule de foudre", author LIU Cixin...
-        # URL is: https://www.noosfere.org/livres/niou...vre=2146606157 and
-        # set nsfr_id to vl$2146606157 to directly access this volume, bypassing search of "best volume".
+      # the nsfr_id is designed to be the significant part of the URL:
+      # that is the number after the "=" in the URL containing "niourf.asp?numlivre"
+      # one can force the access to a particular volume by setting the value of nsfr_id to vl$<number>
+      # could be an entry point if I can make sure that noosfere DB is alone and in interactive mode...
+      # example: for "Boule de foudre", author LIU Cixin...
+      # URL is: https://www.noosfere.org/livres/niou...vre=2146606157 and
+      # set nsfr_id to vl$2146606157 to directly access this volume, bypassing search of "best volume".
         nsfr_id = identifiers.get('nsfr_id', None)
         log.info('nsfr_id value is : ', nsfr_id)
 
@@ -737,7 +752,6 @@ class noosfere(Source):
                 if not len(author_index):
                     log.info("Désolé, aucun auteur trouvé avec : ",authors)
                     return
-        # here maybe try with title alone... a dessiner lrp todo... pas vraiment une option... noosfere est 'trop' riche :-)
 
         if not book_index:
             log.error("No book found in noosfere... ")
@@ -820,15 +834,14 @@ class noosfere(Source):
 ####################### test section #######################
 
 if __name__ == '__main__':
-
-    # Run these tests from the directory containing all files needed for the plugin (the files that go into the zip file)
-    # that is: __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
-    # issue in sequence:
-    # calibre-customize -b .
-    # calibre-debug -e __init__.py
-    # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log... (parfois fort grand)
-    # Careful, a message may pop up about an error... however this message pops up function of the length of the log... (sometime quite big)
-    # anyway, verify... I have been caught at least once
+  # Run these tests from the directory containing all files needed for the plugin (the files that go into the zip file)
+  # that is: __init__.py, plugin-import-name-noosfere.txt and optional .py such as worker.py, ui.py
+  # issue in sequence:
+  # calibre-customize -b .
+  # calibre-debug -e __init__.py
+  # attention: on peut voir un message prévenant d'une erreur... en fait ce message est activé par la longueur du log... (parfois fort grand)
+  # Careful, a message may pop up about an error... however this message pops up function of the length of the log... (sometime quite big)
+  # anyway, verify... I have been caught at least once
 
     from calibre.ebooks.metadata.sources.test import (test_identify_plugin, title_test, authors_test, series_test)
     test_identify_plugin(noosfere.name,
