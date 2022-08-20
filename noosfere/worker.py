@@ -7,7 +7,6 @@ __license__   = 'GPL v3'
 __copyright__ = '2021, Louis Richard Pirlet'
 __docformat__ = 'restructuredtext en'
 
-import socket
 import datetime
 from bs4 import BeautifulSoup as BS
 from threading import Thread
@@ -24,7 +23,9 @@ from calibre_plugins.noosfere import noosfere
 
 
 class Worker(Thread):
-    # Get volume details, in a separate thread, from noosfere vol page from (book_url)s found in __init__
+    '''
+    Get volume details, in a separate thread, from noosfere vol page from (book_url)s found in __init__
+    '''
 
     def __init__(self, log, book_url, book_title, isbn, result_queue, browser, relevance, plugin, dbg_lvl, timeout=30):
 
@@ -50,7 +51,7 @@ class Worker(Thread):
         self.must_be_editor = self.plugin.must_be_editor
         self.get_Prixobtenus = self.plugin.get_Prixobtenus
         self.get_Citédanslespagesthématiquessuivantes = self.plugin.get_Citédanslespagesthématiquessuivantes
-        self.get_Citédansleslistesthématiquesdesoeuvressuivantes  = self.plugin.get_Citédansleslistesthématiquesdesoeuvressuivantes
+        self.get_Citédansleslistesthématiquesdesoeuvressuivantes = self.plugin.get_Citédansleslistesthématiquesdesoeuvressuivantes
         self.get_CitédanslesConseilsdelecture = self.plugin.get_CitédanslesConseilsdelecture
         self.get_Adaptations = self.plugin.get_Adaptations
 
@@ -81,11 +82,12 @@ class Worker(Thread):
 
 
     def run(self):
-        # wrk from __init__ could be a URL to the book (several volumes) or to the unique volume.
-        # Sometimes we get a 'book' URL that is redirected to a 'volume' URL...
-        # OK, il faut se connecter sur wrk_url et remonter url_vrai...
-        # On décide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
-        #
+        '''
+        wrk from file __init__.py could be a URL to the book (several volumes) or to the unique volume.
+        Sometimes we get a 'book' URL that is redirected to a 'volume' URL...
+        OK, il faut se connecter sur wrk_url et remonter url_vrai...
+        On décide sur url_vrai contenant niourf.asp (volume) ou ditionsLivre.asp (livre)
+        '''
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"Entering run(self)")
 
@@ -110,40 +112,41 @@ class Worker(Thread):
                 self.log.exception("extract_vol_details failed for URL: ",vol_url)
 
     def ret_top_vol_indx(self, url, book_title, book_isbn):
-        # cette fonction reçoit l'URL du livre qui contient plusieurs volumes du même auteur,
-        # dont certains ont le même ISBN et généralement le même titres.
-        #
-        # Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
-        # MON choix se base sur un système de points sur les indications du site
-        # résumé présent:                       r   1pt
-        # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
-        # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
-        # sommaire des nouvelles présentes:     s   1pt
-        # information vérifiée                  v   2pt
-        # titre identique                       t   5pt
-        # image présente                        p   1pt
-        # isbn présent                          i  50pt         fonction de with_isbn
-        # isbn présent et identique a calibre     100pt         fonction de with_isbn
-        # le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
-        # en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
-        #
-        # This gets the book's URL, there many volume may be present with (or not) same ISBN, same title.
-        # if the book only has one volume, then we bypass ret_top_vol_indx
-        #
-        # the volumes are different by the publisher, edition's or re-edition's date, cover, resume, critic...
-        # MY choice is based on a point system based on the site's flag
-        # resume available:                     r   1pt
-        # critic available:                     c   1pt         # maybe incorrect as sometimes, when a critic exists
-        # series critic:                        cs  1pt         # it is distributed to all volume without indication
-        # summary of novel in the book:         s   1pt
-        # verified information                  v   2pt
-        # same title as requested               t   5pt
-        # cover available                       p   1pt
-        # isbn available                        i  50pt         depending on with_isbn
-        # isbn available and same as calibre      100pt         depending on with_isbn
-        # the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
-        # in case of equality the oldest win
-        #
+        '''
+        cette fonction reçoit l'URL du livre qui contient plusieurs volumes du même auteur,
+        dont certains ont le même ISBN et généralement le même titres.
+
+        Ces volumes diffèrent par l'éditeur, la date d'édition ou de réédition, l'image de couverture, le 4me de couverture, la critique.
+        MON choix se base sur un système de points sur les indications du site
+        résumé présent:                       r   1pt
+        critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
+        critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
+        sommaire des nouvelles présentes:     s   1pt
+        information vérifiée                  v   2pt
+        titre identique                       t   5pt
+        image présente                        p   1pt
+        isbn présent                          i  50pt         fonction de with_isbn
+        isbn présent et identique a calibre     100pt         fonction de with_isbn
+        le nombre de point sera  augmenté de telle manière a choisir le volume chez l'éditeur le plus représenté... MON choix
+        en cas d'égalité, le plus ancien reçoit la préférence sauf préférence
+
+        This gets the book's URL, many volumes may be present with (or not) same ISBN, same title.
+        if the book only has one volume, then we bypass ret_top_vol_indx
+
+        the volumes are different by the publisher, edition's or re-edition's date, cover, resume, critic...
+        MY choice is based on a point system based on the site's flag
+        resume available:                     r   1pt
+        critic available:                     c   1pt         # maybe incorrect as sometimes, when a critic exists
+        series critic:                        cs  1pt         # it is distributed to all volume without indication
+        summary of novel in the book:         s   1pt
+        verified information                  v   2pt
+        same title as requested               t   5pt
+        cover available                       p   1pt
+        isbn available                        i  50pt         depending on with_isbn
+        isbn available and same as calibre      100pt         depending on with_isbn
+        the score will be increased so that the volume will be chosen to the most present publisher ... MY choice
+        in case of equality the oldest win
+        '''
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title, isbn)")
         if debug:
@@ -164,7 +167,7 @@ class Worker(Thread):
             return url_vrai.replace("https://www.noosfere.org","")                     #volume found return and set wrk_url to volume
 
         ts_vol_index={}
-        # we like better volumes with an identifier, but some are edited on a particular publisher without isbn
+      # we prefer volumes with an identifier, but some are edited on a particular publisher without isbn
         push_isbn = self.with_isbn
         priority_balanced = self.balanced
         if debug:
@@ -229,18 +232,18 @@ class Worker(Thread):
         reverse_it = True if "latest" in self.set_priority_handling else False
         if debug: self.log.info(self.who,"priority pushes latest : ", reverse_it)
 
-        # in python 3 a dict keeps the order of introduction... In this case, as noosfere presents it in chronological order,
-        # let's invert the dict by sorting reverse if the latest volume is asked
+      # in python 3 a dict keeps the order of introduction... In this case, as noosfere presents it in chronological order,
+      # let's invert the dict by sorting reverse if the latest volume is asked
         ts_vol_index = dict(sorted(ts_vol_index.items(),reverse=reverse_it))
 
-        # create a list of publisher
+      # create a list of publisher
         for key,ref in ts_vol_index.items():
             serie_editeur.append(ts_vol_index[key][2])
 
-        # find the publishers in the list
+      # find the publishers in the list
         top_vol_editor={}.fromkeys(set(serie_editeur),0)
 
-        # and set a value to each publisher function of the count and (the value of) self.must_be_editor
+      # and set a value to each publisher function of the count and (the value of) self.must_be_editor
         if debug:
             self.log.info(self.who,"if self.must_be_editor  : ", bool(self.must_be_editor))
         for editr in serie_editeur:
@@ -251,7 +254,7 @@ class Worker(Thread):
                 else:
                     top_vol_editor[editr]+=1
 
-        # compute all that and the final result is the first entry with the top number of point...
+       # compute all that and the final result is the first entry with the top number of point...
         for key,ref in ts_vol_index.items():
             if debug:
                 self.log.info(self.who,"pour la clé", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"l'URL est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
@@ -261,30 +264,14 @@ class Worker(Thread):
 
         return top_vol_index
 
-    def get_decoupage_annexe(self, dec_anx_url):    ### Will never be called, handling of this info is too difficult for a very small gain when it works
-        # looks like we have some external ref to another series  of books for the same saga (different cut or even expansion to the series)
-        # I want to catch it so I can get the info for the numbering
-        #
-        debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIget_decoupage_annexe(self, dec_anx_url)")
-        if debug:
-            self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
-            self.log.info(self.who,"critic_url : ", dec_anx_url, "who : ", self.who)
-        soup = ret_soup(self.log, self.dbg_lvl, self.br, dec_anx_url, who=self.who)[0]
-
-        if debug:
-#            self.log.info(self.who,"découpage annexe extract:\n",soup.select_one("div#Série").select_one("div").select_one("tbody").prettify())  # a bit long I guess
-            self.log.info(self.who,"découpage annexe processed")
-
-        return soup.select_one("div#Série").select_one("div").select_one("tbody")
-
     def get_Critique_de_la_serie(self, critic_url):
-        # La critique de la série peut être développée dans une autre page dont seul l'URL est d'intérêt
-        # cette fonction remplace le pointeur par le contenu.
-        #
-        # The critic for a series may be set apart in another page. The vol URL refers to that other location.
-        # I want to have it.
-        #
+        '''
+        La critique de la série peut être développée dans une autre page dont seul l'URL est d'intérêt
+        cette fonction remplace le pointeur par le contenu.
+
+        The critic for a series may be set apart in another page. The vol URL refers to that other location.
+        I want to have it.
+        '''
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
         if debug:
@@ -302,32 +289,31 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
-
-
     def extract_vol_details(self, vol_url):
-        # Here we extract and format the information from the choosen volume.
-        # - The first name and last name to populate author and author sort : vol_auteur_prenom  and vol_auteur_nom
-        # - The title of the volume                                         : vol_title
-        # - The series name the volume is part of                           : vol_serie
-        # - The sequence number in the serie                                : vol_serie_seq                         # missing
-        # - The editor of this volume                                       : vol_editor
-        # - The editor's collection of this volume                          : vol_coll
-        # - The collection serial code of this volume                       : vol_coll_srl
-        # - The "dépot légal" date (the publication date is vastly unknown) : vol_dp_lgl                            # date format to be computed
-        # - The ISBN number associated with the volume                      : vol_isbn
-        # - The volume tags                                                 : vol_genre
-        # - The URL pointer to the volume cover image                       : vol_cover_index
-        # - The comments includes various info about the book               : vol_comment_soup
-        #   . reference, an URL pointer to noosfere
-        #   . couverture, an URL pointer to noosfere, cover may be real small, but is accurate to the volume
-        #   . first edition information
-        #   . series (cycle) name and number
-        #   . this volume editor info
-        #   . Resume (quatrième de couverture)
-        #   . Critiques
-        #   . Sommaire detailing what novels are in the volume when it is an anthology
-        #   . Critiques about the series and/or about another volume of the book
-        #
+        '''
+        Here we extract and format the information from the choosen volume.
+        - The first name and last name to populate author and author sort : vol_auteur_prenom  and vol_auteur_nom
+        - The title of the volume                                         : vol_title
+        - The series name the volume is part of                           : vol_serie
+        - The sequence number in the serie                                : vol_serie_seq                         # missing
+        - The editor of this volume                                       : vol_editor
+        - The editor's collection of this volume                          : vol_coll
+        - The collection serial code of this volume                       : vol_coll_srl
+        - The "dépot légal" date (the publication date is vastly unknown) : vol_dp_lgl                            # date format to be computed
+        - The ISBN number associated with the volume                      : vol_isbn
+        - The volume tags                                                 : vol_genre
+        - The URL pointer to the volume cover image                       : vol_cover_index
+        - The comments includes various info about the book               : vol_comment_soup
+          . reference, an URL pointer to noosfere
+          . couverture, an URL pointer to noosfere, cover may be real small, but is accurate to the volume
+          . first edition information
+          . series (cycle) name and number
+          . this volume editor info
+          . Resume (quatrième de couverture)
+          . Critiques
+          . Sommaire detailing what novels are in the volume when it is an anthology
+          . Critiques about the series and/or about another volume of the book
+        '''
 
         debug=self.dbg_lvl & 2
         self.log.info(self.who,"\nIn extract_vol_details(soup)")
@@ -347,7 +333,6 @@ class Worker(Thread):
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
         tmp_lst=[]
-        # vol_info={}       delme
         vol_title=""
         vol_auteur=""
         vol_auteur_prenom=""
@@ -367,7 +352,6 @@ class Worker(Thread):
         comment_Critiques=None
         comment_Sommaire=None
         comment_AutresCritique=None
-        comment_decoupage_annexe=None
         comment_Prixobtenus=None
         comment_Citédanslespagesthématiquessuivantes=None
         comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
@@ -375,7 +359,7 @@ class Worker(Thread):
         comment_Adaptations=None
         comment_cover=None
 
-        # add volume address as a reference in the comment (noosfere URL)
+      # add volume address as a reference in the comment (noosfere URL)
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"vol reference processed")
 
@@ -405,10 +389,7 @@ class Worker(Thread):
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
                         vol_serie_seq="0.1"
-                        break                # lrp I do not want that code as it is far from coherent in noosfere; beside, decoupage is an url to noosfere => accessible after...
-  #                      dec_anx_url = "https://www.noosfere.org/livres/"+soup.select("a[href*='serie.asp']")[0]['href']
-  #                      comment_pre_decoupage_annexe = BS('<div><p> </p><p style="font-weight: 600; font-size: 18px"> Découpage annexe</p><hr style="color:CCC;"/></div>',"lxml")
-  #                      comment_decoupage_annexe = self.get_decoupage_annexe(dec_anx_url)
+                        break
                 if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -437,9 +418,9 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
 
 #        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
-        # sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
-        # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
-        # note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
+      # sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
+      # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
+      # note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
         all_elemnt=[]
         ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
         for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
@@ -508,13 +489,13 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
 #        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
 
-       # add cover image address as a reference in the comment
+      # add cover image address as a reference in the comment
         if vol_cover_index:
             comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
 
-    # select the fields I want... More exist such as film adaptations or references to advises to read
-    # but that is not quite consistent around all the books (noosfere is a common database from many people)
-    # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
+      # select the fields I want... More exist such as film adaptations or references to advises to read
+      # but that is not quite consistent around all the books (noosfere is a common database from many people)
+      # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
 #        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
@@ -547,7 +528,7 @@ class Worker(Thread):
                 if debug: self.log.info(self.who,"comment_AutresCritique processed")
 #                if debug: self.log.info(self.who,"comment_AutresCritique\n",comment_AutresCritique)         # a bit long I guess
 
-    # Note: Both "Prix obtenus" and "Prix obtenus par des textes du sommaire" are covered by the following code...
+          # Note: Both "Prix obtenus" and "Prix obtenus par des textes du sommaire" are covered by the following code...
             if self.get_Prixobtenus and ("Prix obtenus" in str(tmp_comm_lst[i])):
                 comment_Prixobtenus = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
                 if debug: self.log.info(self.who,"comment_Prixobtenus processed")
@@ -573,8 +554,7 @@ class Worker(Thread):
                 if debug: self.log.info(self.who,"comment_Adaptations processed")
 #                if debug: self.log.info(self.who,"comment_Adaptations\n",comment_Adaptations)               # a bit long I guess
 
-    # group in a big bundle all the fields I think I want... (It is difficult not to include more... :-))
-
+      # group in a big bundle all the fields I think I want... (It is difficult not to include more... :-))
         if comment_cover:
             vol_comment_soup.append(comment_cover)
         if comment_generic:
@@ -589,9 +569,6 @@ class Worker(Thread):
             vol_comment_soup.append(comment_Sommaire)
         if comment_AutresCritique:
             vol_comment_soup.append(comment_AutresCritique)
-        if comment_decoupage_annexe:
-            vol_comment_soup.append(comment_pre_decoupage_annexe)     # this is the title
-            vol_comment_soup.append(comment_decoupage_annexe)
         if comment_Prixobtenus:                                                   # optionnal
             vol_comment_soup.append(comment_Prixobtenus)
         if comment_Citédanslespagesthématiquessuivantes:                          # optionnal
@@ -604,20 +581,20 @@ class Worker(Thread):
             vol_comment_soup.append(comment_Adaptations)
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
 
-    # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
-    # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
-    # donc vol_comment_soup est modifié... APRES integration de toutes les parties
-    #
-    # Make a minimum of "repair" over vol_comment_soup so that it displays correctly (how I like it) in the comments and in my catalogs
-    # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
-    # - I like to have functional url when they exist
-    # - I like to find out the next and/or previous books in a series (simulated arrows are link :-) )
+      # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
+      # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
+      # donc vol_comment_soup est modifié... APRES integration de toutes les parties
+      #
+      # Make a minimum of "repair" over vol_comment_soup so that it displays correctly (how I like it) in the comments and in my catalogs
+      # - I hate justify when it makes margin "float" around the correct position (in fact when space are used instead of absolute positioning)
+      # - I like to have functional url when they exist
+      # - I like to find out the next and/or previous books in a series (simulated arrows are link :-) )
 
         for elemnt in vol_comment_soup.select('[align="justify"]'):
             del elemnt['align']
 
-    # remove all double or triple 'br' to improve presentation.
-    # Note: tmp1 and tmp2 must contain a different value from any possible first element. (yes, I am lrp and I am unique :-) )
+      # remove all double or triple 'br' to improve presentation.
+      # Note: tmp1 and tmp2 must contain a different value from any possible first element. (yes, I am lrp and I am unique :-) )
 
         tmp1=tmp2="lrp_the_unique"
         for elemnt in vol_comment_soup.findAll():
@@ -625,18 +602,18 @@ class Worker(Thread):
             if tmp1==tmp2:
                 elemnt.extract()
 
-    # merge sequential bold text and sequential italic text
-    # so <b>I</b><b>saac<\b> displayed as "I saac" in calibre becomes
-    # <b>Isaac<\b> displayed as "Isaac" in calibre
+      # merge sequential bold text and sequential italic text
+      # so <b>I</b><b>saac<\b> displayed as "I saac" in calibre becomes
+      # <b>Isaac<\b> displayed as "Isaac" in calibre
 
         x=[b"</b><b>",b"</i><i>",b"</em><em>",b"</strong><strong>"]
         for i in range(len(x)):
             vol_comment_soup=BS(vol_comment_soup.encode("utf-8").replace(x[i],b""),"html5lib")
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
 
-    # insert style for title
-    # then wrap div around span and next span if its exist
-    # (Ca s'évanouit tout seul dans calibre du probablement à une construction non acceptée par calibre)
+      # insert style for title
+      # then wrap div around span and next span if its exist
+      # (Ca s'évanouit tout seul dans calibre du probablement à une construction non acceptée par calibre)
         for elemnt in vol_comment_soup.select('span'):
             if ("class" in elemnt.attrs) and ('AuteurNiourf' in elemnt.attrs['class'][0]):         #elemnt.select('.AuteurNiourf'):
                 hr = vol_comment_soup.new_tag('hr')
@@ -650,14 +627,14 @@ class Worker(Thread):
                         new_div=vol_comment_soup.new_tag('div')
                         elemnt.find_next("span").wrap(new_div)
 
-    # repair comment_AutresEdition in vol_comment_soup by removing id=AutresEdition if it exists....
-    # this should make the whole word "AutresEdition" click-able instead of only the first letter 'A'
+      # repair comment_AutresEdition in vol_comment_soup by removing id=AutresEdition if it exists....
+      # this should make the whole word "AutresEdition" click-able instead of only the first letter 'A'
 
         if vol_comment_soup.select("div[id='AutresEdition']"):
             tmptag=vol_comment_soup.select_one("div[id='AutresEdition']")
             del tmptag['id']
 
-    # repair url's so it does NOT depend on being in noosfere space
+      # repair url's so it does NOT depend on being in noosfere space
 
         self.log.info(self.who,"\nCorrecting vol_comment_soup to calibre")
         if debug:
@@ -717,15 +694,15 @@ class Worker(Thread):
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
                 if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet apres correction: ", elemnt)
 
-    # design from UFT_8 character set a set of right and left arrows
+      # I could design from UFT_8 character set a set of right and left arrows but I fake if with ==>>
 
         fg,fd="<<==","==>>" #chr(0x21D0),chr(0x21D2)   #chr(0x27f8),chr(0x27f9)
         for elemnt in vol_comment_soup.select("img[src*='arrow_left']"): elemnt.replace_with(fg)
         for elemnt in vol_comment_soup.select("img[src*='arrow_right']"): elemnt.replace_with(fd)
 
-        # depending on the tick box, make a fat publisher using separators that have a very low probability to pop up (§ and €)
-        # only set vol_coll_srl if vol_coll exists
-        # the idea is to use search and replace in the edit Metadata in bulk window.
+      # depending on the tick box, make a fat publisher using separators that have a very low probability to pop up (§ and €)
+      # only set vol_coll_srl if vol_coll exists
+      # the idea is to use search and replace in the edit Metadata in bulk window.
 
         if self.extended_publisher:
             if debug: self.log.info(self.who,"""flag : "Ajoute collection et son numéro d'ordre au champ èditeur" set""")
@@ -747,16 +724,16 @@ class Worker(Thread):
                 else:
                     vol_serie_seq = 0.0
 
-        # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
-        # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
-        # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
-        # Side note:
-        # I have no real good URL structure(i once got html 3 times, div a sibling of html...), but calibre does not seems to care (nice :-) )
-        #
-        # Ça m'a pris un temps fou pour trouver, par hasard, que encode('ascii','xmlcharrefreplace') aidait bien...
-        # (enfin, quasi par hasard, j' ai essayé tout ce qui pouvait améliorer la compatibilité avec xml... mais je
-        # lisais mal et je pensais à une incompatibilité avec la structure xml),
-        #
+      # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
+      # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
+      # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
+      # Side note:
+      # This provides no real good URL structure(I once got html 3 times and div as a sibling of html...), but calibre does not seems to care (nice :-) )
+      #
+      # Ça m'a pris un temps fou pour trouver, par hasard, que encode('ascii','xmlcharrefreplace') aidait bien...
+      # (enfin, quasi par hasard, j' ai essayé tout ce qui pouvait améliorer la compatibilité avec xml... mais je
+      # lisais mal et je pensais à une incompatibilité avec la structure xml),
+      #
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
         self.log.info(self.who,"+++"*25)
@@ -778,7 +755,6 @@ class Worker(Thread):
         self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
         self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
 #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
-                                                                                                               # language must be <class 'str'>
 
         if vol_cover_index:
             self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)

@@ -208,19 +208,19 @@ class noosfere(Source):
     # took the liberty to write the following information in French. I will
     # comment with a translation in the english language.
 
-                                    #config help message: noosfere is a database that presents information
-                                    #about French books, tagged as science-fiction. Those informations span
-                                    #from author to films made of the books, including translators,
-                                    #illustrators, critics... and of course there work. The book that were
-                                    #published several time are exposed as a "volume". Each of those volumes
-                                    #share the authors and the book content, they MAY share, or not, the
-                                    #cover, the editor, the editor's collection and the associated order
-                                    #number, the resume, the critics,etc.... The choice of the volume is done
-                                    #by the program. One may somewhat influence the choice through the dialog
-                                    #box `priorité de tri´. On the other hand, there is no official way to
-                                    #programmaticaly update a custom column. So There is a tick box that will
-                                    #push the information along with the publisher. Please read the doc to
-                                    #understand how to put it back later in the right place with a right format.
+                                  # config help message: noosfere is a database that presents information
+                                  # about French books, tagged as science-fiction. Those informations span
+                                  # from author to films made of the books, including translators,
+                                  # illustrators, critics... and of course there work. The book that were
+                                  # published several time are exposed as a "volume". Each of those volumes
+                                  # share the authors and the book content, they MAY share, or not, the
+                                  # cover, the editor, the editor's collection and the associated order
+                                  # number, the resume, the critics,etc.... The choice of the volume is done
+                                  # by the program. One may somewhat influence the choice through the dialog
+                                  # box `priorité de tri´. On the other hand, there is no official way to
+                                  # programmaticaly update a custom column. So There is a tick box that will
+                                  # push the information along with the publisher. Please read the doc to
+                                  # understand how to put it back later in the right place with a right format.
 
     config_help_message = '<p>'+_(" noosfere est une base de donnée qui propose des informations"
                                   " à propos des ouvrages, de genre science fiction, disponibles en langue française."
@@ -263,7 +263,7 @@ class noosfere(Source):
                    'debug_level',
                    'number',
                    7,
-                   _("Verbosité du journal, de 0 à 7"),                                                  # verbosity of the log
+                   _("Verbosité du journal, de 0 à 7"),                                                 # verbosity of the log
                    _("Le niveau de verbosité: "                                                         # the level of verbosity.
                      " O un minimum de rapport, "                                                       # value 0 will output the minimum,
                      " 1 rapport étendu de __init__, "                                                  # 1 debug messages of __init__
@@ -468,13 +468,14 @@ class noosfere(Source):
         return url
 
     def ret_author_index(self, log, br, authors):
-        # Trouve la référence de l'auteur dans la soupe de noosfere
-        # retourne author_index, un dictionnaire avec key=AUTEUR, val=href
-        # L'idée est de renvoyer UNE seule référence... trouver l'auteur est primordial si isbn is indisponible
-        #
-        # Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
-        # the idea is to find ONE single reference... to get the author is important if isbn is unavailable
-        #
+        '''
+        Trouve la référence de l'auteur dans la soupe de noosfere
+        retourne author_index, un dictionnaire avec key=AUTEUR, val=href
+        L'idée est de renvoyer UNE seule référence... trouver l'auteur est primordial si isbn is indisponible
+
+        Find author references in the soup produced by noosfere, return author_index a dictionary with key=author, val=href
+        the idea is to find ONE single reference... to get the author is important if isbn is unavailable
+        '''
         debug=self.dbg_lvl & 1
         log.info("\nIn ret_author_index(soup)")
         if debug:
@@ -556,18 +557,19 @@ class noosfere(Source):
         return author_index
 
     def ret_book_per_author_index(self, log, br, author_index, title, book_index):
-        # Find the books references of a known author from the returned soup for noosfere
-        # returns a dict "book_per_author_index{}" with key as title and val as the link to the book
-        # Idea is to send back a few references that hopefully contains the title expected
-        #
-        # Trouver la référence des livres d'un auteur connu dans la soupe produite par noosfere
-        # retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
-        # L'idée est de renvoyer une série de référencé, dont on extrait les livres proches du titre de calibre
-        #
-        # now that we have a list of authors, let's get all the books associated with them
-        # The "book_per_author_index" dictionnary will contain all book's references...
-        # If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
-        #
+        '''
+        Find the books references of a known author from the returned soup for noosfere
+        returns a dict "book_per_author_index{}" with key as title and val as the link to the book
+        Idea is to send back a few references that hopefully contains the title expected
+
+        Trouver la référence des livres d'un auteur connu dans la soupe produite par noosfere
+        retourne "book_per_author_index{}", un dictionnaire avec key=titre, val=href
+        L'idée est de renvoyer une série de référencé, dont on extrait les livres proches du titre de calibre
+
+        now that we have a list of authors, let's get all the books associated with them
+        The "book_per_author_index" dictionnary will contain all book's references...
+        If a book has a common url it will be overwritten by the following author, ensuring a list of unique books
+        '''
         debug=self.dbg_lvl & 1
         log.info("\nIn ret_book_per_author_index(self, log, br, author_index, title, book_index)")
         if debug:
@@ -576,7 +578,6 @@ class noosfere(Source):
             log.info("book_index   : ",book_index)
 
         book_per_author_index={}
-        unsorted_book_index={}
 
         for i in range(len(author_index)):
             rqt= author_index[i]+"&Niveau=livres"
@@ -593,14 +594,14 @@ class noosfere(Source):
                     log.info('tmp_bpai[i]["href"] : ',tmp_bpai[i]["href"],end=" ; ")
                     log.info("book_title : ",book_title)
                 if ratio > .6 :
-                    unsorted_book_index[ratio]=[book_url, "", book_title]
+                    book_per_author_index[ratio]=[book_url, "", book_title]
                 if ratio == 1:
-                    unsorted_book_index={}
-                    unsorted_book_index[ratio]=[book_url, "", book_title]
+                    book_per_author_index={}
+                    book_per_author_index[ratio]=[book_url, "", book_title]
                     break                        # we have a perfect match no need to go further in the author books
                                                  # and I know it could cause problem iff several authors produce an identical title
 
-            sorted_book_index=dict(sorted(unsorted_book_index.items(),reverse=True))
+            sorted_book_index=dict(sorted(book_per_author_index.items(),reverse=True))
             if debug: log.info("sorted bySM.ratio")
             for key,ref in sorted_book_index.items():
                 if debug:
@@ -618,18 +619,19 @@ class noosfere(Source):
         return book_index
 
     def ISBN_ret_book_index(self, log, br, isbn, book_index):
-        # Trouver la référence d'un livre (titre ou ISBN) dans la soupe produite par noosfere
-        # retourne book_index{}, un dictionnaire avec key=book_url, val=title
-        # L'idée est de trouver UNE seule référence...
-        # Attention: on retourne une référence qui peut contenir PLUSIEURs volumes
-        # C'est a dire: différents éditeurs, différentes re-éditions et/ou, même, un titre différent... YESss)
-        #
-        # Find the book's reference (either title or ISBN) in the returned soup from noosfere
-        # returns book_index{}, a dictionary with key=book_url, val=title
-        # The idea is to find ONE unique reference...
-        # Caution: the reference may contains several volumes,
-        # each with potentially a different editor, a different edition date,... and even a different title
-        #
+        '''
+        Trouver la référence d'un livre (titre ou ISBN) dans la soupe produite par noosfere
+        retourne book_index{}, un dictionnaire avec key=book_url, val=title
+        L'idée est de trouver UNE seule référence...
+        Attention: on retourne une référence qui peut contenir PLUSIEURs volumes
+        C'est a dire: différents éditeurs, différentes re-éditions et/ou, même, un titre différent... YESss)
+
+        Find the book's reference (either title or ISBN) in the returned soup from noosfere
+        returns book_index{}, a dictionary with key=book_url, val=title
+        The idea is to find ONE unique reference...
+        Caution: the reference may contains several volumes,
+        each with potentially a different editor, a different edition date,... and even a different title
+        '''
         debug=self.dbg_lvl & 1
         log.info("\nIn ISBN_ret_book_index(self, log, br, isbn, book_index)")
 
@@ -778,9 +780,10 @@ class noosfere(Source):
 
 
     def download_cover(self, log, result_queue, abort, title=None, authors=None, identifiers={}, timeout=30):
-        # will download cover from Noosfere provided it was found (and then cached)... If not, it will
-        # run the metadata download and try to cache the cover URL...
-
+        '''
+        will download cover from Noosfere provided it was found (and then cached)... If not, it will
+        run the metadata download and try to cache the cover URL...
+        '''
         cached_url = self.get_cached_cover_url(identifiers)
         if cached_url is None:
             log.info('No cached cover found, running identify')
