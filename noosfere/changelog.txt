@@ -175,9 +175,28 @@ Sometimes, the cover image cannot be located in the header, but it is still avai
  in the body... Modified cover discovery algorithm.
 
 Some series sequence order number do include a letter in noosfere...
- example: 4a or 7c
- Modified so that it reads 4.1 or 7.3 (letter position in french alphabet)
+ example:
+ Modified so that 4a reads 4.1 orand 7c reads 7.3 (letter position in french alphabet)
 
 It seems that I am missing some functionalities while not overwriting 2 methods:
  get_book_url : used by calibre to convert the identifier to a URL...
  id_from_url : takes a URL and extracts the identifier details...
+BOTH are now implemented...
+Now, thanks to get_book_url, one can jump directly to the URL from within calibre:
+ in the detail pane, ensure that ids have been selected for display,
+  (Preferences → Interface → Look & feel → Book details.)
+ Click on the id to get at the url page.
+  Note that I will not remove the reference in the comment, because I want that
+  information to show in the catalogs.
+Now, thanks to id_from_url, to add or modify an id in the metadata editor, just
+ copy and paste the url on the icon on the left of the ids field.
+
+This sort of made noosfere_util a little less needed, yet if I want to distribute
+ the information in the editor, or want to wipe the matadata "clean" before
+ downloading it (some fields are never deleted, noosfere_util does). I still
+ can use the noosfere_util web browser to slect the exact volume I want...
+
+I made quite a few cosmetic modifications (comments style to document function,
+ remove some useless code, ...)
+
+I push noosfere DB to version 1.0.0

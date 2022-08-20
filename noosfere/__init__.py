@@ -194,7 +194,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (0, 9, 6)
+    version                 = (1, 0, 0)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'nsfr_id'
