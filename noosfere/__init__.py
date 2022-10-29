@@ -89,7 +89,9 @@ def urlopen_with_retry(log, dbg_lvl, br, url, rkt, who):
 
 def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
     '''
-    Function to return the soup for beautifullsoup to work on.
+    Function to return (soup,sr.geturl()) with
+    soup the HTML coded information and
+    sr.geturl() the url from where soup was extracted.
     '''
     debug=dbg_lvl & 4
     if debug:
@@ -123,7 +125,7 @@ def ret_soup(log, dbg_lvl, br, url, rkt=None, who=''):
 
     sr, url_ret = resp[0], resp[1]
 
-    soup = BS(sr, "html5lib", from_encoding="windows-1252")
+    soup = BS(sr, "html5lib", from_encoding=from_encoding)              #"windows-1252")
     if debug:
 #        log.info(who,"soup.prettify() :\n",soup.prettify())               # très utile parfois, mais que c'est long...
         log.info(who,"(ret_soup) return (soup,sr.geturl()) from ret_soup\n")
@@ -135,21 +137,21 @@ def verify_isbn(log, dbg_lvl, isbn_str, who=''):
     Notez qu'on doit supprimer les characteres de separation et les characteres restants apres extraction
     et que l'on traite un mot de 10 ou 13 characteres.
 
-    isbn_str is strait from extraction... function returns an ISBN maybe correct ...or not
+    isbn_str is strait from extraction... function returns an ISBN correct, or not
     Characters irrelevant to ISBN and separators inside ISBN must be removed,
     the resulting word must be either 10 or 13 characters long.
     '''
     debug=dbg_lvl & 4
     if debug:
-        log.info("\nIn verify_isbn(log, dbg_lvl, isbn_str)")
-        log.info("isbn_str         : ",isbn_str)
+        log.info(who,"\nIn verify_isbn(log, dbg_lvl, isbn_str)")
+        log.info(who,"isbn_str         : ",isbn_str)
 
     for k in ['(',')','-',' ']:
         if k in isbn_str:
             isbn_str=isbn_str.replace(k,"")
     if debug:
-        log.info("isbn_str cleaned : ",isbn_str)
-        log.info("return check_isbn(isbn_str) from verify_isbn\n")
+        log.info(who,"isbn_str cleaned : ",isbn_str)
+        log.info(who,"return check_isbn(isbn_str) from verify_isbn\n")
     return check_isbn(isbn_str)         # calibre does the check for me after cleaning...
 
 def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
@@ -159,8 +161,8 @@ def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
     '''
     debug=dbg_lvl & 4
     if debug:
-        log.info("\nIn ret_clean_txt(self, log, text, swap =",swap,")")
-        log.info("text         : ", text)
+        log.info(who,"\nIn ret_clean_txt(self, log, text, swap =",swap,")")
+        log.info(who,"text         : ", text)
 
   # Calibre per default presents the author as "Firstname Lastname", cleaned to be become "firstname lastname"
   # Noosfere present the author as "LASTNAME Firstname", let's get "Firstname LASTNAME" cleaned to "firstname lastname"
@@ -182,8 +184,8 @@ def ret_clean_text(log, dbg_lvl, text, swap=False, who=''):
         if debug: log.info("text         : ", text)
 
     if debug:
-        log.info("cleaned text : ", text)
-        log.info("return text from ret_clean_txt")
+        log.info(who,"cleaned text : ", text)
+        log.info(who,"return text from ret_clean_txt")
 
     return lower(get_udc().decode(text))
 
@@ -223,17 +225,17 @@ class noosfere(Source):
                                   # understand how to put it back later in the right place with a right format.
 
     config_help_message = '<p>'+_(" noosfere est une base de donnée qui propose des informations"
-                                  " à propos des ouvrages, de genre science fiction, disponibles en langue française."
+                                  " à propos des ouvrages, de genre science fiction, disponibles en langue française.<br>"
                                   " Ces informations vont de l'auteur aux films produits sur base de l'ouvrage en"
                                   " passant par les auteurs, les traducteurs, les illustrateurs, les critiques..."
-                                  " et bien sur, leurs œuvres. Les livres qui ont été publiés plusieurs fois"
+                                  " et bien sur, leurs œuvres.<br>Les livres qui ont été publiés plusieurs fois"
                                   " sont repris chacun sous un volume dont est exposé l'ISBN, la date de dépôt légal"
                                   " (repris sous la date de publication, souvent méconnue), la couverture, l'éditeur,"
-                                  " la collection de l'éditeur et son numéro d'ordre. Le choix, programmé, du volume"
-                                  " est quelque peu paramétrable par la boite de dialogue `priorité de tri´. "
+                                  " la collection de l'éditeur et son numéro d'ordre.<br><br>Le choix, programmé, du volume"
+                                  " est quelque peu paramétrable par la boite de dialogue `priorité de tri´.<br><br>"
                                   " D'autre part, il n'existe pas de moyens officiels de remplir une colonne définie"
                                   " par l'utilisateur. Pour rester dans les clous, je propose de remplir le champs"
-                                  " de l'éditeur avec, conjointement à celui-ci, la collection et son numéro d'ordre."
+                                  " de l'éditeur avec, conjointement à celui-ci, la collection et son numéro d'ordre.<br>"
                                   " Une petite procédure, décrite dans la doc devrait remettre tout en ordre."
                                   )
 
@@ -256,21 +258,22 @@ class noosfere(Source):
                    'bool',
                    True,
                    _("Ajoute collection et son numéro d'ordre au champ éditeur"),       # add the editor's collection and the associated order number to the publisher field
-                   _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur."
+                   _("Cochez cette case pour ajouter la collection et son numéro d'ordre au champs de l'éditeur.<br>"
                      "Voir LIS-MOI editeur_collection_seriel-code.txt")                 # check this box to enable... see README publisher_collection_seriel-code.txt
                    ),
             Option(
                    'debug_level',
                    'number',
                    7,
-                   _("Verbosité du journal, de 0 à 7"),                                                 # verbosity of the log
-                   _("Le niveau de verbosité: "                                                         # the level of verbosity.
-                     " O un minimum de rapport, "                                                       # value 0 will output the minimum,
-                     " 1 rapport étendu de __init__, "                                                  # 1 debug messages of __init__
-                     " 2 rapport étendu de worker, "                                                    # 2 debug messages of worker
-                     " 4 rapport étendu des annexes... "                                                # 4 debug level of accessory code...
-                     " La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport. "  # 3, 5 or 7 is the sum of the value defined above.
-                     " Note: mettre la verbosité = 7 pour rapport d'erreur")            # In fact it is a bitwise flag spread over the last 3 bits of debug_level
+                   _("Verbosité du journal, de 0 à 7"),                                                    # verbosity of the log
+                   _("Le niveau de verbosité:<br>"                                                         # the level of verbosity.
+                     " O un minimum de rapport,<br>"                                                       # value 0 will output the minimum,
+                     " 1 rapport étendu de __init__,<br>"                                                  # 1 debug messages of __init__
+                     " 2 rapport étendu de worker,<br>"                                                    # 2 debug messages of worker
+                     " 4 rapport étendu des annexes...<br>"                                                # 4 debug level of accessory code...
+                     " La somme 3, 5 ou 7 peut être introduite, ainsi 7 donne un maximum de rapport.<br>"  # 3, 5 or 7 is the sum of the value defined above.
+                     " Note: mettre la verbosité = 7 pour rapport d'erreur")                               # use 7 to log an issue
+                                                         # In fact it is a bitwise flag spread over the last 3 bits of debug_level
                    ),
             Option(
                    'Priority',
@@ -292,14 +295,14 @@ class noosfere(Source):
                    'bool',
                    True,
                    _("choix du volume pondéré"),          #
-                   _("la priorite est donnée au volume avec: "
-                     "résumé présent, "                   # résumé présent:                       r   1pt
-                     "critique présente, "                # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
-                     "critique de la série, "             # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
-                     "sommaire des nouvelles présentes, " # sommaire des nouvelles présentes:     s   1pt
-                     "information vérifiée, "             # information vérifiée                  v   1pt
-                     "titre identique, "                  # titre identique                       t   1pt
-                     "et/ou couverture présente ")           # image présente                        p   1pt
+                   _("la priorite est donnée au volume avec:<br>"
+                     "résumé présent, 1pt<br>"                   # résumé présent:                       r   1pt
+                     "critique présente, 1pt<br>"                # critique présente:                    c   1pt         # semble pas trop correct car CS n'existe pas même si, quand
+                     "critique de la série, 1pt<br>"             # critique de la série                  cs  1pt         # une critique existe, elle est parfois reprise pour tous les volumes
+                     "sommaire des nouvelles présentes, 1pt<br>" # sommaire des nouvelles présentes:     s   1pt
+                     "information vérifiée, 1pt<br>"             # information vérifiée                  v   1pt
+                     "titre identique, 1pt<br>"                  # titre identique                       t   1pt
+                     "et/ou couverture présente 1pt")            # image présente                        p   1pt
 
                    ),
             Option(
@@ -307,8 +310,8 @@ class noosfere(Source):
                    'string',
                    "x",
                    _("Impose un éditeur, 3 possibilités"),                                        # impose a publisher, 3 possibilities
-                   _("Non défini (boite vide): l'éditeur ne fait pas partie du choix."            # Undefined (empty box): publisher is not part of the choice
-                     " Défini inexistant: le volume aura l'éditeur le plus représenté."            # Defined (x) but inexistant): volume will have most present publisher
+                   _("Non défini (boite vide): l'éditeur ne fait pas partie du choix.<br>"            # Undefined (empty box): publisher is not part of the choice
+                     " Défini inexistant: le volume aura l'éditeur le plus représenté.<br>"            # Defined (x) but inexistant): volume will have most present publisher
                      " Défini avec un MATCH PARFAIT: le volume sera choisi avec cet éditeur.")     # Defined with a PERFECT MATCH volume will be choosen with that publisher.
                    ),
             Option(
@@ -442,6 +445,7 @@ class noosfere(Source):
     def get_book_url(self, identifiers):
         '''
         get_book_url : used by calibre to convert the identifier to a URL...
+        return an url if nsfr_id exists and is valid
         '''
         nsfr = identifiers.get('nsfr_id', None)
         if "vl$" in nsfr:

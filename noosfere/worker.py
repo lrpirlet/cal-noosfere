@@ -10,17 +10,10 @@ __docformat__ = 'restructuredtext en'
 import datetime
 from bs4 import BeautifulSoup as BS
 from threading import Thread
-import lxml
 
 from calibre.ebooks.metadata.book.base import Metadata
-from calibre.ebooks.metadata import check_isbn
-from calibre.library.comments import sanitize_comments_html
-from calibre.utils.cleantext import clean_ascii_chars
-from calibre.utils.icu import lower
 
 from calibre_plugins.noosfere import ret_soup, verify_isbn
-from calibre_plugins.noosfere import noosfere
-
 
 class Worker(Thread):
     '''
