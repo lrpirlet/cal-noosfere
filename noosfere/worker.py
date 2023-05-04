@@ -356,9 +356,11 @@ class Worker(Thread):
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"vol reference processed")
 
+      # get title
         if soup.select("span[class='TitreNiourf']"): vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
         if debug: self.log.info(self.who,"vol_title processed : ",vol_title)
 
+      # get authors
         if soup.select("span[class='AuteurNiourf']"): vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
         if debug: self.log.info(self.who,"vol_auteur processed : ",vol_auteur)
         for i in range(len(vol_auteur.split())):
@@ -372,6 +374,7 @@ class Worker(Thread):
         vol_auteur_nom = vol_auteur_nom.strip()
         if debug: self.log.info(self.who,"vol_auteur_nom processed : ",vol_auteur_nom)
 
+      # get series and series seq
         if soup.select("a[href*='serie.asp']"):
             if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
                 vol_serie = soup.select("a[href*='serie.asp']")[0].text
@@ -385,12 +388,14 @@ class Worker(Thread):
                         break
                 if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
+      # get comment
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
         new_div=soup.new_tag('div')
         comment_generic = comment_generic.wrap(new_div)
         if debug: self.log.info(self.who,"comment_generic processed")
 #        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
+      # get publisher, publisher collection and publisher collection serial
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
         if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
 
@@ -411,6 +416,8 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
 
 #        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
+
+      # get ISBN, Genre and publication date
       # sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
       # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
       # note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
@@ -464,6 +471,7 @@ class Worker(Thread):
                 vol_genre = all_elemnt[i].replace("Genre : ","").strip()
                 if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
 
+      # get link to cover
         try:
             vol_cover_index = soup.find(property="og:image").get("content")
         except:
@@ -477,6 +485,7 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol_cover_index processed : ")
 #        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
 
+      # get other editions
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
@@ -698,7 +707,7 @@ class Worker(Thread):
       # the idea is to use search and replace in the edit Metadata in bulk window.
 
         if self.extended_publisher:
-            if debug: self.log.info(self.who,"""flag : "Ajoute collection et son numéro d'ordre au champ èditeur" set""")
+            if debug: self.log.info(self.who,"""flag : "Ajoute collection et son numéro d'ordre au champ éditeur" set""")
             if vol_coll:
                 if debug: self.log.info(self.who,'add collection')
                 vol_editor = vol_editor+('§')+vol_coll

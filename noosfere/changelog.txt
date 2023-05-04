@@ -26,7 +26,7 @@ to the title will point to a serie of volumes
 
 If the title is the only reference, a search in noosfere will output a list
 of books sorted by best mactch along with a score again a book will point to
-a serie of volume. (In theory, it is yet to be implemented...
+a serie of volume. (In theory, it is yet to be implemented...)
 
 Out of the volume list one must choose the best candidate to get a coherent
 set of volumes attributes (cover, isbn, editor, critics, serie, serie nbr,
