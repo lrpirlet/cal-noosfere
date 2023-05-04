@@ -93,7 +93,7 @@ class Worker(Thread):
                 wrk_url = self.ret_top_vol_indx(book_url, self.book_title, self.isbn)
                 if debug: self.log.info(self.who,"wrk_url               : ", wrk_url)
             except:
-                self.log.exception("ret_top_vol_indx failed for URL: ",book_url)
+                self.log.exception("ERROR: ret_top_vol_indx failed for URL: ",book_url)
 
         if "niourf" in wrk_url:
             self.log.info("getting to THE volume for this book")
@@ -102,7 +102,7 @@ class Worker(Thread):
             try:
                 self.extract_vol_details(vol_url)
             except:
-                self.log.exception("extract_vol_details failed for URL: ",vol_url)
+                self.log.exception("ERROR: extract_vol_details failed for URL: ",vol_url)
 
     def ret_top_vol_indx(self, url, book_title, book_isbn):
         '''
@@ -304,7 +304,6 @@ class Worker(Thread):
                     if "découpage" in tmp_vss[i]:
                         vol_serie_seq="0.1"
                         break
-                if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
         if vol_serie:
             if vol_serie_seq.isnumeric():
@@ -317,8 +316,41 @@ class Worker(Thread):
                 else:
                     vol_serie_seq = 0.0
 
+        if debug: self.log.info(self.who,"return vol_serie, vol_serie_seq : ",vol_serie,",",vol_serie_seq)
         return vol_serie, vol_serie_seq
 
+    def parse_authors(self, soup):
+        '''
+        returns authors as a string of the form
+        First_name_0 Familly_name_0 & First_name_1 Familly_name_1 ...
+        needs to be modified as to return a list of the form
+        [First_name_0 Familly_name_0, First_name_1 Familly_name_1, ...]
+        or maybe (check what is best)
+        ['Familly_name_0,First_name_0', 'Familly_name_1,First_name_1',  ...]
+        needs to be modified later to reflect list instead of string
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info(self.who,"\nIn parse_authors(self, soup)")
+
+        vol_auteur=""
+        vol_auteur_prenom=""
+        vol_auteur_nom=""
+
+        if soup.select("span[class='AuteurNiourf']"): vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
+
+        for i in range(len(vol_auteur.split())):
+            if not vol_auteur.split()[i].isupper():
+                vol_auteur_prenom += " "+vol_auteur.split()[i]
+            else:
+                vol_auteur_nom += " "+vol_auteur.split()[i].title()
+        vol_auteur = vol_auteur.title()
+        vol_auteur_prenom = vol_auteur_prenom.strip()
+        if debug: self.log.info(self.who,"vol_auteur_prenom processed : ",vol_auteur_prenom)
+        vol_auteur_nom = vol_auteur_nom.strip()
+        if debug: self.log.info(self.who,"vol_auteur_nom processed : ",vol_auteur_nom)
+
+        if debug: self.log.info(self.who,"return vol_auteur : ",vol_auteur)
+        return vol_auteur
 
     def extract_vol_details(self, vol_url):
         '''
@@ -365,11 +397,6 @@ class Worker(Thread):
 
         tmp_lst=[]
         vol_title=""
-        vol_auteur=""
-        vol_auteur_prenom=""
-        vol_auteur_nom=""
-        # vol_serie=""
-        # vol_serie_seq=""
         vol_editor=""
         vol_coll=""
         vol_coll_srl=""
@@ -399,40 +426,18 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol_title processed : ",vol_title)
 
       # get authors
-        if soup.select("span[class='AuteurNiourf']"): vol_auteur = soup.select("span[class='AuteurNiourf']")[0].text.replace("\n","").strip()
-        if debug: self.log.info(self.who,"vol_auteur processed : ",vol_auteur)
-        for i in range(len(vol_auteur.split())):
-            if not vol_auteur.split()[i].isupper():
-                vol_auteur_prenom += " "+vol_auteur.split()[i]
-            else:
-                vol_auteur_nom += " "+vol_auteur.split()[i].title()
-        vol_auteur = vol_auteur.title()
-        vol_auteur_prenom = vol_auteur_prenom.strip()
-        if debug: self.log.info(self.who,"vol_auteur_prenom processed : ",vol_auteur_prenom)
-        vol_auteur_nom = vol_auteur_nom.strip()
-        if debug: self.log.info(self.who,"vol_auteur_nom processed : ",vol_auteur_nom)
+        try:
+            vol_auteur = self.parse_authors(soup)
+        except:
+            self.log.exception("ERROR: parse_authors(soup) failed")
 
       # get series and series seq
-
         try:
             vol_serie, vol_serie_seq = self.parse_series_series_seq(soup)
         except:
             vol_serie=""
             vol_serie_seq=""
-            self.log.exception("parse_series_series_seq(soup) failed")
-
-        # if soup.select("a[href*='serie.asp']"):
-        #     if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
-        #         vol_serie = soup.select("a[href*='serie.asp']")[0].text
-        #         tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
-        #         for i in range(len(tmp_vss)):
-        #             if "vol." in tmp_vss[i]:
-        #                 if not vol_serie_seq:
-        #                     vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
-        #             if "découpage" in tmp_vss[i]:
-        #                 vol_serie_seq="0.1"
-        #                 break
-        #         if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
+            self.log.exception("ERROR: parse_series_series_seq(soup) failed")
 
       # get comment
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -471,7 +476,7 @@ class Worker(Thread):
         ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
         for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
             all_elemnt.append(elemnt)
-        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
+#        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
 
         period, vol_isbn = "",""
         for i in range(len(all_elemnt)):
@@ -572,7 +577,7 @@ class Worker(Thread):
                         more_comment_AutresCritique=self.get_Critique_de_la_serie(critic_url)
                         comment_AutresCritique.append(more_comment_AutresCritique)
                     except:
-                        self.log.exception("get_Critique_de_la_serie failed for url: ",critic_url)
+                        self.log.exception("ERROR: get_Critique_de_la_serie failed for url: ",critic_url)
                 if debug: self.log.info(self.who,"comment_AutresCritique processed")
 #                if debug: self.log.info(self.who,"comment_AutresCritique\n",comment_AutresCritique)         # a bit long I guess
 
@@ -761,17 +766,6 @@ class Worker(Thread):
                     if debug: self.log.info(self.who,'add collection number')
                     vol_editor = vol_editor+('€')+vol_coll_srl
 
-        # if vol_serie:
-        #     if vol_serie_seq.isnumeric():
-        #         vol_serie_seq = float(vol_serie_seq)
-        #     else:
-        #         if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
-        #             try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
-        #             except: subseq=0.99
-        #             vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
-        #         else:
-        #             vol_serie_seq = 0.0
-
       # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
       # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
       # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
@@ -789,8 +783,6 @@ class Worker(Thread):
         self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
         self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
         self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
-        self.log.info(self.who,"vol_auteur_prenom, type()      : ",vol_auteur_prenom, type(vol_auteur_prenom))      # must be <class 'str'>
-        self.log.info(self.who,"vol_auteur_nom, type()         : ",vol_auteur_nom, type(vol_auteur_nom))            # must be <class 'str'>
         self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
         if vol_serie:
             self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
