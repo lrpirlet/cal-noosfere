@@ -282,6 +282,44 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
+    def parse_series_series_seq(self, soup):
+        '''
+        will return series and associated sequence.
+        series and series_seq will be formatted for use
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info(self.who,"\nIn parse_series_series_seq(self, soup)")
+
+        vol_serie=""
+        vol_serie_seq=""
+
+        if soup.select("a[href*='serie.asp']"):
+            if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
+                vol_serie = soup.select("a[href*='serie.asp']")[0].text
+                tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
+                for i in range(len(tmp_vss)):
+                    if "vol." in tmp_vss[i]:
+                        if not vol_serie_seq:
+                            vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+                    if "découpage" in tmp_vss[i]:
+                        vol_serie_seq="0.1"
+                        break
+                if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
+
+        if vol_serie:
+            if vol_serie_seq.isnumeric():
+                vol_serie_seq = float(vol_serie_seq)
+            else:
+                if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
+                    try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
+                    except: subseq=0.99
+                    vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
+                else:
+                    vol_serie_seq = 0.0
+
+        return vol_serie, vol_serie_seq
+
+
     def extract_vol_details(self, vol_url):
         '''
         Here we extract and format the information from the choosen volume.
@@ -330,8 +368,8 @@ class Worker(Thread):
         vol_auteur=""
         vol_auteur_prenom=""
         vol_auteur_nom=""
-        vol_serie=""
-        vol_serie_seq=""
+        # vol_serie=""
+        # vol_serie_seq=""
         vol_editor=""
         vol_coll=""
         vol_coll_srl=""
@@ -375,18 +413,26 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol_auteur_nom processed : ",vol_auteur_nom)
 
       # get series and series seq
-        if soup.select("a[href*='serie.asp']"):
-            if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
-                vol_serie = soup.select("a[href*='serie.asp']")[0].text
-                tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
-                for i in range(len(tmp_vss)):
-                    if "vol." in tmp_vss[i]:
-                        if not vol_serie_seq:
-                            vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
-                    if "découpage" in tmp_vss[i]:
-                        vol_serie_seq="0.1"
-                        break
-                if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
+
+        try:
+            vol_serie, vol_serie_seq = self.parse_series_series_seq(soup)
+        except:
+            vol_serie=""
+            vol_serie_seq=""
+            self.log.exception("parse_series_series_seq(soup) failed")
+
+        # if soup.select("a[href*='serie.asp']"):
+        #     if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
+        #         vol_serie = soup.select("a[href*='serie.asp']")[0].text
+        #         tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
+        #         for i in range(len(tmp_vss)):
+        #             if "vol." in tmp_vss[i]:
+        #                 if not vol_serie_seq:
+        #                     vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
+        #             if "découpage" in tmp_vss[i]:
+        #                 vol_serie_seq="0.1"
+        #                 break
+        #         if debug: self.log.info(self.who,"vol_serie, vol_serie_seq processed : ",vol_serie,",",vol_serie_seq)
 
       # get comment
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -715,16 +761,16 @@ class Worker(Thread):
                     if debug: self.log.info(self.who,'add collection number')
                     vol_editor = vol_editor+('€')+vol_coll_srl
 
-        if vol_serie:
-            if vol_serie_seq.isnumeric():
-                vol_serie_seq = float(vol_serie_seq)
-            else:
-                if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
-                    try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
-                    except: subseq=0.99
-                    vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
-                else:
-                    vol_serie_seq = 0.0
+        # if vol_serie:
+        #     if vol_serie_seq.isnumeric():
+        #         vol_serie_seq = float(vol_serie_seq)
+        #     else:
+        #         if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
+        #             try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
+        #             except: subseq=0.99
+        #             vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
+        #         else:
+        #             vol_serie_seq = 0.0
 
       # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
       # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
