@@ -282,6 +282,31 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
+    def isole_lien_couverture(self,soup):
+        '''
+        retourne le lien vers la couverture du volume choisi, sera place dans les commentaires
+        car la couverture choisie peut etre differente de la vraie couverture...
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_lien_couverture(self, soup)")
+
+        vol_cover_index=""
+
+        try:
+            vol_cover_index = soup.find(property="og:image").get("content")
+        except:
+          # og:image may be missing in the head ... revert searching cover in the body
+            if not vol_cover_index:
+                if soup.select("img[name='couverture']"):
+                    for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
+                        if "http" in elemnt:
+                            vol_cover_index = elemnt
+
+        if debug:
+            self.log.info(self.who,"return vol_cover_index : {}".format(vol_cover_index))
+        return vol_cover_index
+
+
     def isole_isbn(self, soup):
         '''
         return ISBN from sousFicheNiourf (used to be extrated together with genre and publication date)
@@ -529,7 +554,6 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
-        vol_cover_index=""
         comment_generic=None
         comment_AutresEdition=None
         comment_resume=None
@@ -592,17 +616,9 @@ class Worker(Thread):
 
       # get link to cover
         try:
-            vol_cover_index = soup.find(property="og:image").get("content")
+            vol_cover_index = self.isole_lien_couverture(soup)
         except:
-          # og:image may be missing in the head ... revert searching cover in the body
-            if not vol_cover_index:
-                if soup.select("img[name='couverture']"):
-                    for elemnt in repr(soup.select("img[name='couverture']")[0]).split('"'):
-                        if "http" in elemnt:
-                            vol_cover_index = elemnt
-
-        if debug: self.log.info(self.who,"vol_cover_index processed : ")
-#        if debug: self.log.info(self.who,"vol_cover_index :\n", vol_cover_index)              # a bit long I guess
+            self.log.exception("ERROR: isole_lien_couverture(soup) failed")
 
       # get other editions
         if soup.select_one("#AutresEdition"):
