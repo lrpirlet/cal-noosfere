@@ -282,6 +282,92 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
+    def isole_isbn(self, soup):
+        '''
+        return ISBN from sousFicheNiourf (used to be extrated together with genre and publication date)
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_isbn(self, soup)")
+
+        vol_isbn=""
+        all_elemnt=[]
+
+#        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
+        for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
+            all_elemnt.append(elemnt)
+#        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
+
+        for i in range(len(all_elemnt)):
+            if not vol_isbn and "ISBN : " in all_elemnt[i]:
+                vol_isbn = all_elemnt[i].replace("ISBN : ","").strip()
+                if not vol_isbn[0].isnumeric(): vol_isbn=""
+
+        if debug:
+            self.log.info(self.who,"return ISBN : {}".format(vol_isbn))
+        return vol_isbn
+
+
+    def isole_genre_date(self,soup):
+        '''
+        sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
+        publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
+        note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_genre_date(self, soup)")
+
+        vol_genre=""
+        vol_dp_lgl=""
+        period=""
+        all_elemnt=[]
+
+#        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
+        ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
+        for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
+            all_elemnt.append(elemnt)
+#        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
+
+        for i in range(len(all_elemnt)):
+            for dt in ("Dépôt légal :","Date de parution :"):                                  # if "Dépôt légal :" absent try "Date de parution :"
+                if not period and dt in all_elemnt[i]:
+                    substr=all_elemnt[i].replace(dt,"").strip()
+                    if len(substr):
+                        period=substr.replace(","," ")
+                        if substr.isnumeric():
+                            dom = substr
+                            substr = all_elemnt[i+1]
+                            period = dom + " " + substr
+                    else:
+                        substr=all_elemnt[i+1]
+                        period=substr.replace(","," ")
+
+        if period:
+            if period.isnumeric() and len(period) == 4:
+                vol_dp_lgl=datetime.datetime.strptime("175 "+period,"%j %Y")
+            elif "semestre" in period:
+                ele=period.split()
+                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*175+97))[-3:]+" "+ele[2],"%j %Y")
+            elif "trimestre" in period:
+                ele=period.split()
+                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
+            else:
+                for i in range(len(ms)):
+                    if ms[i] in period:
+                        ele=period.split()
+                        if len(ele)==3:
+                            vol_dp_lgl=datetime.datetime.strptime(("00"+ele[0])[-2:]+" "+("00"+str(i+1))[-2:]+" "+ele[2],"%d %m %Y")
+                        else:
+                            vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
+
+        for i in range(len(all_elemnt)):
+            if "Genre : " in all_elemnt[i]:
+                vol_genre = all_elemnt[i].replace("Genre : ","").strip()
+
+        if debug:
+            self.log.info(self.who,"return genre : {}, date : {}".format(vol_genre, vol_dp_lgl))
+        return vol_genre, vol_dp_lgl
+
+
     def isole_editeur_and_co(self, soup):
         '''
         returns publisher, publisher collection and publisher collection index
@@ -297,10 +383,7 @@ class Worker(Thread):
         vol_coll_srl=""
 
         if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
-
         if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
-
-
         for i in soup.select("span[class='ficheNiourf']")[0].stripped_strings:
             tmp_lst.append(str(i))
         vol_coll_srl = tmp_lst[len(tmp_lst)-1]
@@ -314,7 +397,7 @@ class Worker(Thread):
             vol_coll_srl = ""
 
         if debug:
-            self.log.info(self.who,"return vol_editor : {}, vol_coll : {}, vol_coll_srl : {}".format(vol_editor, vol_coll, vol_coll_srl))
+            self.log.info(self.who,"return publisher : {}, pub_coll : {}, pub_coll_srl : {}".format(vol_editor, vol_coll, vol_coll_srl))
         return vol_editor, vol_coll, vol_coll_srl
 
 
@@ -446,13 +529,6 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
-        # tmp_lst=[]
-        # vol_editor=""
-        # vol_coll=""
-        # vol_coll_srl=""
-        vol_dp_lgl=""
-        vol_isbn=""
-        vol_genre=""
         vol_cover_index=""
         comment_generic=None
         comment_AutresEdition=None
@@ -502,81 +578,17 @@ class Worker(Thread):
         except:
             self.log.exception("ERROR: isole_editeur_and_co(soup) failed")
 
+      # get ISBN
+        try:
+            vol_isbn = self.isole_isbn(soup)
+        except:
+            self.log.exception("ERROR: isole_isbn(soup) failed")
 
-        # if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
-        # if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
-
-        # if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
-        # if debug: self.log.info(self.who,"vol_coll : ", vol_coll)
-
-        # for i in comment_generic.stripped_strings:
-        #     tmp_lst.append(str(i))
-        # vol_coll_srl = tmp_lst[len(tmp_lst)-1]
-        # if "n°" in vol_coll_srl:
-        #     for k in ["n°","(",")"]:
-        #         if k in vol_coll_srl:
-        #             vol_coll_srl=vol_coll_srl.replace(k,"")
-        #     vol_coll_srl = vol_coll_srl.strip()
-        #     if vol_coll_srl.isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
-        # else:
-        #     vol_coll_srl = ""
-        # if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
-
-#        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
-
-      # get ISBN, Genre and publication date
-      # sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
-      # publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
-      # note that I 'calculate' the missing day of the month and even sometimes the missing month (somewhen in the middle)
-        all_elemnt=[]
-        ms=("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre")
-        for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
-            all_elemnt.append(elemnt)
-#        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
-
-        period, vol_isbn = "",""
-        for i in range(len(all_elemnt)):
-            for dt in ("Dépôt légal :","Date de parution :"):                                  # if "Dépôt légal :" absent try "Date de parution :"
-                if not period and dt in all_elemnt[i]:
-                    substr=all_elemnt[i].replace(dt,"").strip()
-                    if len(substr):
-                        period=substr.replace(","," ")
-                        if substr.isnumeric():
-                            dom = substr
-                            substr = all_elemnt[i+1]
-                            period = dom + " " + substr
-                    else:
-                        substr=all_elemnt[i+1]
-                        period=substr.replace(","," ")
-
-        if period:
-            if period.isnumeric() and len(period) == 4:
-                vol_dp_lgl=datetime.datetime.strptime("175 "+period,"%j %Y")
-            elif "semestre" in period:
-                ele=period.split()
-                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*175+97))[-3:]+" "+ele[2],"%j %Y")
-            elif "trimestre" in period:
-                ele=period.split()
-                vol_dp_lgl=datetime.datetime.strptime(("000"+str((int(ele[0][0])-1)*91+47))[-3:]+" "+ele[2],"%j %Y")
-            else:
-                for i in range(len(ms)):
-                    if ms[i] in period:
-                        ele=period.split()
-                        if len(ele)==3:
-                            vol_dp_lgl=datetime.datetime.strptime(("00"+ele[0])[-2:]+" "+("00"+str(i+1))[-2:]+" "+ele[2],"%d %m %Y")
-                        else:
-                            vol_dp_lgl=datetime.datetime.strptime(("000"+str(10+31*i))[-3:]+" "+ele[1],"%j %Y")
-        if debug: self.log.info(self.who,"vol_dp_lgl processed : ", vol_dp_lgl)
-
-        for i in range(len(all_elemnt)):
-            if not vol_isbn and "ISBN : " in all_elemnt[i]:
-                vol_isbn = all_elemnt[i].replace("ISBN : ","").strip()
-                if not vol_isbn[0].isnumeric(): vol_isbn=""
-                if debug: self.log.info(self.who,"vol_isbn processed : ", vol_isbn)
-
-            elif "Genre : " in all_elemnt[i]:
-                vol_genre = all_elemnt[i].replace("Genre : ","").strip()
-                if debug: self.log.info(self.who,"vol_genre processed : ", vol_genre)
+      # get Genre and publication date
+        try:
+            vol_genre, vol_dp_lgl = self.isole_genre_date(soup)
+        except:
+            self.log.exception("ERROR: isole_genre_date(soup) failed")
 
       # get link to cover
         try:
