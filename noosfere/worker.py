@@ -554,23 +554,6 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
-        comment_generic=None
-        comment_AutresEdition=None
-        comment_resume=None
-        comment_Critiques=None
-        comment_Sommaire=None
-        comment_AutresCritique=None
-        comment_Prixobtenus=None
-        comment_Citédanslespagesthématiquessuivantes=None
-        comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
-        comment_CitédanslesConseilsdelecture=None
-        comment_Adaptations=None
-        comment_cover=None
-
-      # add volume address as a reference in the comment (noosfere URL)
-        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
-        if debug: self.log.info(self.who,"vol reference processed")
-
       # get title
         try:
             vol_title = self.isole_title(soup)
@@ -588,13 +571,6 @@ class Worker(Thread):
             vol_serie, vol_serie_seq = self.isole_serie_serie_seq(soup)
         except:
             self.log.exception("ERROR: isole_serie_serie_seq(soup) failed")
-
-      # get comment
-        comment_generic = soup.select("span[class='ficheNiourf']")[0]
-        new_div=soup.new_tag('div')
-        comment_generic = comment_generic.wrap(new_div)
-        if debug: self.log.info(self.who,"comment_generic processed")
-#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
       # get publisher, publisher collection and publisher collection serial
         try:
@@ -620,15 +596,32 @@ class Worker(Thread):
         except:
             self.log.exception("ERROR: isole_lien_couverture(soup) failed")
 
+        self.log.info("\n",self.who,"Fetch and format various info to create HTML comments")
+
+      # first comment is volume address as a reference in the comment (noosfere URL)
+        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
+        if debug: self.log.info(self.who,"reference url_vrai processed")
+
+      # add cover image address as a reference in the comment
+        comment_cover=None
+        if vol_cover_index:
+            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
+        if debug: self.log.info(self.who,"comment_cover processed")
+
       # get other editions
+        comment_AutresEdition=None
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
 #        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
 
-      # add cover image address as a reference in the comment
-        if vol_cover_index:
-            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
+      # get generic comments
+        comment_generic=None
+        comment_generic = soup.select_one("span[class='ficheNiourf']")   #[0]
+        new_div=soup.new_tag('div')
+        comment_generic = comment_generic.wrap(new_div)
+        if debug: self.log.info(self.who,"comment_generic processed")
+#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
       # select the fields I want... More exist such as film adaptations or references to advises to read
       # but that is not quite consistent around all the books (noosfere is a common database from many people)
@@ -636,6 +629,16 @@ class Worker(Thread):
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
 #        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
+        comment_resume=None
+        comment_Critiques=None
+        comment_Sommaire=None
+        comment_AutresCritique=None
+        comment_Prixobtenus=None
+        comment_Citédanslespagesthématiquessuivantes=None
+        comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
+        comment_CitédanslesConseilsdelecture=None
+        comment_Adaptations=None
+
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
                 comment_resume = tmp_comm_lst[i].find_parents("div",{'class':'sousbloc'})[0]
@@ -716,7 +719,10 @@ class Worker(Thread):
             vol_comment_soup.append(comment_CitédanslesConseilsdelecture)
         if comment_Adaptations:                                                   # optionnal
             vol_comment_soup.append(comment_Adaptations)
+
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
+
+        self.log.info("\n",self.who,"Correct HTML comments for design and complete functionality in calibre catalog")
 
       # ouais, et alors, si je modifie le comment_<n'importe quoi> immediatement APRES l'avoir ajouté à vol_comment_soup
       # et avant d'avoir tout intégré, comme il n'y a qu'une seule version en mémoire... ça fait un big mess
@@ -773,7 +779,6 @@ class Worker(Thread):
 
       # repair url's so it does NOT depend on being in noosfere space
 
-        self.log.info("\n",self.who,"Correcting vol_comment_soup to calibre")
         if debug:
             for elemnt in vol_comment_soup.select("a[href]"):
                 if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet avant correction: ", elemnt)
@@ -842,7 +847,8 @@ class Worker(Thread):
       # the idea is to use search and replace in the edit Metadata in bulk window.
 
         if self.extended_publisher:
-            if debug: self.log.info(self.who,"""flag : "Ajoute collection et son numéro d'ordre au champ éditeur" set""")
+            if debug:
+                self.log.info("\n",self.who,""""Ajoute collection et son numéro d'ordre au champ éditeur" is set""")
             if vol_coll:
                 if debug: self.log.info(self.who,'add collection')
                 vol_editor = vol_editor+('§')+vol_coll
@@ -862,30 +868,30 @@ class Worker(Thread):
       #
         vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
 
-        self.log.info(self.who,"+++"*25)
-        self.log.info(self.who,"nsfr_id, type()                : ",self.nsfr_id, type(self.nsfr_id))                # must be <class 'str'>
-        self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
-        self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
-        self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
-        self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
-        if vol_serie:
-            self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
-        self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
-        self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be <class 'str'>
-        self.log.info(self.who,"vol_coll_srl, type()           : ",vol_coll_srl, type(vol_coll_srl))                # must be <class 'str'>
-        self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
-        self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
-        self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
-        self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
-        self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
-#        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
+        if debug:
+            self.log.info("\n",self.who,"+++"*25)
+            self.log.info(self.who,"nsfr_id, type()                : ",self.nsfr_id, type(self.nsfr_id))                # must be <class 'str'>
+            self.log.info(self.who,"relevance, type()              : ",self.relevance, type(self.relevance))            # must be <class 'float'>
+            self.log.info(self.who,"vol_title, type()              : ",vol_title, type(vol_title))                      # must be <class 'str'>
+            self.log.info(self.who,"vol_auteur, type()             : ",vol_auteur, type(vol_auteur))                    # must be <class 'list'> of <class 'str'>
+            self.log.info(self.who,"vol_serie, type()              : ",vol_serie, type(vol_serie))                      # must be <class 'str'>
+            if vol_serie:
+                self.log.info(self.who,"vol_serie_seq, type()          : ",vol_serie_seq, type(vol_serie_seq))          # must be <class 'float'>
+            self.log.info(self.who,"vol_editor, type()             : ",vol_editor, type(vol_editor))                    # must be <class 'str'>
+            self.log.info(self.who,"vol_coll, type()               : ",vol_coll, type(vol_coll))                        # must be <class 'str'>
+            self.log.info(self.who,"vol_coll_srl, type()           : ",vol_coll_srl, type(vol_coll_srl))                # must be <class 'str'>
+            self.log.info(self.who,"vol_dp_lgl, type()             : ",vol_dp_lgl, type(vol_dp_lgl))                    # must be <class 'datetime.datetime'> ('renderer=isoformat')
+            self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
+            self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
+            self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
+            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
+    #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
 
         if vol_cover_index:
             self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)
 
         if vol_isbn:
             self.plugin.cache_isbn_to_identifier(vol_isbn, self.nsfr_id)
-
 
         mi = Metadata(vol_title, [vol_auteur])
         mi.set_identifier('nsfr_id', self.nsfr_id)
@@ -903,7 +909,7 @@ class Worker(Thread):
 
         mi.comments = vol_comment_soup
 
-        if debug: self.log.info(self.who,"mi\n",mi,"\n")
+        if debug: self.log.info("\n",self.who,"mi\n",mi,"\n")
         self.plugin.clean_downloaded_metadata(mi)
 
         self.result_queue.put(mi)
