@@ -282,6 +282,42 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
+    def isole_editeur_and_co(self, soup):
+        '''
+        returns publisher, publisher collection and publisher collection index
+        the collection and related index will be added to the publisher field
+        if so desired
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_editeur_and_co(self, soup)")
+
+        tmp_lst=[]
+        vol_editor=""
+        vol_coll=""
+        vol_coll_srl=""
+
+        if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
+
+        if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
+
+
+        for i in soup.select("span[class='ficheNiourf']")[0].stripped_strings:
+            tmp_lst.append(str(i))
+        vol_coll_srl = tmp_lst[len(tmp_lst)-1]
+        if "n°" in vol_coll_srl:
+            for k in ["n°","(",")"]:
+                if k in vol_coll_srl:
+                    vol_coll_srl=vol_coll_srl.replace(k,"")
+            vol_coll_srl = vol_coll_srl.strip()
+            if vol_coll_srl.isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
+        else:
+            vol_coll_srl = ""
+
+        if debug:
+            self.log.info(self.who,"return vol_editor : {}, vol_coll : {}, vol_coll_srl : {}".format(vol_editor, vol_coll, vol_coll_srl))
+        return vol_editor, vol_coll, vol_coll_srl
+
+
     def isole_serie_serie_seq(self, soup):
         '''
         will return series and associated sequence.
@@ -410,10 +446,10 @@ class Worker(Thread):
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
-        tmp_lst=[]
-        vol_editor=""
-        vol_coll=""
-        vol_coll_srl=""
+        # tmp_lst=[]
+        # vol_editor=""
+        # vol_coll=""
+        # vol_coll_srl=""
         vol_dp_lgl=""
         vol_isbn=""
         vol_genre=""
@@ -451,8 +487,6 @@ class Worker(Thread):
         try:
             vol_serie, vol_serie_seq = self.isole_serie_serie_seq(soup)
         except:
-            vol_serie=""
-            vol_serie_seq=""
             self.log.exception("ERROR: isole_serie_serie_seq(soup) failed")
 
       # get comment
@@ -463,24 +497,30 @@ class Worker(Thread):
 #        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
       # get publisher, publisher collection and publisher collection serial
-        if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
-        if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
+        try:
+            vol_editor, vol_coll, vol_coll_srl = self.isole_editeur_and_co(soup)
+        except:
+            self.log.exception("ERROR: isole_editeur_and_co(soup) failed")
 
-        if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
-        if debug: self.log.info(self.who,"vol_coll : ", vol_coll)
 
-        for i in comment_generic.stripped_strings:
-            tmp_lst.append(str(i))
-        vol_coll_srl = tmp_lst[len(tmp_lst)-1]
-        if "n°" in vol_coll_srl:
-            for k in ["n°","(",")"]:
-                if k in vol_coll_srl:
-                    vol_coll_srl=vol_coll_srl.replace(k,"")
-            vol_coll_srl = vol_coll_srl.strip()
-            if vol_coll_srl.isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
-        else:
-            vol_coll_srl = ""
-        if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
+        # if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
+        # if debug: self.log.info(self.who,"vol_editor processed : ", vol_editor)
+
+        # if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
+        # if debug: self.log.info(self.who,"vol_coll : ", vol_coll)
+
+        # for i in comment_generic.stripped_strings:
+        #     tmp_lst.append(str(i))
+        # vol_coll_srl = tmp_lst[len(tmp_lst)-1]
+        # if "n°" in vol_coll_srl:
+        #     for k in ["n°","(",")"]:
+        #         if k in vol_coll_srl:
+        #             vol_coll_srl=vol_coll_srl.replace(k,"")
+        #     vol_coll_srl = vol_coll_srl.strip()
+        #     if vol_coll_srl.isnumeric(): vol_coll_srl=("0"*5+vol_coll_srl)[-6:]
+        # else:
+        #     vol_coll_srl = ""
+        # if debug: self.log.info(self.who,"vol_coll_srl processed : ", vol_coll_srl)
 
 #        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
 
