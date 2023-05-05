@@ -49,7 +49,7 @@ class Worker(Thread):
         self.get_Adaptations = self.plugin.get_Adaptations
 
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nEntering worker")
+        self.log.info("\n",self.who,"Entering worker")
         if debug:
             self.log.info(self.who,"self                                                : ", self)
             self.log.info(self.who,"log                                                 : ", log)
@@ -86,7 +86,7 @@ class Worker(Thread):
 
         wrk_url = self.book_url
         if "ditionsLivre" in wrk_url:
-            self.log.info("several volumes exist for this book")
+            self.log.info("\n",self.who,"several volumes exist for this book")
             book_url="https://www.noosfere.org"+self.book_url+"&Tri=3"
             if debug: self.log.info(self.who,"book_url : ",book_url)
             try:
@@ -96,7 +96,7 @@ class Worker(Thread):
                 self.log.exception("ERROR: ret_top_vol_indx failed for URL: ",book_url)
 
         if "niourf" in wrk_url:
-            self.log.info("getting to THE volume for this book")
+            self.log.info("\n",self.who,"getting to THE volume for this book")
             vol_url="https://www.noosfere.org"+wrk_url.replace("./niourf","/livres/niourf")+"&Tri=3"
             if debug: self.log.info(self.who,"vol_url  : ",vol_url)
             try:
@@ -141,7 +141,7 @@ class Worker(Thread):
         in case of equality the oldest win
         '''
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn ret_top_vol_indx(self, url, title, isbn)")
+        self.log.info("\n",self.who,"In ret_top_vol_indx(self, url, title, isbn)")
         if debug:
             self.log.info(self.who, "url : ", url, ", book_title : ", book_title, "isbn : ", book_isbn)
 
@@ -266,7 +266,7 @@ class Worker(Thread):
         I want to have it.
         '''
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn get_Critique_de_la_serie(self, critic_url)")
+        self.log.info("\n",self.who,"In get_Critique_de_la_serie(self, critic_url)")
         if debug:
             self.log.info(self.who,"calling ret_soup(log, dbg_lvl, br, url, rkt=None, who='[__init__]')")
             self.log.info(self.who,"critic_url : ", critic_url, "who : ", self.who)
@@ -282,13 +282,13 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
-    def parse_series_series_seq(self, soup):
+    def isole_serie_serie_seq(self, soup):
         '''
         will return series and associated sequence.
         series and series_seq will be formatted for use
         '''
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn parse_series_series_seq(self, soup)")
+        self.log.info("\n",self.who,"In isole_serie_serie_seq(self, soup)")
 
         vol_serie=""
         vol_serie_seq=""
@@ -319,7 +319,7 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"return vol_serie, vol_serie_seq : ",vol_serie,",",vol_serie_seq)
         return vol_serie, vol_serie_seq
 
-    def parse_authors(self, soup):
+    def isole_authors(self, soup):
         '''
         returns authors as a string of the form
         First_name_0 Familly_name_0 & First_name_1 Familly_name_1 ...
@@ -330,7 +330,7 @@ class Worker(Thread):
         needs to be modified later to reflect list instead of string
         '''
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn parse_authors(self, soup)")
+        self.log.info("\n",self.who,"In isole_authors(self, soup)")
 
         vol_auteur=""
         vol_auteur_prenom=""
@@ -351,6 +351,21 @@ class Worker(Thread):
 
         if debug: self.log.info(self.who,"return vol_auteur : ",vol_auteur)
         return vol_auteur
+
+    def isole_title(self, soup):
+        '''
+        isole title de la soup...
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_title(self, soup)")
+
+        vol_title=""
+
+        vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
+
+        if debug: self.log.info(self.who,"return vol_title : ",vol_title)
+        return vol_title
+
 
     def extract_vol_details(self, vol_url):
         '''
@@ -379,7 +394,7 @@ class Worker(Thread):
         '''
 
         debug=self.dbg_lvl & 2
-        self.log.info(self.who,"\nIn extract_vol_details(soup)")
+        self.log.info("\n",self.who,"In extract_vol_details(soup)")
         if debug:
             self.log.info(self.who,"vol_url       : ",vol_url)
 
@@ -396,7 +411,6 @@ class Worker(Thread):
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
         tmp_lst=[]
-        vol_title=""
         vol_editor=""
         vol_coll=""
         vol_coll_srl=""
@@ -422,22 +436,24 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"vol reference processed")
 
       # get title
-        if soup.select("span[class='TitreNiourf']"): vol_title = soup.select("span[class='TitreNiourf']")[0].text.strip()
-        if debug: self.log.info(self.who,"vol_title processed : ",vol_title)
+        try:
+            vol_title = self.isole_title(soup)
+        except:
+            self.log.exception("ERROR: isole_title(soup) failed")
 
       # get authors
         try:
-            vol_auteur = self.parse_authors(soup)
+            vol_auteur = self.isole_authors(soup)
         except:
-            self.log.exception("ERROR: parse_authors(soup) failed")
+            self.log.exception("ERROR: isole_authors(soup) failed")
 
       # get series and series seq
         try:
-            vol_serie, vol_serie_seq = self.parse_series_series_seq(soup)
+            vol_serie, vol_serie_seq = self.isole_serie_serie_seq(soup)
         except:
             vol_serie=""
             vol_serie_seq=""
-            self.log.exception("ERROR: parse_series_series_seq(soup) failed")
+            self.log.exception("ERROR: isole_serie_serie_seq(soup) failed")
 
       # get comment
         comment_generic = soup.select("span[class='ficheNiourf']")[0]
@@ -689,7 +705,7 @@ class Worker(Thread):
 
       # repair url's so it does NOT depend on being in noosfere space
 
-        self.log.info(self.who,"\nCorrecting vol_comment_soup to calibre")
+        self.log.info("\n",self.who,"Correcting vol_comment_soup to calibre")
         if debug:
             for elemnt in vol_comment_soup.select("a[href]"):
                 if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet avant correction: ", elemnt)
