@@ -152,14 +152,14 @@ class Worker(Thread):
         soup = rsp[0]
         url_vrai = rsp[1]
         if debug:
-#            self.log.info(self.who,"top_vol_index soup :\n",soup)        # a bit long I guess
+#            self.log.info(self.who,"ret_top_vol_indx soup :\n",soup)        # a bit long I guess
             self.log.info(self.who,"url_vrai  : ",url_vrai)
 
         if "niourf.asp" in url_vrai:
             self.log.info(self.who,"Bypassing to extract_vol_details, we have only one volume")
             return url_vrai.replace("https://www.noosfere.org","")                     #volume found return and set wrk_url to volume
 
-        ts_vol_index={}
+        ts_vl_index={}
       # we prefer volumes with an identifier, but some are edited on a particular publisher without isbn
         push_isbn = self.with_isbn
         priority_balanced = self.balanced
@@ -167,34 +167,34 @@ class Worker(Thread):
             self.log.info(self.who,"priority pushes isbn  : ", push_isbn)
             self.log.info(self.who,"priority balanced : ", priority_balanced)
 
-        nbr_of_vol=soup.select("td[class='item_bib']")
-        for count in range(0,len(nbr_of_vol),2):
-            subsoup=nbr_of_vol[count]
+        nbr_of_vl=soup.select("td[class='item_bib']")
+        for count in range(0,len(nbr_of_vl),2):
+            subsoup=nbr_of_vl[count]
             point=1
-            vol_index=vol_title=vol_cover_index=vol_editor=vol_isbn=vol_collection=""
+            vl_index=vl_title=vl_cover_index=vl_editor=vl_isbn=vl_collection=""
 
-            if subsoup.select("a[href*='numlivre']"): vol_index=subsoup.select("a[href*='numlivre']")[0]['href']
+            if subsoup.select("a[href*='numlivre']"): vl_index=subsoup.select("a[href*='numlivre']")[0]['href']
 
-            if subsoup.select("a > img"): vol_title=subsoup.select("a > img")[0]['alt']
-            if book_title.title()==vol_title.title():
+            if subsoup.select("a > img"): vl_title=subsoup.select("a > img")[0]['alt']
+            if book_title.title()==vl_title.title():
                 if priority_balanced: point+=5
 
             if subsoup.select("a > img"):
-                vol_cover_index=subsoup.select("a > img")[0]['src']
+                vl_cover_index=subsoup.select("a > img")[0]['src']
                 if priority_balanced: point+=1
 
-            if subsoup.select("a[href*='numediteur']"): vol_editor=subsoup.select("a[href*='numediteur']")[0].text
+            if subsoup.select("a[href*='numediteur']"): vl_editor=subsoup.select("a[href*='numediteur']")[0].text
 
             if subsoup.select("span[class='SousFicheNiourf']"):
-                vol_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
-                vol_isbn = verify_isbn(self.log, self.dbg_lvl, vol_isbn, who=self.who)
-                if vol_isbn:
+                vl_isbn = subsoup.select("span[class='SousFicheNiourf']")[0].text.strip()
+                vl_isbn = verify_isbn(self.log, self.dbg_lvl, vl_isbn, who=self.who)
+                if vl_isbn:
                     if push_isbn:
                         if priority_balanced:
                             point+=50
-                            if vol_isbn==book_isbn: point+=50
+                            if vl_isbn==book_isbn: point+=50
 
-            if subsoup.select("a[href*='collection']"): vol_collection=subsoup.select("a[href*='collection']")[0].text
+            if subsoup.select("a[href*='collection']"): vl_collection=subsoup.select("a[href*='collection']")[0].text
 
             if subsoup.select("img[src*='3dbullgreen']"):
                 if priority_balanced: point+=2
@@ -207,31 +207,31 @@ class Worker(Thread):
                     elif "CS" in tmp_presence[i].text: point+=1
                     elif "S" in tmp_presence[i].text: point+=1
 
-            ts_vol_index[int(count/2)]=(point,vol_index,vol_editor)
+            ts_vl_index[int(count/2)]=(point,vl_index,vl_editor)
 
             self.log.info(self.who,"found",int(count/2+1),"volumes différents")
             self.log.info(self.who,"key                   : ",int(count/2))
-            self.log.info(self.who,"vol_index             : ",vol_index)
-            self.log.info(self.who,"vol_title             : ",vol_title)
-            self.log.info(self.who,"vol_cover_index       : ",vol_cover_index)
-            self.log.info(self.who,"vol_editor            : ",vol_editor)
-            self.log.info(self.who,"vol_isbn              : ",vol_isbn)
-            self.log.info(self.who,"vol_collection        : ",vol_collection)
+            self.log.info(self.who,"vl_index             : ",vl_index)
+            self.log.info(self.who,"vl_title             : ",vl_title)
+            self.log.info(self.who,"vl_cover_index       : ",vl_cover_index)
+            self.log.info(self.who,"vl_editor            : ",vl_editor)
+            self.log.info(self.who,"vl_isbn              : ",vl_isbn)
+            self.log.info(self.who,"vl_collection        : ",vl_collection)
             self.log.info(self.who,"point                 : ",point)
 
-        top_vol_point = 0
-        top_vol_index = ""
+        top_vl_point = 0
+        top_vl_index = ""
         serie_editeur = []
         reverse_it = True if "latest" in self.set_priority_handling else False
         if debug: self.log.info(self.who,"priority pushes latest : ", reverse_it)
 
       # in python 3 a dict keeps the order of introduction... In this case, as noosfere presents it in chronological order,
       # let's invert the dict by sorting reverse if the latest volume is asked
-        ts_vol_index = dict(sorted(ts_vol_index.items(),reverse=reverse_it))
+        ts_vl_index = dict(sorted(ts_vl_index.items(),reverse=reverse_it))
 
       # create a list of publisher
-        for key,ref in ts_vol_index.items():
-            serie_editeur.append(ts_vol_index[key][2])
+        for key,ref in ts_vl_index.items():
+            serie_editeur.append(ts_vl_index[key][2])
 
       # find the publishers in the list
         top_vol_editor={}.fromkeys(set(serie_editeur),0)
@@ -248,14 +248,14 @@ class Worker(Thread):
                     top_vol_editor[editr]+=1
 
        # compute all that and the final result is the first entry with the top number of point...
-        for key,ref in ts_vol_index.items():
+        for key,ref in ts_vl_index.items():
             if debug:
-                self.log.info(self.who,"pour la clé", key,"la valeur des points est", ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]],"l'URL est",ts_vol_index[key][1],"l'éditeur est",ts_vol_index[key][2])
-            if ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]>top_vol_point:
-                top_vol_point=ts_vol_index[key][0]*top_vol_editor[ts_vol_index[key][2]]
-                top_vol_index=ts_vol_index[key][1]
+                self.log.info(self.who,"pour la clé", key,"la valeur des points est", ts_vl_index[key][0]*top_vol_editor[ts_vl_index[key][2]],"l'URL est",ts_vl_index[key][1],"l'éditeur est",ts_vl_index[key][2])
+            if ts_vl_index[key][0]*top_vol_editor[ts_vl_index[key][2]]>top_vl_point:
+                top_vl_point=ts_vl_index[key][0]*top_vol_editor[ts_vl_index[key][2]]
+                top_vl_index=ts_vl_index[key][1]
 
-        return top_vol_index
+        return top_vl_index
 
     def get_Critique_de_la_serie(self, critic_url):
         '''
@@ -598,7 +598,7 @@ class Worker(Thread):
 
         self.log.info("\n",self.who,"Fetch and format various info to create HTML comments")
 
-      # first comment is volume address as a reference in the comment (noosfere URL)
+      # first line of comment is volume address as a reference in the comment (noosfere URL)
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"reference url_vrai processed")
 
@@ -627,8 +627,6 @@ class Worker(Thread):
       # but that is not quite consistent around all the books (noosfere is a common database from many people)
       # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
 
-        tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
-#        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
         comment_resume=None
         comment_Critiques=None
         comment_Sommaire=None
@@ -638,6 +636,9 @@ class Worker(Thread):
         comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
         comment_CitédanslesConseilsdelecture=None
         comment_Adaptations=None
+
+        tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
+#        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
 
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
@@ -781,7 +782,8 @@ class Worker(Thread):
 
         if debug:
             for elemnt in vol_comment_soup.select("a[href]"):
-                if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet avant correction: ", elemnt)
+                if 'http' not in elemnt.get('href'):
+                    self.log.info(self.who,"url incomplet avant correction: ", elemnt)
 
         for elemnt in vol_comment_soup.select("a[href*='/livres/auteur.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
@@ -834,7 +836,8 @@ class Worker(Thread):
 
         if debug:
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
-                if 'http' not in elemnt.get('href'): self.log.info(self.who,"url incomplet apres correction: ", elemnt)
+                if 'http' not in elemnt.get('href'):
+                    self.log.info(self.who,"url incomplet apres correction: ", elemnt)
 
       # I could design from UFT_8 character set a set of right and left arrows but I fake if with ==>>
 
@@ -860,7 +863,7 @@ class Worker(Thread):
       # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
       # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
       # Side note:
-      # This provides no real good URL structure(I once got html 3 times and div as a sibling of html...), but calibre does not seems to care (nice :-) )
+      # This produce no very good URL structure (I once got html 3 times and div as a sibling of html...), but calibre does not seems to care (nice :-) )
       #
       # Ça m'a pris un temps fou pour trouver, par hasard, que encode('ascii','xmlcharrefreplace') aidait bien...
       # (enfin, quasi par hasard, j' ai essayé tout ce qui pouvait améliorer la compatibilité avec xml... mais je
