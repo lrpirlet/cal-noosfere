@@ -458,8 +458,8 @@ class noosfere(Source):
         id_from_url : takes an URL and extracts the identifier details...
         '''
         idt=""
-        if "https://www.noosfere.org/livres/niourf.asp?numlivre=" in url:
-            idt = url.replace("https://www.noosfere.org/livres/niourf.asp?numlivre=","").strip()
+        if "https://www.noosfere.org/livres/niourf.asp?numlivre=" in url.lower():
+            idt = url.lower().replace("https://www.noosfere.org/livres/niourf.asp?numlivre=","").strip()
         if idt:
             return (self.ID_NAME, "vl$" + idt)
         else:
