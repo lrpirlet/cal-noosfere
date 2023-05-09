@@ -282,6 +282,37 @@ class Worker(Thread):
                 self.log.info(self.who,"critique de la série processed")
             return soup.select_one('div[id="critique"]')
 
+    def get_decoupage(self, soup):
+        '''
+        certains cycles sont divisés suivant une autre serie de volume...
+        ceci retourne le numero de la serie fonction du volume choisi (numitem)
+        bk_decoup est l'adresse de la page de cette decoupe annexe
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In get_decoupage(self, soup)")
+
+        vol_serie_seq = "0"
+
+      # isole le n° de ref du volume (numitem) et l'url du/des découpage/s (bk_decoup)
+        nmtm = soup.select_one('a[href*="numitem"]')['href'].split("=")[-1]
+        bk_decoup = "https://www.noosfere.org/livres/"+soup.select('a[href*="serie.asp"]')[0]['href']+"&Niveau=simple"
+        if debug:
+            self.log.info(self.who,"nmtm      : ", nmtm)
+            self.log.info(self.who,"bk_decoup : ", bk_decoup)
+
+        sp = ret_soup(self.log, self.dbg_lvl, self.br, bk_decoup, who=self.who)[0]
+        bk_dcp = sp.select('a[href*=numitem]')
+
+        for i in range(len(bk_dcp)):
+            if nmtm in bk_dcp[i]['href']:
+#                 if debug: self.log.info(self.who, bk_dcp[i])                     # a bit long I guess
+                vol_serie_seq = bk_dcp[i].get_text().replace("/","").strip()
+                break
+
+        if debug:
+            self.log.info(self.who,"return vol_serie_seq : {}".format(vol_serie_seq))
+        return vol_serie_seq
+
     def isole_lien_couverture(self,soup):
         '''
         retourne le lien vers la couverture du volume choisi, sera place dans les commentaires
@@ -430,6 +461,7 @@ class Worker(Thread):
         '''
         will return series and associated sequence.
         series and series_seq will be formatted for use
+        vol_title maybe needed in some occasion
         '''
         debug=self.dbg_lvl & 2
         self.log.info("\n",self.who,"In isole_serie_serie_seq(self, soup)")
@@ -439,6 +471,7 @@ class Worker(Thread):
 
         if soup.select("a[href*='serie.asp']"):
             if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
+#                 if debug: self.log.info(soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}).prettify())              # a bit long I guess
                 vol_serie = soup.select("a[href*='serie.asp']")[0].text
                 tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
                 for i in range(len(tmp_vss)):
@@ -446,7 +479,7 @@ class Worker(Thread):
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
                     if "découpage" in tmp_vss[i]:
-                        vol_serie_seq="0.1"
+                        vol_serie_seq = self.get_decoupage(soup)
                         break
 
         if vol_serie:
@@ -548,7 +581,7 @@ class Worker(Thread):
         rsp = ret_soup(self.log, self.dbg_lvl, self.br, vol_url, who=self.who)
         soup = rsp[0]
         url_vrai = rsp[1].replace("&Tri=3","")
-#        if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
+#         if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
 
         self.nsfr_id = "vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
         if debug:
