@@ -472,13 +472,17 @@ class Worker(Thread):
         if soup.select("a[href*='serie.asp']"):
             if soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}):
 #                 if debug: self.log.info(soup.select("a[href*='serie.asp']")[0].find_parent("span", {"class":"ficheNiourf"}).prettify())              # a bit long I guess
-                vol_serie = soup.select("a[href*='serie.asp']")[0].text
+                vol_serie = soup.select_one("a[href*='serie.asp']").text
                 tmp_vss = [x for x in soup.select("a[href*='serie.asp']")[0].parent.stripped_strings]
                 for i in range(len(tmp_vss)):
                     if "vol." in tmp_vss[i]:
                         if not vol_serie_seq:
                             vol_serie_seq=tmp_vss[i].replace("vol.","").strip()
-                    if "découpage" in tmp_vss[i]:
+                            break
+                    elif "découpage" in tmp_vss[i]:
+                        vol_serie_seq = self.get_decoupage(soup)
+                        break
+                    elif "omnibus" in tmp_vss[i]:
                         vol_serie_seq = self.get_decoupage(soup)
                         break
 
@@ -486,11 +490,19 @@ class Worker(Thread):
             if vol_serie_seq.isnumeric():
                 vol_serie_seq = float(vol_serie_seq)
             else:
-                if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():
+                if vol_serie_seq and vol_serie_seq[0:-1].isnumeric():   # return vol_serie_seq : 2a ==> 2.01
                     try: subseq=("abcdefghijklmnopqrstuvwxyz".index(vol_serie_seq[-1])+1)/100
                     except: subseq=0.99
                     vol_serie_seq = float(vol_serie_seq[0:-1])+subseq
+                elif "(omn" in vol_serie_seq:                           # return vol_serie_seq : (omn1)  ==> 0.1
+                    vol_serie_seq = vol_serie_seq.replace("(omn","").replace(")","")
+                    if vol_serie_seq and vol_serie_seq.isnumeric():
+                        vol_serie_seq = float(vol_serie_seq)/10
+                    else:
+                        if debug: self.log.info(self.who,"vol_serie_seq is {}, will be set to 0.0 (line1)".format(vol_serie_seq))
+                        vol_serie_seq = 0.0
                 else:
+                    if debug: self.log.info(self.who,"vol_serie_seq is {}, will be set to 0.0 (line2)".format(vol_serie_seq))
                     vol_serie_seq = 0.0
 
         if debug: self.log.info(self.who,"return vol_serie, vol_serie_seq : ",vol_serie,",",vol_serie_seq)
@@ -920,8 +932,7 @@ class Worker(Thread):
             self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
             self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
             self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
-            self.log.info(self.who,"type(vol_comment_soup)         : ",type(vol_comment_soup))                          # must be byte encoded (start with b'blablabla...
-    #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
+     #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
 
         if vol_cover_index:
             self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)
@@ -945,7 +956,7 @@ class Worker(Thread):
 
         mi.comments = vol_comment_soup
 
-        if debug: self.log.info("\n",self.who,"mi\n",mi,"\n")
+#         if debug: self.log.info("\n",self.who,"mi\n",mi,"\n")                     # a bit long I guess
         self.plugin.clean_downloaded_metadata(mi)
 
         self.result_queue.put(mi)
