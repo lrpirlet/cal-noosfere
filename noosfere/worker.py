@@ -287,27 +287,53 @@ class Worker(Thread):
         certains cycles sont divisés suivant une autre serie de volume...
         ceci retourne le numero de la serie fonction du volume choisi (numitem)
         bk_decoup est l'adresse de la page de cette decoupe annexe
+        cette fonction retourne un string qui represente la numero du volume dans la serie
         '''
         debug=self.dbg_lvl & 2
         self.log.info("\n",self.who,"In get_decoupage(self, soup)")
 
         vol_serie_seq = "0"
+        nmtm = None
+        titre= None
 
       # isole le n° de ref du volume (numitem) et l'url du/des découpage/s (bk_decoup)
-        nmtm = soup.select_one('a[href*="numitem"]')['href'].split("=")[-1]
+      # sans numitem, pas de flèche qui pointe vers le précédent ou le suivant de la série...
+        try:
+            nmtm = soup.select_one('a[href*="numitem"]')['href'].split("=")[-1]
+        except:
+            if debug: self.log.info(self.who, "OUPS, pas de numitem...")
+            titre = self.isole_title(soup)
+            if debug: self.log.info(self.who, "on essaye avec le titre : {}".format(titre))
+
         bk_decoup = "https://www.noosfere.org/livres/"+soup.select('a[href*="serie.asp"]')[0]['href']+"&Niveau=simple"
         if debug:
-            self.log.info(self.who,"nmtm      : ", nmtm)
+            if nmtm:
+                self.log.info(self.who,"nmtm      : ", nmtm)
+            else:
+                self.log.info(self.who,"titre     : ", titre)
             self.log.info(self.who,"bk_decoup : ", bk_decoup)
 
         sp = ret_soup(self.log, self.dbg_lvl, self.br, bk_decoup, who=self.who)[0]
         bk_dcp = sp.select('a[href*=numitem]')
 
+      # if titre exists, find nmtm from an exact match of the title with one of the titles in the list 
+      # (hope no exact same title in two alternate series)
+        if titre:
+            for i in range(len(bk_dcp)):
+                # if debug: self.log.info(self.who, "bk_dcp[{}] : {}".format(i,bk_dcp[i]))     # a bit long I guess
+                if titre.strip() == bk_dcp[i].get_text().strip():
+                    nmtm =  bk_dcp[i]['href'].split("=")[-1]
+                    break
+            if debug:
+                self.log.info(self.who,"nmtm      : ", nmtm)
+
+      # extrait la numerotation fonction de nmtm
         for i in range(len(bk_dcp)):
-            if nmtm in bk_dcp[i]['href']:
-#                 if debug: self.log.info(self.who, bk_dcp[i])                     # a bit long I guess
-                vol_serie_seq = bk_dcp[i].get_text().replace("/","").strip()
-                break
+            # if debug: self.log.info(self.who, "bk_dcp[{}] : {}".format(i,bk_dcp[i]))     # a bit long I guess
+            if nmtm:
+                if (nmtm in bk_dcp[i]['href']):
+                    vol_serie_seq = bk_dcp[i].get_text().split("/")[0].strip()    # damn I can't do anything when we have a 'bis' numerotation
+                    break
 
         if debug:
             self.log.info(self.who,"return vol_serie_seq : {}".format(vol_serie_seq))
@@ -487,6 +513,7 @@ class Worker(Thread):
                         break
 
         if vol_serie:
+            vol_serie_seq = vol_serie_seq.replace("bis","")         # damn I can't differentiate a 'bis' numerotation
             if vol_serie_seq.isnumeric():
                 vol_serie_seq = float(vol_serie_seq)
             else:

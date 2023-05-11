@@ -206,3 +206,9 @@ the 'good' fact is that one can access a volume using either:
 https://www.noosfere.org/livres/niourf.asp?NumLivre=2146610758 or
 https://www.noosfere.org/livres/niourf.asp?numlivre=2146610758
 
+improved vol_seriel_seq detection when a 'decoupage annexe' (? other volume distribution ?) or
+several omnibus collection exists: seen as (omn1) (omn2) ...
+
+While doing the above 2, I modified the worker.py code into methods (easier to maintain)...
+this (and of cousre, the repair and the vol_seriel_seq improvement) does
+justify to uplift the version to 1.2.0
