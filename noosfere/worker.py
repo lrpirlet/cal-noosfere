@@ -316,7 +316,7 @@ class Worker(Thread):
         sp = ret_soup(self.log, self.dbg_lvl, self.br, bk_decoup, who=self.who)[0]
         bk_dcp = sp.select('a[href*=numitem]')
 
-      # if titre exists, find nmtm from an exact match of the title with one of the titles in the list 
+      # if titre exists, find nmtm from an exact match of the title with one of the titles in the list
       # (hope no exact same title in two alternate series)
         if titre:
             for i in range(len(bk_dcp)):
@@ -331,8 +331,8 @@ class Worker(Thread):
         for i in range(len(bk_dcp)):
             # if debug: self.log.info(self.who, "bk_dcp[{}] : {}".format(i,bk_dcp[i]))     # a bit long I guess
             if nmtm:
-                if (nmtm in bk_dcp[i]['href']):
-                    vol_serie_seq = bk_dcp[i].get_text().split("/")[0].strip()    # damn I can't do anything when we have a 'bis' numerotation
+                if (nmtm == bk_dcp[i]['href'].split("=")[-1]):
+                    vol_serie_seq = bk_dcp[i].get_text().split("/")[0].strip()
                     break
 
         if debug:
