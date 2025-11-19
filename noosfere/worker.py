@@ -339,7 +339,7 @@ class Worker(Thread):
             self.log.info(self.who,"return vol_serie_seq : {}".format(vol_serie_seq))
         return vol_serie_seq
 
-    def isole_lien_couverture(self,soup):
+    def isole_lien_couverture(self,soup):   # in head or in id='Fiche_livre'
         '''
         retourne le lien vers la couverture du volume choisi, sera place dans les commentaires
         car la couverture choisie peut etre differente de la vraie couverture...
@@ -364,7 +364,7 @@ class Worker(Thread):
         return vol_cover_index
 
 
-    def isole_isbn(self, soup):
+    def isole_isbn(self, soup):     # in id='Fiche_livre'
         '''
         return ISBN from sousFicheNiourf (used to be extrated together with genre and publication date)
         '''
@@ -389,7 +389,7 @@ class Worker(Thread):
         return vol_isbn
 
 
-    def isole_genre_date(self,soup):
+    def isole_genre_date(self,soup):    # in id='Fiche_livre'
         '''
         sousFicheNiourf holds some information we want to extract: ISBN, Genre and publication date... However,
         publication date is largely ignored in noosfere, but we have the "dépot legal" date and I use it instead
@@ -450,7 +450,7 @@ class Worker(Thread):
         return vol_genre, vol_dp_lgl
 
 
-    def isole_editeur_and_co(self, soup):
+    def isole_editeur_and_co(self, soup):    # in id='Fiche_livre'
         '''
         returns publisher, publisher collection and publisher collection index
         the collection and related index will be added to the publisher field
@@ -483,7 +483,7 @@ class Worker(Thread):
         return vol_editor, vol_coll, vol_coll_srl
 
 
-    def isole_serie_serie_seq(self, soup):
+    def isole_serie_serie_seq(self, soup):    # in id='Fiche_livre'
         '''
         will return series and associated sequence.
         series and series_seq will be formatted for use
@@ -535,7 +535,7 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"return vol_serie, vol_serie_seq : ",vol_serie,",",vol_serie_seq)
         return vol_serie, vol_serie_seq
 
-    def isole_authors(self, soup):
+    def isole_authors(self, soup):    # in id='Fiche_livre'
         '''
         returns authors as a string of the form
         First_name_0 Familly_name_0 & First_name_1 Familly_name_1 ...
@@ -568,7 +568,7 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"return vol_auteur : ",vol_auteur)
         return vol_auteur
 
-    def isole_title(self, soup):
+    def isole_title(self, soup):    # in id='Fiche_livre'
         '''
         isole title de la soup...
         '''
@@ -581,6 +581,22 @@ class Worker(Thread):
 
         if debug: self.log.info(self.who,"return vol_title : ",vol_title)
         return vol_title
+
+    def isole_comment_generic(self, soup):    # in id='Fiche_livre'
+        '''
+        isole generic comments
+        '''
+        debug=self.dbg_lvl & 2
+        self.log.info("\n",self.who,"In isole_comment_generic(self, soup)")
+
+        vol_comment_generic=""
+        vol_comment_generic = soup.select_one("span[class='ficheNiourf']")   #[0]
+#         new_div=soup.new_tag('div')
+#         comment_generic = comment_generic.wrap(new_div)
+#         if debug: self.log.info(self.who,"comment_generic processed")
+# #        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
+        if debug: self.log.info(self.who,"return vol_title : ",vol_comment_generic)
+        return vol_comment_generic
 
 
     def extract_vol_details(self, vol_url):
@@ -620,54 +636,64 @@ class Worker(Thread):
         rsp = ret_soup(self.log, self.dbg_lvl, self.br, vol_url, who=self.who)
         soup = rsp[0]
         url_vrai = rsp[1].replace("&Tri=3","")
-#         if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
+        # if debug: self.log.info(self.who,"extract_vol_details soup :\n",soup.prettify())              # a bit long I guess
 
         self.nsfr_id = "vl$"+url_vrai.replace('?','&').replace('=','&').split('&')[2]
         if debug:
             self.log.info(self.who,"self.nsfr_id, type() : ", self.nsfr_id, type(self.nsfr_id))
 
-      # get title
+      # create a subset of soup that only contains info about the book itself
+        soup_fiche_livre = soup.select_one("div[id='Fiche_livre']")
+
+      # get title in id='Fiche_livre'
         try:
-            vol_title = self.isole_title(soup)
+            vol_title = self.isole_title(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_title(soup) failed")
 
-      # get authors
+      # get authors in id='Fiche_livre'
         try:
-            vol_auteur = self.isole_authors(soup)
+            vol_auteur = self.isole_authors(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_authors(soup) failed")
 
-      # get series and series seq
+      # get series and series seq in id='Fiche_livre'
         try:
-            vol_serie, vol_serie_seq = self.isole_serie_serie_seq(soup)
+            vol_serie, vol_serie_seq = self.isole_serie_serie_seq(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_serie_serie_seq(soup) failed")
 
-      # get publisher, publisher collection and publisher collection serial
+      # get publisher, publisher collection and publisher collection serial in id='Fiche_livre'
         try:
-            vol_editor, vol_coll, vol_coll_srl = self.isole_editeur_and_co(soup)
+            vol_editor, vol_coll, vol_coll_srl = self.isole_editeur_and_co(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_editeur_and_co(soup) failed")
 
-      # get ISBN
+      # get ISBN in id='Fiche_livre'
         try:
-            vol_isbn = self.isole_isbn(soup)
+            vol_isbn = self.isole_isbn(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_isbn(soup) failed")
 
-      # get Genre and publication date
+      # get Genre and publication date in id='Fiche_livre'
         try:
-            vol_genre, vol_dp_lgl = self.isole_genre_date(soup)
+            vol_genre, vol_dp_lgl = self.isole_genre_date(soup_fiche_livre)
         except:
             self.log.exception("ERROR: isole_genre_date(soup) failed")
 
-      # get link to cover
+      # get link to cover in head or in id='Fiche_livre'
         try:
             vol_cover_index = self.isole_lien_couverture(soup)
         except:
             self.log.exception("ERROR: isole_lien_couverture(soup) failed")
 
+      # get generic comments in id='Fiche_livre'
+        try:
+            vol_comment_generic = self.isole_comment_generic(soup_fiche_livre)
+        except:
+            self.log.exception("ERROR: isole_comment_generic(soup) failed")
+
+      # strart building calibre comments
         self.log.info("\n",self.who,"Fetch and format various info to create HTML comments")
 
       # first line of comment is volume address as a reference in the comment (noosfere URL)
@@ -680,20 +706,20 @@ class Worker(Thread):
             comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"comment_cover processed")
 
-      # get other editions
+      # other editions
         comment_AutresEdition=None
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
-#        if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
+        # if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
 
-      # get generic comments
-        comment_generic=None
-        comment_generic = soup.select_one("span[class='ficheNiourf']")   #[0]
-        new_div=soup.new_tag('div')
-        comment_generic = comment_generic.wrap(new_div)
+      # generic comments
+        comment_generic = None
+        if vol_comment_generic:
+            new_div=soup.new_tag('div')
+            comment_generic = vol_comment_generic.wrap(new_div)
         if debug: self.log.info(self.who,"comment_generic processed")
-#        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
+        # if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
 
       # select the fields I want... More exist such as film adaptations or references to advises to read
       # but that is not quite consistent around all the books (noosfere is a common database from many people)
