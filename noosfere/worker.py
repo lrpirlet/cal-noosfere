@@ -8,7 +8,7 @@ __copyright__ = '2021, Louis Richard Pirlet'
 __docformat__ = 'restructuredtext en'
 
 import datetime
-from bs4 import BeautifulSoup as BS
+from bs4 import BeautifulSoup as BS, Comment
 from threading import Thread
 
 from calibre.ebooks.metadata.book.base import Metadata
@@ -591,11 +591,7 @@ class Worker(Thread):
 
         vol_comment_generic=""
         vol_comment_generic = soup.select_one("span[class='ficheNiourf']")   #[0]
-#         new_div=soup.new_tag('div')
-#         comment_generic = comment_generic.wrap(new_div)
-#         if debug: self.log.info(self.who,"comment_generic processed")
-# #        if debug: self.log.info(self.who,"comment_generic : \n", comment_generic.prettify())                          # a bit long I guess
-        if debug: self.log.info(self.who,"return vol_title : ",vol_comment_generic)
+        if debug: self.log.info(self.who,"return vol_comment_generic, it's length is : ", len(vol_comment_generic))          # would be too long if extract printed
         return vol_comment_generic
 
 
@@ -699,21 +695,23 @@ class Worker(Thread):
       # first line of comment is volume address as a reference in the comment (noosfere URL)
         vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"reference url_vrai processed")
+        # if debug: self.log.info(self.who,"reference vol_comment_soup :\n", vol_comment_soup.prettify())                         # a bit long I guess
 
-      # add cover image address as a reference in the comment
+      # second line of comment is cover image address as a reference in the comment
         comment_cover=None
         if vol_cover_index:
             comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
         if debug: self.log.info(self.who,"comment_cover processed")
+        # if debug: self.log.info(self.who,"comment_cover :\n", comment_cover.prettify())                          # a bit long I guess
 
-      # other editions
+      # next lines is other editions
         comment_AutresEdition=None
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
-        # if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", type(comment_AutresEdition),"\n", comment_AutresEdition)              # a bit long I guess
+        # if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", comment_AutresEdition.prettify())              # a bit long I guess
 
-      # generic comments
+      # last default nlines are generic comments
         comment_generic = None
         if vol_comment_generic:
             new_div=soup.new_tag('div')
@@ -723,8 +721,8 @@ class Worker(Thread):
 
       # select the fields I want... More exist such as film adaptations or references to advises to read
       # but that is not quite consistent around all the books (noosfere is a common database from many people)
-      # and beside I have enough info like that AND I do NOT want to take out the noosfere's business
-
+      # and beside I have enough info like that to fill my needs... Yet, I leave the possibility to
+      # activate them if needed
         comment_resume=None
         comment_Critiques=None
         comment_Sommaire=None
@@ -733,7 +731,7 @@ class Worker(Thread):
         comment_Citédanslespagesthématiquessuivantes=None
         comment_Citédansleslistesthématiquesdesoeuvressuivantes=None
         comment_CitédanslesConseilsdelecture=None
-        comment_Adaptations=None
+        comment_Adaptations=None   # not yet implemented
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
 #        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
@@ -819,7 +817,15 @@ class Worker(Thread):
         if comment_Adaptations:                                                   # optionnal
             vol_comment_soup.append(comment_Adaptations)
 
-#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
+      # remove HTML comments from vol_comment_soup to improve display in calibre comments
+      # this to avoid having part of the vol_comment_soup not displayed in calibre comments
+      # as calibre seems to not like HTML comments... (at least in some situations)
+
+        self.log.info("\n",self.who,"Remove HTML comments to improve display in calibre comments")
+
+        for element in vol_comment_soup(text=lambda text: isinstance(text, Comment)):
+            if debug: self.log.info(self.who,"removed comments : ", element)
+            element.extract()
 
         self.log.info("\n",self.who,"Correct HTML comments for design and complete functionality in calibre catalog")
 
@@ -878,10 +884,11 @@ class Worker(Thread):
 
       # repair url's so it does NOT depend on being in noosfere space
 
-        if debug:
-            for elemnt in vol_comment_soup.select("a[href]"):
-                if 'http' not in elemnt.get('href'):
-                    self.log.info(self.who,"url incomplet avant correction: ", elemnt)
+        # if debug:
+        #     for elemnt in vol_comment_soup.select("a[href]"):
+        #         if 'http' not in elemnt.get('href'):
+        #             self.log.info(self.who,"url incomplet avant correction: ", elemnt)
+        # repair list of incomplete url's, may be too long to report in log
 
         for elemnt in vol_comment_soup.select("a[href*='/livres/auteur.asp']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/livres/auteur.asp","https://www.noosfere.org/livres/auteur.asp")
@@ -932,6 +939,7 @@ class Worker(Thread):
         for elemnt in vol_comment_soup.select("a[href*='?numlivre']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("?numlivre","https://www.noosfere.org/livres/niourf.asp?numlivre")
 
+        # debug check of repaired url's, if any in the log then we have missed some...
         if debug:
             for elemnt in vol_comment_soup.select("a[href*='.asp']"):
                 if 'http' not in elemnt.get('href'):
@@ -943,7 +951,8 @@ class Worker(Thread):
         for elemnt in vol_comment_soup.select("img[src*='arrow_left']"): elemnt.replace_with(fg)
         for elemnt in vol_comment_soup.select("img[src*='arrow_right']"): elemnt.replace_with(fd)
 
-      # depending on the tick box, make a fat publisher using separators that have a very low probability to pop up (§ and €)
+      # depending on the tick box, make a fat publisher using separators that have a very low probability
+      # to pop up (§ and €) in the publisher field so that later user can easily separate the fields if needed
       # only set vol_coll_srl if vol_coll exists
       # the idea is to use search and replace in the edit Metadata in bulk window.
 
