@@ -1950,11 +1950,12 @@ soup_fiche_livre = soup.select_one("div[id='Fiche_livre']")
 
       # get generic comments
 comment_generic=None
-comment_generic = soup_fiche_livre.select_one("span[class='ficheNiourf']")   #[0]
+comment_generic = soup_fiche_livre.select_one("span[class='ficheNiourf']")
+print("comment_generic found", comment_generic.prettify())
 new_div=soup.new_tag('div')
 comment_generic = comment_generic.wrap(new_div)
 
-print( comment_generic.prettify())
+# print( comment_generic.prettify())
 
   # other editions
 comment_AutresEdition=None

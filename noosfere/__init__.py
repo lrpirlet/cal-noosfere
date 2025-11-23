@@ -196,7 +196,7 @@ class noosfere(Source):
     name                    = 'noosfere DB'
     description             = _('Source extention: downloads and sets metadata from noosfere.org for selected volumes')
     author                  = 'Louis Richard Pirlet'
-    version                 = (1, 2, 1)
+    version                 = (1, 2, 2)
     minimum_calibre_version = (5, 11, 0)
 
     ID_NAME = 'nsfr_id'
@@ -315,6 +315,13 @@ class noosfere(Source):
                      " Défini avec un MATCH PARFAIT: le volume sera choisi avec cet éditeur.")     # Defined with a PERFECT MATCH volume will be choosen with that publisher.
                    ),
             Option(
+                   'linktosimilar',
+                   'bool',
+                   False,
+                   _("Ajoute les liens vers les ouvrages avec une étiquette identique"),        # add some field to the comment field
+                   _("Cochez cette case pour ajouter ces infos, si elles existent dans noosfere.") # check this box to enable...
+                   ),
+            Option(
                    'Prixobtenus',
                    'bool',
                    False,
@@ -401,6 +408,14 @@ class noosfere(Source):
             return x
         te = self.prefs.get('requested_editor', None)
         return te
+
+    @property
+    def get_linktosimilar(self):
+        x = getattr(self, 'get_lts', None)
+        if x is not None:
+            return x
+        get_lts = self.prefs.get('linktosimilar', False)
+        return get_lts
 
     @property
     def get_Prixobtenus(self):
@@ -682,6 +697,7 @@ class noosfere(Source):
         log.info('self.with_isbn                                              : ', self.with_isbn)
         log.info('self.balanced                                               : ', self.balanced)
         log.info('self.must_be_editor                                         : ', self.must_be_editor)
+        log.info('self.get_linktosimilar                                      : ', self.get_linktosimilar)
         log.info('self.get_Prixobtenus                                        : ', self.get_Prixobtenus)
         log.info('self.get_Citédanslespagesthématiquessuivantes               : ', self.get_Citédanslespagesthématiquessuivantes)
         log.info('self.get_Citédansleslistesthématiquesdesoeuvressuivantes    : ', self.get_Citédansleslistesthématiquesdesoeuvressuivantes)

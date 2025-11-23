@@ -2194,3 +2194,18 @@ genre = isole_genre(soup_fiche_livre)
 print("Genre:", genre)
 print("Dépôt légal:", dp_lgl)
 
+# comment_linktosimilar=BS('<b></b>',"lxml")
+
+# for element in soup_fiche_livre.select("a[class='undertag']"):
+#     print(f"len de comment_linktosimilar before insert: {len(comment_linktosimilar)}")
+#     comment_linktosimilar.insert(len(comment_linktosimilar), element)
+
+# print("Link to similar books:", comment_linktosimilar.prettify())
+
+# comment_linktosimilar.wrap("div")
+
+# print("Link to similar books:", comment_linktosimilar.prettify())
+
+
+comment_linktosimilar = soup_fiche_livre.select_one("a[class='undertag']").find_parent("div")
+print("Link to similar books:", comment_linktosimilar.prettify())

@@ -42,6 +42,7 @@ class Worker(Thread):
         self.with_isbn = self.plugin.with_isbn
         self.balanced = self.plugin.balanced
         self.must_be_editor = self.plugin.must_be_editor
+        self.get_linktosimilar = self.plugin.get_linktosimilar
         self.get_Prixobtenus = self.plugin.get_Prixobtenus
         self.get_Citédanslespagesthématiquessuivantes = self.plugin.get_Citédanslespagesthématiquessuivantes
         self.get_Citédansleslistesthématiquesdesoeuvressuivantes = self.plugin.get_Citédansleslistesthématiquesdesoeuvressuivantes
@@ -67,6 +68,7 @@ class Worker(Thread):
             self.log.info(self.who,"balanced                                            : ", self.balanced)
             self.log.info(self.who,"set_priority_handling                               : ", self.set_priority_handling)
             self.log.info(self.who,"must_be_editor                                      : ", self.must_be_editor)
+            self.log.info(self.who,"get_get_linktosimilar                               : ", self.get_linktosimilar)
             self.log.info(self.who,"get_Prixobtenus                                     : ", self.get_Prixobtenus)
             self.log.info(self.who,"get_Citédanslespagesthématiquessuivantes            : ", self.get_Citédanslespagesthématiquessuivantes)
             self.log.info(self.who,"get_Citédansleslistesthématiquesdesoeuvressuivantes : ", self.get_Citédansleslistesthématiquesdesoeuvressuivantes)
@@ -374,10 +376,10 @@ class Worker(Thread):
         vol_isbn=""
         all_elemnt=[]
 
-#        if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
+    #    if debug: self.log.info(self.who,"sousFicheNiourf : \n", soup.select_one("span[class='sousFicheNiourf']").prettify())                          # a bit long I guess
         for elemnt in soup.select_one("span[class='sousFicheNiourf']").stripped_strings:
             all_elemnt.append(elemnt)
-#        if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
+    #    if debug: self.log.info(self.who,"all_elemnt : ", all_elemnt)                          # a bit long I guess
 
         for i in range(len(all_elemnt)):
             if not vol_isbn and "ISBN : " in all_elemnt[i]:
@@ -644,6 +646,7 @@ class Worker(Thread):
           . first edition information
           . series (cycle) name and number
           . this volume editor info
+          . link to books with same undertag
           . Resume (quatrième de couverture)
           . Critiques
           . Sommaire detailing what novels are in the volume when it is an anthology
@@ -740,14 +743,29 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"comment_cover processed")
         # if debug: self.log.info(self.who,"comment_cover :\n", comment_cover.prettify())                          # a bit long I guess
 
-      # next lines is other editions
+      # next lines is other editions and potentially link to similar books
         comment_AutresEdition=None
         if soup.select_one("#AutresEdition"):
             comment_AutresEdition = soup.select_one("#AutresEdition")
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
         # if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", comment_AutresEdition.prettify())              # a bit long I guess
 
-      # last default nlines are generic comments
+          # Next entry is liens vers les ouvrages avec les mêmes étiqettes, optionel
+          # only if self.get_linktosimilar is True
+          # should have for title : "Ouvrages avec une étiquette identique"
+
+        comment_linktosimilar=None
+        if self.get_linktosimilar and soup_fiche_livre.select_one("a[class='undertag']"):
+            comment_linktosimilar = soup_fiche_livre.select_one("a[class='undertag']").find_parent("div")
+          # draw a line rather than a space at the top of comment_linktosimilar
+            for br in comment_linktosimilar.find_all('br'):
+                hr = soup.new_tag('hr')
+                br.replace_with(hr)
+
+            if debug: self.log.info(self.who,"comment_linktosimilar processed")
+            if debug: self.log.info(self.who,"comment_linktosimilar\n",comment_linktosimilar.prettify())              # a bit long I guess
+
+      # last default n lines are generic comments
         comment_generic = None
         if vol_comment_generic:
             new_div=soup.new_tag('div')
@@ -770,7 +788,7 @@ class Worker(Thread):
         comment_Adaptations=None   # not yet implemented
 
         tmp_comm_lst=soup.select("span[class='AuteurNiourf']")
-#        if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                     # a bit long I guess
+        # if debug: self.log.info(self.who,"tmp_comm_lst\n",tmp_comm_lst)                                    # a bit long I guess
 
         for i in range(len(tmp_comm_lst)):
             if "Quatrième de couverture" in str(tmp_comm_lst[i]):
@@ -834,12 +852,14 @@ class Worker(Thread):
             vol_comment_soup.append(comment_generic)
         if comment_AutresEdition:                                       # NOT optional... seems that this is important info about the book as it gives all the volumes
             vol_comment_soup.append(comment_AutresEdition)
+        if comment_linktosimilar:                                                 # optionnal
+            vol_comment_soup.append(comment_linktosimilar)
         if comment_resume:
             vol_comment_soup.append(comment_resume)
-        if comment_Critiques:
-            vol_comment_soup.append(comment_Critiques)
         if comment_Sommaire:
             vol_comment_soup.append(comment_Sommaire)
+        if comment_Critiques:
+            vol_comment_soup.append(comment_Critiques)
         if comment_AutresCritique:
             vol_comment_soup.append(comment_AutresCritique)
         if comment_Prixobtenus:                                                   # optionnal
@@ -890,7 +910,7 @@ class Worker(Thread):
       # so <b>I</b><b>saac<\b> displayed as "I saac" in calibre becomes
       # <b>Isaac<\b> displayed as "Isaac" in calibre
 
-        x=[b"</b><b>",b"</i><i>",b"</em><em>",b"</strong><strong>"]
+        x=[b"</b><b>",b"</i><i>",b"</em><em>",b"</strong><strong>",b"</u><u>",b"<br/>"]
         for i in range(len(x)):
             vol_comment_soup=BS(vol_comment_soup.encode("utf-8").replace(x[i],b""),"html5lib")
 #        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
@@ -974,6 +994,8 @@ class Worker(Thread):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("FicheFilm.asp","https://www.noosfere.org/livres/FicheFilm.asp")
         for elemnt in vol_comment_soup.select("a[href*='?numlivre']"):
             if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("?numlivre","https://www.noosfere.org/livres/niourf.asp?numlivre")
+        for elemnt in vol_comment_soup.select("a[href*='/tags/tag_content.asp']"):
+            if 'http' not in elemnt.get('href'): elemnt["href"]=elemnt["href"].replace("/tags/tag_content.asp","https://www.noosfere.org/tags/tag_content.asp")
 
         # debug check of repaired url's, if any in the log then we have missed some...
         if debug:
@@ -1030,7 +1052,7 @@ class Worker(Thread):
             self.log.info(self.who,"vol_isbn, type()               : ",vol_isbn, type(vol_isbn))                        # must be <class 'str'>
             self.log.info(self.who,"vol_genre, type()              : ",vol_genre, type(vol_genre))                      # must be <class 'list'> of <class 'str'>
             self.log.info(self.who,"vol_cover_index, type()        : ",vol_cover_index, type(vol_cover_index))          # must be
-     #        self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
+            # self.log.info(self.who,"vol_comment_soup               :\n",vol_comment_soup)                               # a bit long I guess
 
         if vol_cover_index:
             self.plugin.cache_identifier_to_cover_url(self.nsfr_id, vol_cover_index)

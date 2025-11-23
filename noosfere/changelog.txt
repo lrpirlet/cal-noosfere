@@ -213,7 +213,15 @@ While doing the above 2, I modified the worker.py code into methods (easier to m
 this (and of cousre, the repair and the vol_seriel_seq improvement) does
 justify to uplift the version to 1.2.0
 
- Repair 'Site Clair' by reducing the searched soup to soup_fiche_livre
- Repair incomplete info in commentys by removing hidden HTML coments, those would act as
- a sign to delete every thing before...
- this pushes version to 1.2.1
+Repair 'Site Clair' by reducing the searched soup to soup_fiche_livre
+Repair incomplete info in commentys by removing hidden HTML coments, those would act as
+a sign to delete every thing before...
+this pushes version to 1.2.1
+
+Introduced a serie of tags taken from the 'undertag'... undertag is a link to books
+with similar noosfere tagging
+It is by default and imposed in the calibre tags
+It is optional in the comments where the links are made available.
+Made order of comments more coherent (moved sommaire before critique that so is adjacent
+to Critiques des autres éditions ou de la série)
+This pushes version to 1.2.2
