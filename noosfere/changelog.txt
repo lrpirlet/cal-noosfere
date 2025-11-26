@@ -225,3 +225,6 @@ It is optional in the comments where the links are made available.
 Made order of comments more coherent (moved sommaire before critique that so is adjacent
 to Critiques des autres éditions ou de la série)
 This pushes version to 1.2.2
+
+finalised undertag presentation pushing it to version 1.3.0... tested over a lot of books
+should be ok

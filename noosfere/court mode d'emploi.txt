@@ -24,6 +24,7 @@ pour utiliser ce plugin efficacement:
           Impose un éditeur: l'algorithme de choix se fait uniquement avec cet éditeur (correspondance exacte),
             avec l'editeur prépondérant (texte sans correspondance),
             ou sans tenir compte de l'éditeur (pas de texte).
+		  Ajoute les liens vers les ouvrages avec une étiquette identique: cocher pour ajouter cette information
           Ajoute 'Prix obtenus' et 'Prix obtenus par des textes au sommaire: cocher pour ajouter cette information
           Ajoute Cité dans les pages thématiques suivantes: cocher pour ajouter cette information
           Ajoute Cité dans les listes thématiques des oeuvres suivantes: cocher pour ajouter cette information

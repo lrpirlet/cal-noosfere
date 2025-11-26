@@ -19,7 +19,10 @@ To use this plugin efficiently:
           Add collection and its order number to the editor field: (see LIS-MOI editeur_collection_seriel-code)
           Log verbosity from 0 to 7: 7 minimum to create a report in case of malfunction
           Sorting priority: see below choice of volume.
-          Imposes an editor: the selection algorithm is only done with this editor (exact match)
+          Require a publisher: the selection algorithm is based solely on this publisher (exact match),
+			with the predominant publisher (text without a match),
+			or without taking the publisher into account (no text).
+		  Add links to works with an identical label: tick to add this information.
           Adds 'Prizes obtained' and 'Prizes obtained by texts' to the table of contents: check to add this information
           Adds 'Cited' in the following thematic pages: check to add this information
           Adds Cited in the following thematic lists of works: check to add this information

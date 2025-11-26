@@ -732,14 +732,14 @@ class Worker(Thread):
         self.log.info("\n",self.who,"Fetch and format various info to create HTML comments")
 
       # first line of comment is volume address as a reference in the comment (noosfere URL)
-        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml")
+        vol_comment_soup=BS('<div><p>Référence: <a href="' + url_vrai + '">' + url_vrai + '</a></p></div>',"lxml").select_one("div")
         if debug: self.log.info(self.who,"reference url_vrai processed")
         # if debug: self.log.info(self.who,"reference vol_comment_soup :\n", vol_comment_soup.prettify())                         # a bit long I guess
 
       # second line of comment is cover image address as a reference in the comment
         comment_cover=None
         if vol_cover_index:
-            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml")
+            comment_cover = BS('<div><p>Couverture: <a href="' + vol_cover_index + '">'+ vol_cover_index +'</a></p></div>',"lxml").select_one("div")
         if debug: self.log.info(self.who,"comment_cover processed")
         # if debug: self.log.info(self.who,"comment_cover :\n", comment_cover.prettify())                          # a bit long I guess
 
@@ -750,20 +750,27 @@ class Worker(Thread):
         if debug: self.log.info(self.who,"comment_AutresEdition processed : ")
         # if debug: self.log.info(self.who,"comment_AutresEdition soup :\n", comment_AutresEdition.prettify())              # a bit long I guess
 
-          # Next entry is liens vers les ouvrages avec les mêmes étiqettes, optionel
-          # only if self.get_linktosimilar is True
-          # should have for title : "Ouvrages avec une étiquette identique"
+      # Next entry is liens vers les ouvrages avec les mêmes étiqettes, optionel
+      # only if self.get_linktosimilar is True
+      # should have for title : "Ouvrages avec une étiquette identique"
+      # we need to create another soup to avoid modifying the main soup,
+      # add undertags to it and format them properly
+      # before creating comment_linktosimilar from it
+        comment_linktosimilar = None
 
-        comment_linktosimilar=None
         if self.get_linktosimilar and soup_fiche_livre.select_one("a[class='undertag']"):
-            comment_linktosimilar = soup_fiche_livre.select_one("a[class='undertag']").find_parent("div")
-          # draw a line rather than a space at the top of comment_linktosimilar
-            for br in comment_linktosimilar.find_all('br'):
-                hr = soup.new_tag('hr')
-                br.replace_with(hr)
+            lts_soup = BS('<div style="padding-bottom:0.5em"><span class="AuteurNiourf"> Ouvrages avec une étiquette identique </span><hr style="color:CCC;"/></div>', "lxml")
+            lts_soup.select_one("div").append(soup.select_one("a[class='undertag']").find_parent("div"))  # clear the div content to prepare for new content
 
-            if debug: self.log.info(self.who,"comment_linktosimilar processed")
-            if debug: self.log.info(self.who,"comment_linktosimilar\n",comment_linktosimilar.prettify())              # a bit long I guess
+            for i in range(len(lts_soup.select('.undertag'))):
+                tag = lts_soup.select('.undertag')[i]
+                new_span = lts_soup.new_tag("span")
+                new_span.string = " | "
+                if i: tag = tag.wrap(new_span)      # add a separator ' | ' between tags except before the first one
+
+            comment_linktosimilar = lts_soup.select_one("div")
+
+        # if debug: self.log.info(self.who,"comment_linktosimilar\n",comment_linktosimilar.prettify())              # a bit long I guess
 
       # last default n lines are generic comments
         comment_generic = None
@@ -913,7 +920,7 @@ class Worker(Thread):
         x=[b"</b><b>",b"</i><i>",b"</em><em>",b"</strong><strong>",b"</u><u>",b"<br/>"]
         for i in range(len(x)):
             vol_comment_soup=BS(vol_comment_soup.encode("utf-8").replace(x[i],b""),"html5lib")
-#        if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
+        # if debug: self.log.info(self.who,"vol_comment_soup\n",vol_comment_soup.prettify())                             # a bit long I guess
 
       # insert style for title
       # then wrap div around span and next span if its exist
