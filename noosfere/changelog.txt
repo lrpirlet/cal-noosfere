@@ -228,3 +228,6 @@ This pushes version to 1.2.2
 
 finalised undertag presentation pushing it to version 1.3.0... tested over a lot of books
 should be ok
+
+changes in calibre from version 9 invalidated the plugin... changed the way to serialize
+the modified html data before sending it to calibre.

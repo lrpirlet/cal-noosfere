@@ -1031,17 +1031,10 @@ class Worker(Thread):
                     if debug: self.log.info(self.who,'add collection number')
                     vol_editor = vol_editor+('€')+vol_coll_srl
 
-      # UTF-8 characters may be serialized different ways, only xmlcharrefreplace produces xml compatible strings
-      # any other non ascii character with another utf-8 byte representation will make calibre behave with the messsage:
-      # ValueError: All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters
       # Side note:
       # This produce no very good URL structure (I once got html 3 times and div as a sibling of html...), but calibre does not seems to care (nice :-) )
       #
-      # Ça m'a pris un temps fou pour trouver, par hasard, que encode('ascii','xmlcharrefreplace') aidait bien...
-      # (enfin, quasi par hasard, j' ai essayé tout ce qui pouvait améliorer la compatibilité avec xml... mais je
-      # lisais mal et je pensais à une incompatibilité avec la structure xml),
-      #
-        vol_comment_soup = vol_comment_soup.encode('ascii','xmlcharrefreplace')
+        vol_comment_soup = str(vol_comment_soup.encode)         # serialize to string
 
         if debug:
             self.log.info("\n",self.who,"+++"*25)
