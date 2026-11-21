@@ -404,11 +404,14 @@ class Worker(Thread):
         vol_coll=""
         vol_coll_srl=""
 
-        if soup.select("a[href*='editeur.asp']"): vol_editor = soup.select("a[href*='editeur.asp']")[0].text
-        if soup.select("a[href*='collection.asp']"): vol_coll = soup.select("a[href*='collection.asp']")[0].text
-        for i in soup.select("span[class='ficheNiourf']")[0].stripped_strings:
-            tmp_lst.append(str(i))
-        vol_coll_srl = tmp_lst[len(tmp_lst)-1]
+        fiche = soup.select_one("span[class='ficheNiourf']")
+        if fiche:
+            ed_tag = fiche.select_one("a[href*='editeur.asp']")
+            if ed_tag: vol_editor = ed_tag.text
+            coll_tag = fiche.select_one("a[href*='collection.asp']")
+            if coll_tag: vol_coll = coll_tag.text
+            for i in fiche.stripped_strings:
+                tmp_lst.append(str(i))
         if "n°" in vol_coll_srl:
             for k in ["n°","(",")"]:
                 if k in vol_coll_srl:
